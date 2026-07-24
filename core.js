@@ -415,7 +415,7 @@ window.App = (function () {
         <div class="field"><label class="label">Password</label>
           <div class="input--icon">${App.icon('lock')}<input class="input" type="password" placeholder="••••••••" value="demo-password"></div></div>
         <button class="btn btn--primary btn--block btn--lg" onclick="App.login.submit('${gov ? 'gov' : 'employer'}')">Sign in ${App.icon('arrow')}</button>
-        ${gov ? `<div class="banner banner--info" style="margin-top:16px">${App.icon('shield')}<div>Demo credentials are pre-filled. Any input signs you in.</div></div>` : `<p class="muted" style="text-align:center;font-size:12.5px;margin-top:16px">Demo build — any credentials sign you in.</p>`}`;
+        ${gov ? `<div class="banner banner--info" style="margin-top:16px">${App.icon('shield')}<div>Demo credentials are pre-filled. Any input signs you in.</div></div>` : `<p class="muted" style="text-align:center;font-size:12.5px;margin-top:16px">Demo build - any credentials sign you in.</p>`}`;
     }
 
     $('#app').innerHTML = `
