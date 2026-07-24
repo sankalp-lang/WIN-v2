@@ -1,0 +1,346 @@
+/* Worker · CV Builder — a professional CV auto-filled from the verified WiN
+   golden record: editorial hero, editable personal info, summary, collapsible
+   work history, skills and education, with a live sticky preview and PDF export.
+   v2 editorial standard (hero + reveal + working flows). */
+(function () {
+  const esc = App.esc;
+
+  // ---- verification provenance shown on each work entry ----
+  const VMETA = {
+    employer: { label: 'Employer-verified', kind: 'green', ic: 'shieldcheck' },
+    document: { label: 'Document-verified', kind: 'blue', ic: 'filecheck' },
+    self:     { label: 'Self-declared',     kind: 'gray', ic: 'user' },
+  };
+
+  // ---- editable working copy (hydrated from the verified record on first render) ----
+  const state = {
+    _init: false,
+    personal: {
+      name: '', age: 34,
+      title: 'Masonry Expert - Construction Supervisor',
+      location: 'Delhi NCR, India', years: 14,
+      email: 'rajan.mason@email.com', phone: '+91 98765 43210', winId: '',
+    },
+    summary: '',
+    entries: [
+      { role: 'Construction Supervisor', company: 'Omaxe Ltd.', period: 'Mar 2023 - Present', location: 'Delhi', status: 'active', verification: 'employer', open: true,
+        description: 'Lead site supervision for a 22-storey residential tower — coordinate 40+ masons, enforce quality and safety standards, and track daily progress against the project schedule.' },
+      { role: 'Mason Foreman', company: 'Hiranandani Group', period: 'Jun 2018 - Feb 2023', location: 'Thane', status: 'completed', verification: 'employer', open: false,
+        description: 'Managed masonry crews across three commercial sites in Thane; trained junior masons and cut rework by keeping finishes within tolerance.' },
+      { role: 'Senior Mason', company: 'JMD Builders', period: 'Jan 2013 - May 2018', location: 'Gurugram', status: 'completed', verification: 'document', open: false,
+        description: 'Executed brickwork, block-work and plastering for mid-rise housing; recognised for clean joints and consistent load-bearing walls.' },
+      { role: 'Mason', company: 'L&T Construction', period: 'Feb 2011 - Dec 2012', location: 'Noida', status: 'completed', verification: 'self', open: false,
+        description: 'Entry-level mason on highway and warehouse projects — laid foundations, mixed and finished concrete, and read basic site drawings.' },
+    ],
+    skills: ['Masonry', 'Scaffolding', 'Plastering', 'Tile Work', 'Concrete Finishing', 'Blueprint Reading'],
+    education: { level: 'Class 12th (Senior Secondary)', board: 'UP Board', year: '2008', school: 'Govt. Inter College, Lucknow', percentage: '68.4' },
+    saved: false,
+    previewOpen: true,
+  };
+
+  // ---- pure helpers (shared by render + controller) ----
+  function buildSummary() {
+    const p = state.personal, sk = state.skills;
+    const first3 = sk.slice(0, 3).join(', ');
+    const more = Math.max(0, sk.length - 3);
+    return `Experienced ${(p.title || '').toLowerCase()} with ${p.years} years of hands-on experience in the construction industry. `
+      + `Proficient in ${first3} and ${more} more specialized skills. `
+      + `Known for delivering quality work on time and leading teams effectively across residential and commercial projects.`;
+  }
+  function expPreviewHtml() {
+    const shown = state.entries.slice(0, 3).map(en => `
+      <div class="cvb-pv-exp">
+        <span class="cvb-pv-dot" style="background:${en.status === 'active' ? 'var(--green-600)' : '#94a3b8'}"></span>
+        <div style="min-width:0"><b style="font-size:12.5px">${esc(en.role || 'Role')}</b><div class="cvb-pv-sub">${esc(en.company || 'Company')} | ${esc(en.period || '')}</div></div>
+      </div>`).join('');
+    const more = state.entries.length > 3 ? `<div class="cvb-pv-more">+<span class="num">${state.entries.length - 3}</span> more</div>` : '';
+    return shown + more;
+  }
+  function skillsPreviewHtml() {
+    const shown = state.skills.slice(0, 6).map(s => `<span class="cvb-pv-chip">${esc(s)}</span>`).join('');
+    const more = state.skills.length > 6 ? `<span class="cvb-pv-chip cvb-pv-chip--more num">+${state.skills.length - 6}</span>` : '';
+    return shown + more;
+  }
+  function eduPreviewInner() {
+    const ed = state.education;
+    return `<b style="font-size:12.5px">${esc(ed.level)}</b><div class="cvb-pv-sub">${esc(ed.board)} | <span class="num">${esc(ed.year)}</span> | <span class="num">${esc(ed.percentage)}%</span></div>`;
+  }
+
+  // ---- controller: text edits patch the preview live (no reload → keeps focus);
+  //      structural changes (add/remove/toggle/save) go through App.reload() ----
+  window.WorkerCV = {
+    setPersonal(k, v) {
+      state.personal[k] = v;
+      if (k === 'name')     { const el = document.getElementById('cvp-name');  if (el) el.textContent = v.trim() || 'Your Name'; }
+      if (k === 'title')    { const el = document.getElementById('cvp-title'); if (el) el.textContent = v.trim() || '—'; }
+      if (k === 'location') { const el = document.getElementById('cvp-loc');   if (el) el.textContent = v.trim(); }
+    },
+    setSummary(v) { state.summary = v; const el = document.getElementById('cvp-summary'); if (el) el.textContent = v; },
+    regenSummary() { state.summary = buildSummary(); App.reload(); App.toast('Summary regenerated from your verified record'); },
+    setEntry(i, k, v) {
+      state.entries[i][k] = v;
+      if ((k === 'role' || k === 'company' || k === 'period') && i < 3) {
+        const el = document.getElementById('cvp-exp'); if (el) el.innerHTML = expPreviewHtml();
+      }
+    },
+    toggleEntry(i) { state.entries[i].open = !state.entries[i].open; App.reload(); },
+    addEntry() {
+      state.entries.push({ role: '', company: '', period: '', location: '', description: '', status: 'completed', verification: 'self', open: true });
+      App.reload(); App.toast('New work entry added');
+    },
+    removeEntry(i) { if (state.entries.length <= 1) return; state.entries.splice(i, 1); App.reload(); App.toast('Work entry removed'); },
+    skillInput(v) { const b = document.getElementById('cvb-add-skill-btn'); if (b) b.disabled = !v.trim(); },
+    skillKey(e) { if (e.key === 'Enter') { e.preventDefault(); WorkerCV.addSkill(); } },
+    addSkill() {
+      const el = document.getElementById('cvb-skill-input'); const v = el ? el.value.trim() : '';
+      if (!v) return;
+      if (state.skills.some(s => s.toLowerCase() === v.toLowerCase())) { App.toast('“' + v + '” is already in your skills'); return; }
+      state.skills.push(v); App.reload(); App.toast('Skill added');
+    },
+    removeSkill(i) { state.skills.splice(i, 1); App.reload(); },
+    setEdu(k, v) { state.education[k] = v; const el = document.getElementById('cvp-edu'); if (el) el.innerHTML = eduPreviewInner(); },
+    togglePreview() { state.previewOpen = !state.previewOpen; App.reload(); },
+    save() {
+      state.saved = true; App.reload(); App.toast('CV saved to your WiN profile');
+      setTimeout(() => { state.saved = false; if (App.state.route === 'worker-cv') App.reload(); }, 2000);
+    },
+    exportCv() { App.toast('CV exported as PDF (demo)', 'download'); },
+    exportProfile() { App.toast('Profile PDF downloaded (demo)', 'download'); },
+  };
+
+  App.registerView('worker-cv', {
+    title: 'CV Builder',
+    subtitle: 'Build and export your professional CV',
+    render(ctx) {
+      const u = ctx.user;
+      if (!state._init) {
+        state._init = true;
+        state.personal.name = u.name || 'Rajan Kumar';
+        state.personal.winId = u.winId || 'WIN-2024-8834-1029';
+        state.summary = buildSummary();
+      }
+      const p = state.personal;
+
+      // reusable personal-info text field (num → Inter tabular; mono → code)
+      const tf = (label, key, opts) => {
+        opts = opts || {};
+        const cls = 'input' + (opts.mono ? ' mono' : '') + (opts.num ? ' num' : '');
+        return `<div class="field" style="margin-bottom:0">
+          <label class="label">${label}</label>
+          <input class="${cls}" ${opts.type ? `type="${opts.type}"` : ''} value="${esc(p[key])}" oninput="WorkerCV.setPersonal('${key}',this.value)">
+        </div>`;
+      };
+
+      const entriesHtml = state.entries.map((en, i) => {
+        const vm = VMETA[en.verification] || VMETA.self;
+        return `<div class="cvb-entry">
+          <div class="cvb-entry__head" onclick="WorkerCV.toggleEntry(${i})">
+            <span class="cvb-dot" style="background:${en.status === 'active' ? 'var(--green-600)' : '#94a3b8'}"></span>
+            <div class="grow" style="min-width:0">
+              <div class="row gap-8 wrap">
+                <b style="font-size:14px">${esc(en.role || 'New role')}</b>
+                ${en.status === 'active' ? App.ui.pill('CURRENT', 'green', true) : ''}
+              </div>
+              <div class="muted" style="font-size:12px;margin-top:2px">${esc(en.company || 'Company')} | ${esc(en.period || 'Period')}</div>
+            </div>
+            <span class="cvb-vpill">${App.ui.pill(vm.label, vm.kind, true)}</span>
+            ${state.entries.length > 1 ? `<button class="iconbtn" style="width:30px;height:30px" title="Remove entry" onclick="event.stopPropagation();WorkerCV.removeEntry(${i})">${App.icon('trash')}</button>` : ''}
+            <span class="cvb-chev" style="transform:rotate(${en.open ? 90 : 0}deg);color:var(--muted)">${App.icon('chevron')}</span>
+          </div>
+          ${en.open ? `<div class="cvb-entry__body">
+            <div class="grid grid-2">
+              <div class="field" style="margin:12px 0 0"><label class="label">Role / Title</label><input class="input" value="${esc(en.role)}" oninput="WorkerCV.setEntry(${i},'role',this.value)"></div>
+              <div class="field" style="margin:12px 0 0"><label class="label">Company</label><input class="input" value="${esc(en.company)}" oninput="WorkerCV.setEntry(${i},'company',this.value)"></div>
+              <div class="field" style="margin:12px 0 0"><label class="label">Period</label><input class="input" value="${esc(en.period)}" oninput="WorkerCV.setEntry(${i},'period',this.value)"></div>
+              <div class="field" style="margin:12px 0 0"><label class="label">Location</label><input class="input" value="${esc(en.location)}" oninput="WorkerCV.setEntry(${i},'location',this.value)"></div>
+            </div>
+            <div class="field" style="margin:12px 0 0"><label class="label">Description</label><textarea class="textarea" rows="3" oninput="WorkerCV.setEntry(${i},'description',this.value)">${esc(en.description)}</textarea></div>
+          </div>` : ''}
+        </div>`;
+      }).join('');
+
+      const skillsHtml = state.skills.map((s, i) =>
+        `<span class="cvb-skill">${esc(s)}<button title="Remove skill" onclick="WorkerCV.removeSkill(${i})">${App.icon('x')}</button></span>`).join('');
+
+      return `<div class="page page--wide fade-in">
+        <style>
+          .cvb-grid{ display:grid; grid-template-columns:minmax(0,1fr) 360px; gap:20px; align-items:start; }
+          .cvb-side{ position:sticky; top:20px; }
+          @media(max-width:1000px){ .cvb-grid{ grid-template-columns:1fr; } .cvb-side{ position:static; } }
+          .cvb-entry{ border:1px solid var(--line); border-radius:var(--r); background:var(--surface); overflow:hidden; }
+          .cvb-entry + .cvb-entry{ margin-top:10px; }
+          .cvb-entry__head{ display:flex; align-items:center; gap:12px; padding:12px 14px; cursor:pointer; transition:.12s; }
+          .cvb-entry__head:hover{ background:var(--surface-2); }
+          .cvb-entry__body{ padding:2px 14px 16px; }
+          .cvb-dot{ width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+          .cvb-chev{ display:inline-flex; transition:.15s; }
+          .cvb-vpill .ico{ display:none; }
+          .cvb-skill{ display:inline-flex; align-items:center; gap:5px; padding:6px 7px 6px 12px; border-radius:var(--r-full); background:var(--accent-weak); color:var(--accent-strong); font-size:12.5px; font-weight:600; }
+          .cvb-skill button{ display:grid; place-items:center; width:18px; height:18px; border-radius:50%; color:var(--accent-strong); opacity:.65; transition:.12s; }
+          .cvb-skill button:hover{ opacity:1; background:rgba(0,0,0,.07); }
+          .cvb-skill button .ico{ width:13px; height:13px; }
+          .cvb-pv{ border:1px solid var(--line); border-radius:var(--r-lg); overflow:hidden; box-shadow:var(--sh-sm); background:var(--surface); }
+          .cvb-pv__head{ display:flex; align-items:center; gap:8px; padding:12px 15px; background:var(--accent); color:#fff; font-weight:600; font-size:14px; }
+          .cvb-pv__head .ico{ color:#fff; }
+          .cvb-pv__head .iconbtn{ color:#fff; width:28px; height:28px; }
+          .cvb-pv__head .iconbtn:hover{ background:rgba(255,255,255,.18); color:#fff; }
+          .cvb-pv__body{ padding:20px 18px 22px; }
+          .cvb-pv-sec{ font-size:10.5px; font-weight:700; letter-spacing:.08em; color:var(--muted); text-transform:uppercase; margin:18px 0 9px; }
+          .cvb-pv-exp{ display:flex; gap:9px; align-items:flex-start; margin-bottom:9px; }
+          .cvb-pv-dot{ width:8px; height:8px; border-radius:50%; margin-top:5px; flex-shrink:0; }
+          .cvb-pv-sub{ font-size:11.5px; color:var(--muted); margin-top:1px; }
+          .cvb-pv-more{ font-size:11.5px; color:var(--accent-strong); font-weight:600; margin-left:17px; }
+          .cvb-pv-chip{ display:inline-block; padding:4px 9px; border-radius:var(--r-full); background:var(--accent-weak); color:var(--accent-strong); font-size:11px; font-weight:600; margin:0 5px 5px 0; }
+          .cvb-pv-chip--more{ background:var(--surface-2); color:var(--muted); }
+          .cvb-clamp3{ display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; font-size:12.5px; color:var(--ink-2); line-height:1.5; }
+          .cvb-hero-actions{ align-items:flex-start; }
+        </style>
+
+        <!-- editorial hero -->
+        <div class="hero reveal">
+          <div class="hero__wash"></div>
+          <div class="hero__in">
+            <div class="row between wrap gap-20">
+              <div style="min-width:290px;flex:1">
+                <div class="eyebrow">${App.icon('doc')} Professional CV</div>
+                <h1 class="h-grad" style="margin-top:12px">Your CV, built from verified facts.</h1>
+                <p class="lead">Every line auto-filled from your WiN golden record — employment, skills and education verified at source. Edit anything, then export a clean A4 PDF for job applications.</p>
+                <div class="row gap-8 wrap mt-16">
+                  <span class="src-chip mono">${App.icon('idcard')} ${esc(p.winId)}</span>
+                  ${App.ui.verified('100% Verified')}
+                  <span class="pill pill--gray">${esc(u.role || 'Construction Worker')} · ${esc(u.location || 'Delhi NCR')}</span>
+                  <span class="pill pill--gray"><span class="num">${esc(String(p.years))}</span>&nbsp;yrs experience</span>
+                </div>
+              </div>
+              <div class="row gap-10 wrap cvb-hero-actions">
+                <button class="btn" onclick="WorkerCV.exportProfile()">${App.icon('download')} Download Profile</button>
+                <button class="btn btn--accent" onclick="WorkerCV.exportCv()">${App.icon('file')} Export CV</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- provenance banner -->
+        <div class="banner banner--green reveal" style="margin-bottom:20px;align-items:center">
+          ${App.icon('shieldcheck')}
+          <div class="grow"><b>Auto-filled from your verified record</b> — employment, skills and education are pulled from your WiN golden record. Edit anything before you export.</div>
+        </div>
+
+        <div class="cvb-grid">
+          <!-- ============ LEFT: editor ============ -->
+          <div>
+            <!-- Personal information -->
+            <div class="card reveal mb-16">
+              <div class="card__head">${App.icon('user')}<h3 class="grow">Personal Information</h3></div>
+              <div class="card__body">
+                <div class="grid grid-2">
+                  ${tf('Full Name', 'name')}
+                  ${tf('Age', 'age', { type: 'number', num: true })}
+                  ${tf('Title / Role', 'title')}
+                  <div class="field" style="margin-bottom:0">
+                    <label class="label">Location</label>
+                    <div class="input--icon">${App.icon('mappin')}<input class="input" value="${esc(p.location)}" oninput="WorkerCV.setPersonal('location',this.value)"></div>
+                  </div>
+                  ${tf('Years of Experience', 'years', { type: 'number', num: true })}
+                  ${tf('Email', 'email', { type: 'email' })}
+                  ${tf('Phone', 'phone', { num: true })}
+                  <div class="field" style="margin-bottom:0">
+                    <label class="label">WiN ID</label>
+                    <input class="input mono" value="${esc(p.winId)}" disabled>
+                    <span class="hint">WiN ID is read-only and cannot be changed</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Professional summary -->
+            <div class="card reveal mb-16">
+              <div class="card__head">${App.icon('edit')}<h3 class="grow">Professional Summary</h3>
+                <button class="btn btn--ghost btn--sm" onclick="WorkerCV.regenSummary()">${App.icon('sparkles')} Regenerate</button>
+              </div>
+              <div class="card__body">
+                <textarea class="textarea" rows="4" oninput="WorkerCV.setSummary(this.value)">${esc(state.summary)}</textarea>
+              </div>
+            </div>
+
+            <!-- Work experience -->
+            <div class="card reveal mb-16">
+              <div class="card__head">${App.icon('briefcase')}<h3 class="grow">Work Experience</h3>
+                <button class="btn btn--soft btn--sm" onclick="WorkerCV.addEntry()">${App.icon('plus')} Add Entry</button>
+              </div>
+              <div class="card__body">${entriesHtml}</div>
+            </div>
+
+            <!-- Skills -->
+            <div class="card reveal mb-16">
+              <div class="card__head">${App.icon('award')}<h3 class="grow">Skills</h3></div>
+              <div class="card__body">
+                <div class="row wrap gap-8">${skillsHtml}</div>
+                <div class="row gap-8 mt-16">
+                  <input class="input grow" id="cvb-skill-input" placeholder="Add a new skill…" oninput="WorkerCV.skillInput(this.value)" onkeydown="WorkerCV.skillKey(event)">
+                  <button class="btn btn--accent" id="cvb-add-skill-btn" onclick="WorkerCV.addSkill()" disabled>${App.icon('plus')} Add</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Education -->
+            <div class="card reveal mb-16">
+              <div class="card__head">${App.icon('graduation')}<h3 class="grow">Education</h3></div>
+              <div class="card__body">
+                <div class="grid grid-2">
+                  <div class="field" style="margin-bottom:0"><label class="label">Level / Qualification</label><input class="input" value="${esc(state.education.level)}" oninput="WorkerCV.setEdu('level',this.value)"></div>
+                  <div class="field" style="margin-bottom:0"><label class="label">Board / Institution</label><input class="input" value="${esc(state.education.board)}" oninput="WorkerCV.setEdu('board',this.value)"></div>
+                  <div class="field" style="margin-bottom:0"><label class="label">Year</label><input class="input num" value="${esc(state.education.year)}" oninput="WorkerCV.setEdu('year',this.value)"></div>
+                  <div class="field" style="margin-bottom:0"><label class="label">Percentage / Grade</label><input class="input num" value="${esc(state.education.percentage)}" oninput="WorkerCV.setEdu('percentage',this.value)"></div>
+                  <div class="field" style="margin-bottom:0;grid-column:1/-1"><label class="label">School / College</label><input class="input" value="${esc(state.education.school)}" oninput="WorkerCV.setEdu('school',this.value)"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Save -->
+            <button class="btn ${state.saved ? 'btn--soft' : 'btn--accent'} btn--lg btn--block reveal" onclick="WorkerCV.save()">
+              ${state.saved ? App.icon('checkcircle') + ' Saved Successfully' : App.icon('check') + ' Save All Changes'}
+            </button>
+          </div>
+
+          <!-- ============ RIGHT: live preview ============ -->
+          <div class="cvb-side">
+            <div class="cvb-pv reveal">
+              <div class="cvb-pv__head">${App.icon('eye')}<span class="grow">CV Preview</span>
+                <button class="iconbtn" title="Collapse preview" onclick="WorkerCV.togglePreview()"><span class="cvb-chev" style="transform:rotate(${state.previewOpen ? 90 : 0}deg)">${App.icon('chevron')}</span></button>
+              </div>
+              ${state.previewOpen ? `<div class="cvb-pv__body">
+                <div style="text-align:center">
+                  ${App.ui.avatar(p.name || 'Your Name', 'xl')}
+                  <div style="margin-top:12px;font-family:var(--font-display);font-weight:600;font-size:18px" id="cvp-name">${esc(p.name || 'Your Name')}</div>
+                  <div style="color:var(--accent-strong);font-weight:600;font-size:13px;margin-top:3px" id="cvp-title">${esc(p.title || '—')}</div>
+                  <div class="row center gap-4 muted" style="font-size:12px;margin-top:6px">${App.icon('mappin')}<span id="cvp-loc">${esc(p.location)}</span></div>
+                  <div class="mono" style="font-size:11px;color:var(--muted);margin-top:5px">${esc(p.winId)}</div>
+                  ${App.ui.verified('100% Verified')}
+                </div>
+
+                <div class="cvb-pv-sec">Summary</div>
+                <div class="cvb-clamp3" id="cvp-summary">${esc(state.summary)}</div>
+
+                <div class="cvb-pv-sec">Experience</div>
+                <div id="cvp-exp">${expPreviewHtml()}</div>
+
+                <div class="cvb-pv-sec">Skills</div>
+                <div id="cvp-skills">${skillsPreviewHtml()}</div>
+
+                <div class="cvb-pv-sec">Education</div>
+                <div class="row gap-8" style="align-items:flex-start">${App.icon('graduation')}<div id="cvp-edu">${eduPreviewInner()}</div></div>
+
+                <div class="row gap-8 mt-24">
+                  <button class="btn btn--accent grow" onclick="WorkerCV.exportCv()">${App.icon('file')} Export CV</button>
+                  <button class="btn grow" onclick="WorkerCV.exportProfile()">${App.icon('download')} Profile</button>
+                </div>
+              </div>` : ''}
+            </div>
+            <p class="muted" style="text-align:center;font-size:11.5px;margin-top:10px">Exports as an A4 PDF, ready for job applications.</p>
+          </div>
+        </div>
+      </div>`;
+    }
+  });
+})();

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WiN · Workforce Identity Network</title>
+  <meta name="description" content="WiN — Workforce Identity Network. A verified golden record for every worker in India." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;0,800;1,500;1,600&family=Inter:wght@400;450;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app"></div>
+  <div id="modal-root"></div>
+  <div id="toast-root"></div>
+
+  <!-- Data + runtime core -->
+  <script src="data.js"></script>
+  <script src="core.js"></script>
+
+  <!-- View modules (each self-registers via App.registerView) -->
+  <!-- Worker -->
+  <script src="views/worker-home.js"></script>
+  <script src="views/worker-portfolio.js"></script>
+  <script src="views/worker-skills.js"></script>
+  <script src="views/worker-jobs.js"></script>
+  <script src="views/worker-cv.js"></script>
+  <script src="views/worker-courses.js"></script>
+  <script src="views/worker-grievance.js"></script>
+  <script src="views/worker-settings.js"></script>
+  <script src="views/worker-help.js"></script>
+  <script src="views/public-portfolio.js"></script>
+  <!-- Employer -->
+  <script src="views/emp-dashboard.js"></script>
+  <script src="views/emp-verifications.js"></script>
+  <script src="views/emp-employee.js"></script>
+  <script src="views/emp-apidocs.js"></script>
+  <script src="views/emp-settings.js"></script>
+  <script src="views/emp-digilocker.js"></script>
+  <!-- Government -->
+  <script src="views/gov-dashboard.js"></script>
+  <script src="views/gov-demographics.js"></script>
+  <script src="views/gov-enrollment.js"></script>
+  <script src="views/gov-grievances.js"></script>
+  <script src="views/gov-reports.js"></script>
+  <script src="views/gov-settings.js"></script>
+
+  <!-- Boot -->
+  <script>window.addEventListener('DOMContentLoaded', function () { App.boot(); });</script>
+</body>
+</html>
