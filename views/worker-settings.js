@@ -37,10 +37,27 @@
     profile: { name: 'RAJAN', age: '34', email: 'rajan.worker@email.com', phone: '+91 98765 43210', loc: '12, Delhi, India' },
     workInfo: { role: 'Masonry Expert - Construction Supervisor', exp: '14' },
     work: [
-      { role: 'Construction Supervisor', org: 'Omaxe Ltd.',       period: 'Mar 2023 - Present',   loc: 'Delhi',    tier: 'verified', active: true },
-      { role: 'Mason Foreman',           org: 'Hiranandani Group', period: 'Jun 2018 - Feb 2023',  loc: 'Thane',    tier: 'verified', active: false },
-      { role: 'Senior Mason',            org: 'JMD Builders',      period: 'Jan 2013 - May 2018',  loc: 'Gurugram', tier: 'document', active: false },
-      { role: 'Mason',                   org: 'L&T Construction',  period: 'Feb 2011 - Dec 2012',  loc: 'Noida',    tier: 'self',     active: false },
+      { role: 'Construction Supervisor', org: 'NBCC (India) Ltd. — Govt. Housing Project', period: 'Mar 2023 - Present', loc: 'Delhi',
+        address: 'NBCC Housing Site, Sector 62', state: 'Delhi', city: 'Delhi', pincode: '110062',
+        sector: 'govt', relation: 'direct', source: 'hrms-govt', verifyStatus: 'verified', gstin: '', tier: 'verified', active: true },
+      { role: 'Mason Foreman', org: 'Hiranandani Group', period: 'Jun 2018 - Feb 2023', loc: 'Thane',
+        address: 'Hiranandani Estate, Site Office', state: 'Maharashtra', city: 'Thane', pincode: '400607',
+        sector: 'nongovt', relation: 'direct', source: 'hrms-nongovt', verifyStatus: 'verified', gstin: '', tier: 'verified', active: false },
+      { role: 'Site Loader/Helper (Gig)', org: 'Porter Logistics Platform', period: 'Feb 2018 - May 2018', loc: 'Mumbai',
+        address: 'Andheri East Warehouse', state: 'Maharashtra', city: 'Mumbai', pincode: '400069',
+        sector: 'nongovt', relation: 'gig', source: 'platform', verifyStatus: 'verified', gstin: '', tier: 'verified', active: false },
+      { role: 'Independent Masonry Contractor', org: 'Self-Employed — Rajan Masonry Works', period: 'Jan 2016 - Jan 2018', loc: 'Gurugram',
+        address: 'Shop 14, Sohna Road', state: 'Haryana', city: 'Gurugram', pincode: '122018',
+        sector: 'nongovt', relation: 'self', source: 'gstin-udyam', verifyStatus: 'verified', gstin: '07ABCDE1234F1Z5', tier: 'verified', active: false },
+      { role: 'Senior Mason', org: 'JMD Builders (via Sharma Manpower Agency)', period: 'Jan 2013 - Dec 2015', loc: 'Gurugram',
+        address: 'DLF Phase 2, Site Office', state: 'Haryana', city: 'Gurugram', pincode: '122002',
+        sector: 'nongovt', relation: 'agency', source: 'agency-hrms', verifyStatus: 'verified', gstin: '', tier: 'verified', active: false },
+      { role: 'Mason', org: 'L&T Construction (via local contractor)', period: 'Feb 2011 - Dec 2012', loc: 'Noida',
+        address: 'Sector 62, Site Office', state: 'Uttar Pradesh', city: 'Noida', pincode: '201301',
+        sector: 'nongovt', relation: 'agency', source: 'dav', verifyStatus: 'verified', gstin: '', tier: 'verified', active: false },
+      { role: 'Farm Labourer', org: 'Family farmland', period: '2007 - 2010', loc: 'Lucknow, Uttar Pradesh',
+        address: 'Village Rampur, Post Malihabad', state: 'Uttar Pradesh', city: 'Lucknow', pincode: '226102',
+        sector: 'nongovt', relation: 'informal', source: 'dav', verifyStatus: 'verified', gstin: '', tier: 'verified', active: false },
     ],
     skills: ['Masonry', 'Scaffolding', 'Plastering', 'Tile Work', 'Concrete Finishing', 'Blueprint Reading'],
     consent: { employers: true, schemes: true, recruiters: false, notify: true },
@@ -52,6 +69,69 @@
 
   const val = id => { const e = document.getElementById(id); return e ? e.value.trim() : ''; };
 
+  // ---- segmentation: sector/relationship -> verification source ----
+  const SOURCE_META = {
+    'hrms-govt': { label: 'Internal HRMS (Govt/PSU)', ic: 'landmark' },
+    'hrms-nongovt': { label: 'HRMS + EPFO/UAN', ic: 'building' },
+    'agency-hrms': { label: 'Agency HRMS', ic: 'building' },
+    platform: { label: 'Platform Records', ic: 'briefcase' },
+    'gstin-udyam': { label: 'GSTIN/Udyam', ic: 'file' },
+    dav: { label: 'Digital Address Verification', ic: 'mappin' },
+  };
+  const RELATIONS = [
+    { v: 'direct', label: 'Direct employee (own rolls)' },
+    { v: 'agency', label: 'Staffing / manpower agency (contractual)' },
+    { v: 'gig', label: 'Gig / platform work' },
+    { v: 'self', label: 'Self-employed' },
+    { v: 'informal', label: 'Farmer / other informal work' },
+  ];
+  // resolves the verification source for a given entry's current sector/relation.
+  // agency entries keep a pre-seeded 'agency-hrms' source if present; otherwise (including
+  // any freshly-added entry) they fall back to DAV — the agency-HRMS instant-fetch path is
+  // only demonstrated via seed data, there's no user-facing "does your agency have an HRMS" toggle.
+  function resolveSource(w) {
+    if (w.relation === 'direct') return w.sector === 'govt' ? 'hrms-govt' : 'hrms-nongovt';
+    if (w.relation === 'agency') return w.source === 'agency-hrms' ? 'agency-hrms' : 'dav';
+    if (w.relation === 'gig') return 'platform';
+    if (w.relation === 'self') return 'gstin-udyam';
+    return 'dav';
+  }
+
+  const spinner = (label) => `<span class="wset-spin"></span> ${label}`;
+
+  // ---- DAV (Digital Address Verification) modal journey ----
+  // step: 'intro' | 'sending' | 'otp' | 'verifying' | 'done'
+  const DAV = { step: 'intro', i: null, otp: '', queue: [] };
+
+  function davModal() {
+    const w = S.work[DAV.i]; if (!w) return;
+    let body, foot;
+    if (DAV.step === 'intro' || DAV.step === 'sending') {
+      const sending = DAV.step === 'sending';
+      body = `
+        <div class="banner banner--info" style="margin-bottom:16px">${App.icon('mappin')}<div>We'll verify this work entry against the address you've provided.</div></div>
+        <div class="dav-kv">
+          <div class="row between gap-12"><span class="muted">Address</span><b>${App.esc(w.address || '—')}</b></div>
+          <div class="row between gap-12"><span class="muted">City / State</span><b>${App.esc(w.city || '—')}, ${App.esc(w.state || '—')}</b></div>
+          <div class="row between gap-12"><span class="muted">Pincode</span><span class="mono">${App.esc(w.pincode || '—')}</span></div>
+        </div>`;
+      foot = `<button class="btn" ${sending ? 'disabled' : ''} onclick="App.modal.close()">Cancel</button>
+              <button class="btn btn--primary" ${sending ? 'disabled' : ''} onclick="WorkerSettings.davSend()">${sending ? spinner('Sending code…') : `${App.icon('send')} Start Verification`}</button>`;
+    } else if (DAV.step === 'otp' || DAV.step === 'verifying') {
+      const verifying = DAV.step === 'verifying';
+      body = `
+        <div class="banner banner--green" style="margin-bottom:16px">${App.icon('checkcircle')}<div>Verification code sent to the registered contact for this address</div></div>
+        <div class="field"><label class="label">Enter Code</label>
+          <input class="input mono dav-otp num" id="davOtp" inputmode="numeric" maxlength="6" placeholder="6-digit code" value="${App.esc(DAV.otp)}" ${verifying ? 'disabled' : ''} oninput="WorkerSettings.onDavOtp(this)"></div>`;
+      foot = `<button class="btn" ${verifying ? 'disabled' : ''} onclick="App.modal.close()">Cancel</button>
+              <button class="btn btn--primary" id="davVerifyBtn" ${(DAV.otp.length !== 6 || verifying) ? 'disabled' : ''} onclick="WorkerSettings.davVerify()">${verifying ? spinner('Verifying…') : `${App.icon('lock')} Verify`}</button>`;
+    } else {
+      body = `<div class="banner banner--green" style="margin-bottom:4px">${App.icon('checkcircle')}<div><b>Address verified</b><div style="font-size:12px;opacity:.85;margin-top:3px">${App.esc(w.role || 'This entry')} at ${App.esc(w.org || '—')} is now verified via Digital Address Verification.</div></div></div>`;
+      foot = `<button class="btn btn--primary" onclick="WorkerSettings.davNext()">${App.icon('check')} Done</button>`;
+    }
+    App.modal.open(body, { title: 'Verify Address', icon: 'mappin', foot });
+  }
+
   window.WorkerSettings = {
     setTab(t) { S.tab = t; App.reload(); },
 
@@ -59,6 +139,7 @@
     editProfile(k, v) { S.profile[k] = v; },
     editWorkInfo(k, v) { S.workInfo[k] = v; },
     editWork(i, k, v) { if (S.work[i]) S.work[i][k] = v; },
+    setGstin(i, v) { if (S.work[i]) S.work[i].gstin = v; },
 
     uploadPhoto() { App.toast('Photo upload is a demo affordance in this prototype', 'upload'); },
 
@@ -68,15 +149,64 @@
         if (section === 'work') { localStorage.setItem('workExperience', JSON.stringify(S.work)); localStorage.setItem('winWorkInfo', JSON.stringify(S.workInfo)); }
         if (section === 'skills') localStorage.setItem('workerSkills', JSON.stringify(S.skills));
       } catch (e) {}
+
+      if (section === 'work') {
+        const toVerify = S.work.map((w, i) => i).filter(i => S.work[i].verifyStatus !== 'verified');
+        const davQueue = toVerify.filter(i => resolveSource(S.work[i]) === 'dav');
+        const instant = toVerify.filter(i => resolveSource(S.work[i]) !== 'dav');
+        instant.forEach(i => WorkerSettings.verifyEntry(i));
+        App.toast(toVerify.length ? `Work experience saved — verifying ${toVerify.length} ${toVerify.length === 1 ? 'entry' : 'entries'}…` : 'Work experience saved to your portfolio');
+        if (davQueue.length) { DAV.queue = davQueue.slice(1); WorkerSettings.openDAV(davQueue[0]); }
+      } else {
+        App.toast(section === 'skills' ? 'Skills updated' : 'Profile saved');
+      }
       S.saved[section] = true; App.reload();
-      App.toast(section === 'skills' ? 'Skills updated' : section === 'work' ? 'Work experience saved to your portfolio' : 'Profile saved');
       setTimeout(() => { S.saved[section] = false; if (App.state.route === 'worker-settings') App.reload(); }, 2000);
     },
 
     // ---- work experience ----
-    addWork() { S.work.push({ role: '', org: '', period: '', loc: '', tier: 'self', active: false }); App.reload(); },
+    addWork() {
+      S.work.push({
+        role: '', org: '', period: '', loc: '', address: '', state: '', city: '', pincode: '',
+        sector: 'nongovt', relation: 'direct', source: '', gstin: '', verifyStatus: 'unverified', tier: 'self', active: false,
+      });
+      App.reload();
+    },
     removeWork(i) { if (S.work.length <= 1) return; const wasActive = S.work[i] && S.work[i].active; S.work.splice(i, 1); if (wasActive && S.work[0]) S.work[0].active = true; App.reload(); },
     setCurrent(i, on) { if (on) S.work.forEach((w, j) => w.active = (j === i)); else if (S.work[i]) S.work[i].active = false; App.reload(); },
+    setSector(i, v) { const w = S.work[i]; if (!w) return; w.sector = v; w.source = ''; w.verifyStatus = 'unverified'; App.reload(); },
+    setRelation(i, v) { const w = S.work[i]; if (!w) return; w.relation = v; w.source = ''; w.gstin = ''; w.verifyStatus = 'unverified'; App.reload(); },
+
+    // ---- verification (kicks off on Save) ----
+    verifyEntry(i) {
+      const w = S.work[i]; if (!w) return;
+      const source = resolveSource(w);
+      if (source === 'dav') { WorkerSettings.openDAV(i); return; }
+      if (source === 'gstin-udyam' && !w.gstin) { App.toast('Enter a GSTIN/Udyam number to verify this entry', 'alert'); return; }
+      w.source = source; w.verifyStatus = 'pending'; App.reload();
+      setTimeout(() => { w.verifyStatus = 'verified'; w.tier = 'verified'; App.reload(); }, 1400);
+    },
+    openDAV(i) { DAV.step = 'intro'; DAV.i = i; DAV.otp = ''; davModal(); },
+    onDavOtp(el) {
+      const v = el.value.replace(/\D/g, '').slice(0, 6);
+      el.value = v; DAV.otp = v;
+      const b = document.getElementById('davVerifyBtn'); if (b) b.disabled = v.length !== 6;
+    },
+    davSend() { DAV.step = 'sending'; davModal(); setTimeout(() => { DAV.step = 'otp'; davModal(); }, 1500); },
+    davVerify() {
+      if (DAV.otp.length !== 6) { App.toast('Enter the 6-digit code', 'alert'); return; }
+      DAV.step = 'verifying'; davModal();
+      setTimeout(() => {
+        const w = S.work[DAV.i];
+        if (w) { w.source = 'dav'; w.verifyStatus = 'verified'; w.tier = 'verified'; }
+        DAV.step = 'done'; davModal(); App.reload();
+      }, 2000);
+    },
+    davNext() {
+      App.modal.close();
+      if (DAV.queue.length) { const next = DAV.queue.shift(); WorkerSettings.openDAV(next); }
+      else { App.toast('Address verified via DAV'); App.reload(); }
+    },
 
     // ---- skills ----
     addSkill() {
@@ -125,6 +255,17 @@
     if (tier === 'verified') return `<span class="verified" style="font-size:11.5px">${App.icon('shieldcheck')} Verified</span>`;
     if (tier === 'document') return App.ui.pill('Document', 'blue', true);
     return App.ui.pill('Self Declared', 'amber', true);
+  }
+
+  // per-entry verification status chip, shown instead of a manual per-entry action button —
+  // Save() is what actually kicks off verification (see WorkerSettings.save)
+  function verifyChip(w) {
+    if (w.verifyStatus === 'verified') {
+      const src = SOURCE_META[w.source] || SOURCE_META[resolveSource(w)];
+      return `<span class="verified" style="font-size:11.5px">${App.icon('shieldcheck')} Verified via ${App.esc(src.label)}</span>`;
+    }
+    if (w.verifyStatus === 'pending') return `<span class="pill pill--blue pill--dot">${spinner('Verifying…')}</span>`;
+    return App.ui.pill('Not yet verified — click Save', 'gray', true);
   }
 
   function saveBtn(section, label) {
@@ -218,10 +359,49 @@
             <input class="input" value="${App.esc(w.loc)}" placeholder="e.g. Delhi" oninput="WorkerSettings.editWork(${i},'loc',this.value)">
           </div>
         </div>
+
+        <div class="grid grid-2" style="margin-top:12px">
+          <div class="field" style="margin-bottom:0">
+            <label class="label wset-flabel">Sector</label>
+            <select class="select" onchange="WorkerSettings.setSector(${i},this.value)">
+              <option value="nongovt" ${w.sector !== 'govt' ? 'selected' : ''}>Non-Government</option>
+              <option value="govt" ${w.sector === 'govt' ? 'selected' : ''}>Government</option>
+            </select>
+          </div>
+          <div class="field" style="margin-bottom:0">
+            <label class="label wset-flabel">Employment Relationship</label>
+            <select class="select" onchange="WorkerSettings.setRelation(${i},this.value)">
+              ${RELATIONS.map(r => `<option value="${r.v}" ${w.relation === r.v ? 'selected' : ''}>${App.esc(r.label)}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+
+        <div class="label" style="margin-top:14px;margin-bottom:2px">Work Address</div>
+        <div class="hint" style="margin-bottom:8px">${resolveSource(w) === 'dav' ? 'Required to verify this entry via Digital Address Verification.' : 'Used for your record — verification for this entry uses ' + App.esc((SOURCE_META[resolveSource(w)] || {}).label || '') + '.'}</div>
+        <div class="grid grid-2">
+          <div class="field" style="margin-bottom:0"><label class="label wset-flabel">Address</label>
+            <input class="input" value="${App.esc(w.address)}" placeholder="Street / site address" oninput="WorkerSettings.editWork(${i},'address',this.value)"></div>
+          <div class="field" style="margin-bottom:0"><label class="label wset-flabel">State</label>
+            <input class="input" value="${App.esc(w.state)}" placeholder="e.g. Haryana" oninput="WorkerSettings.editWork(${i},'state',this.value)"></div>
+        </div>
+        <div class="grid grid-2" style="margin-top:12px">
+          <div class="field" style="margin-bottom:0"><label class="label wset-flabel">City</label>
+            <input class="input" value="${App.esc(w.city)}" placeholder="e.g. Gurugram" oninput="WorkerSettings.editWork(${i},'city',this.value)"></div>
+          <div class="field" style="margin-bottom:0"><label class="label wset-flabel">Pincode</label>
+            <input class="input mono" value="${App.esc(w.pincode)}" placeholder="e.g. 122002" oninput="WorkerSettings.editWork(${i},'pincode',this.value)"></div>
+        </div>
+
+        ${w.relation === 'self' ? `
+        <div class="field" style="margin-top:12px;margin-bottom:0">
+          <label class="label wset-flabel">GSTIN / Udyam Number</label>
+          <input class="input mono" value="${App.esc(w.gstin)}" placeholder="e.g. 07ABCDE1234F1Z5" oninput="WorkerSettings.setGstin(${i},this.value)">
+        </div>` : ''}
+
         <div class="row between" style="margin-top:13px;padding-top:12px;border-top:1px solid var(--line-2)">
           <label class="wset-check"><input type="checkbox" ${w.active ? 'checked' : ''} onchange="WorkerSettings.setCurrent(${i},this.checked)"> Current position</label>
           <button class="wset-trash" ${single ? 'disabled' : ''} onclick="WorkerSettings.removeWork(${i})" title="${single ? 'At least one entry is required' : 'Remove this entry'}">${App.icon('trash')} Remove</button>
         </div>
+        <div class="row" style="margin-top:11px">${verifyChip(w)}</div>
       </div>`).join('');
 
     return `
@@ -422,6 +602,9 @@
           .wset-trash:hover .ico{ color:var(--red-600); }
           .wset-trash[disabled]{ opacity:.4; cursor:not-allowed; }
           .wset-trash[disabled]:hover{ background:transparent; color:var(--muted); }
+          .wset-spin{ width:14px; height:14px; border:2px solid rgba(128,128,128,.35); border-top-color:currentColor; border-radius:50%; display:inline-block; vertical-align:-2px; animation:spin 1s linear infinite; }
+          .dav-kv{ display:flex; flex-direction:column; gap:10px; font-size:13.5px; }
+          .dav-otp{ text-align:center; font-size:16px; letter-spacing:.12em; }
           .wset-chip{ display:inline-flex; align-items:center; gap:6px; padding:7px 7px 7px 13px; border-radius:var(--r-full);
             background:var(--accent-weak); color:var(--accent-strong); font-size:13px; font-weight:600; }
           .wset-chip button{ width:18px; height:18px; border-radius:50%; display:grid; place-items:center; color:var(--accent-strong); opacity:.65; transition:.12s; }

@@ -7,10 +7,38 @@
 
   // ---- verification provenance shown on each work entry ----
   const VMETA = {
-    employer: { label: 'Employer-verified', kind: 'green', ic: 'shieldcheck' },
-    document: { label: 'Document-verified', kind: 'blue', ic: 'filecheck' },
-    self:     { label: 'Self-declared',     kind: 'gray', ic: 'user' },
+    'hrms-govt':    { label: 'Govt HRMS-verified',    kind: 'green', ic: 'landmark' },
+    'hrms-nongovt': { label: 'HRMS/EPFO-verified',    kind: 'green', ic: 'building' },
+    'agency-hrms':  { label: 'Agency HRMS-verified',  kind: 'green', ic: 'building' },
+    platform:       { label: 'Platform-verified',     kind: 'green', ic: 'briefcase' },
+    'gstin-udyam':  { label: 'GSTIN/Udyam-verified',  kind: 'green', ic: 'file' },
+    dav:            { label: 'Address-verified',      kind: 'blue',  ic: 'mappin' },
+    self:           { label: 'Self-declared',          kind: 'gray',  ic: 'user' },
   };
+  const RELATION_LABEL = { direct: 'Direct Employee', agency: 'Staffing Agency', gig: 'Gig / Platform', self: 'Self-Employed', informal: 'Informal / Farm' };
+
+  // "Mar 2023 - Present" / "2007 - 2010" -> "2 yr 4 mo"
+  function duration(period) {
+    const MON = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
+    const parse = (s) => {
+      s = (s || '').trim();
+      if (/present/i.test(s)) return new Date();
+      const m = s.match(/([A-Za-z]{3,})\s+(\d{4})/);
+      if (m) return new Date(Number(m[2]), MON[m[1].slice(0, 3).toLowerCase()] || 0, 1);
+      const y = s.match(/(\d{4})/);
+      return y ? new Date(Number(y[1]), 0, 1) : null;
+    };
+    const parts = (period || '').split(/[–-]/);
+    const from = parse(parts[0] || ''), to = parse(parts[1] || parts[0] || '');
+    if (!from || !to) return '';
+    let months = (to.getFullYear() - from.getFullYear()) * 12 + (to.getMonth() - from.getMonth());
+    months = Math.max(months, 1);
+    const yr = Math.floor(months / 12), mo = months % 12;
+    return [yr ? `${yr} yr` : '', mo ? `${mo} mo` : ''].filter(Boolean).join(' ') || '< 1 mo';
+  }
+  function segLabel(en) {
+    return `${en.sector === 'govt' ? 'Government' : 'Non-Government'}, ${RELATION_LABEL[en.relation] || ''}`;
+  }
 
   // ---- editable working copy (hydrated from the verified record on first render) ----
   const state = {
@@ -23,14 +51,27 @@
     },
     summary: '',
     entries: [
-      { role: 'Construction Supervisor', company: 'Omaxe Ltd.', period: 'Mar 2023 - Present', location: 'Delhi', status: 'active', verification: 'employer', open: true,
+      { role: 'Construction Supervisor', company: 'NBCC (India) Ltd. — Govt. Housing Project', period: 'Mar 2023 - Present', location: 'Delhi', status: 'active',
+        sector: 'govt', relation: 'direct', verification: 'hrms-govt', open: true,
         description: 'Lead site supervision for a 22-storey residential tower — coordinate 40+ masons, enforce quality and safety standards, and track daily progress against the project schedule.' },
-      { role: 'Mason Foreman', company: 'Hiranandani Group', period: 'Jun 2018 - Feb 2023', location: 'Thane', status: 'completed', verification: 'employer', open: false,
+      { role: 'Mason Foreman', company: 'Hiranandani Group', period: 'Jun 2018 - Feb 2023', location: 'Thane', status: 'completed',
+        sector: 'nongovt', relation: 'direct', verification: 'hrms-nongovt', open: false,
         description: 'Managed masonry crews across three commercial sites in Thane; trained junior masons and cut rework by keeping finishes within tolerance.' },
-      { role: 'Senior Mason', company: 'JMD Builders', period: 'Jan 2013 - May 2018', location: 'Gurugram', status: 'completed', verification: 'document', open: false,
+      { role: 'Site Loader/Helper (Gig)', company: 'Porter Logistics Platform', period: 'Feb 2018 - May 2018', location: 'Mumbai', status: 'completed',
+        sector: 'nongovt', relation: 'gig', verification: 'platform', open: false,
+        description: 'Short-term platform-based loading and moving assignments during an off-season gap between construction contracts.' },
+      { role: 'Independent Masonry Contractor', company: 'Self-Employed — Rajan Masonry Works', period: 'Jan 2016 - Jan 2018', location: 'Gurugram', status: 'completed',
+        sector: 'nongovt', relation: 'self', verification: 'gstin-udyam', gstin: '07ABCDE1234F1Z5', open: false,
+        description: 'Ran a small masonry and labour-supply contracting business, taking on subcontracted work for residential builders.' },
+      { role: 'Senior Mason', company: 'JMD Builders (via Sharma Manpower Agency)', period: 'Jan 2013 - Dec 2015', location: 'Gurugram', status: 'completed',
+        sector: 'nongovt', relation: 'agency', verification: 'agency-hrms', open: false,
         description: 'Executed brickwork, block-work and plastering for mid-rise housing; recognised for clean joints and consistent load-bearing walls.' },
-      { role: 'Mason', company: 'L&T Construction', period: 'Feb 2011 - Dec 2012', location: 'Noida', status: 'completed', verification: 'self', open: false,
+      { role: 'Mason', company: 'L&T Construction (via local contractor)', period: 'Feb 2011 - Dec 2012', location: 'Noida', status: 'completed',
+        sector: 'nongovt', relation: 'agency', verification: 'dav', open: false,
         description: 'Entry-level mason on highway and warehouse projects — laid foundations, mixed and finished concrete, and read basic site drawings.' },
+      { role: 'Farm Labourer', company: 'Family farmland', period: '2007 - 2010', location: 'Lucknow, Uttar Pradesh', status: 'completed',
+        sector: 'nongovt', relation: 'informal', verification: 'dav', open: false,
+        description: 'Worked on family farmland — sowing, harvesting and general agricultural labour before migrating to urban construction work.' },
     ],
     skills: ['Masonry', 'Scaffolding', 'Plastering', 'Tile Work', 'Concrete Finishing', 'Blueprint Reading'],
     education: { level: 'Class 12th (Senior Secondary)', board: 'UP Board', year: '2008', school: 'Govt. Inter College, Lucknow', percentage: '68.4' },
@@ -85,7 +126,7 @@
     },
     toggleEntry(i) { state.entries[i].open = !state.entries[i].open; App.reload(); },
     addEntry() {
-      state.entries.push({ role: '', company: '', period: '', location: '', description: '', status: 'completed', verification: 'self', open: true });
+      state.entries.push({ role: '', company: '', period: '', location: '', description: '', status: 'completed', verification: 'self', sector: 'nongovt', relation: 'direct', open: true });
       App.reload(); App.toast('New work entry added');
     },
     removeEntry(i) { if (state.entries.length <= 1) return; state.entries.splice(i, 1); App.reload(); App.toast('Work entry removed'); },
@@ -142,6 +183,7 @@
                 ${en.status === 'active' ? App.ui.pill('CURRENT', 'green', true) : ''}
               </div>
               <div class="muted" style="font-size:12px;margin-top:2px">${esc(en.company || 'Company')} | ${esc(en.period || 'Period')}</div>
+              <div class="faint" style="font-size:11.5px;margin-top:1px">${esc(en.location || '—')} · ${esc(duration(en.period))} · ${esc(segLabel(en))}</div>
             </div>
             <span class="cvb-vpill">${App.ui.pill(vm.label, vm.kind, true)}</span>
             ${state.entries.length > 1 ? `<button class="iconbtn" style="width:30px;height:30px" title="Remove entry" onclick="event.stopPropagation();WorkerCV.removeEntry(${i})">${App.icon('trash')}</button>` : ''}

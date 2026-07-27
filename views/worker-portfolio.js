@@ -57,6 +57,48 @@
     return App.ui.pill(b.t, 'amber', true);
   }
 
+  // "Mar 2023 – Present" / "2007 – 2010" -> "2 yr 4 mo"
+  function duration(period) {
+    const MON = { jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5, jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11 };
+    const parse = (s) => {
+      s = s.trim();
+      if (/present/i.test(s)) return new Date();
+      const m = s.match(/([A-Za-z]{3,})\s+(\d{4})/);
+      if (m) return new Date(Number(m[2]), MON[m[1].slice(0, 3).toLowerCase()] || 0, 1);
+      const y = s.match(/(\d{4})/);
+      return y ? new Date(Number(y[1]), 0, 1) : null;
+    };
+    const parts = period.split(/[–-]/);
+    const from = parse(parts[0] || ''), to = parse(parts[1] || parts[0] || '');
+    if (!from || !to) return '';
+    let months = (to.getFullYear() - from.getFullYear()) * 12 + (to.getMonth() - from.getMonth());
+    months = Math.max(months, 1);
+    const yr = Math.floor(months / 12), mo = months % 12;
+    return [yr ? `${yr} yr` : '', mo ? `${mo} mo` : ''].filter(Boolean).join(' ') || '< 1 mo';
+  }
+
+  const SOURCE_META = {
+    'hrms-govt': { label: 'Internal HRMS (Govt/PSU)', ic: 'landmark' },
+    'hrms-nongovt': { label: 'HRMS + EPFO/UAN', ic: 'building' },
+    'agency-hrms': { label: 'Agency HRMS', ic: 'building' },
+    platform: { label: 'Platform Records', ic: 'briefcase' },
+    'gstin-udyam': { label: 'GSTIN/Udyam', ic: 'file' },
+    dav: { label: 'Digital Address Verification', ic: 'mappin' },
+  };
+  const RELATION_LABEL = { direct: 'Direct Employee', agency: 'Staffing Agency', gig: 'Gig / Platform', self: 'Self-Employed', informal: 'Informal / Farm' };
+
+  // segment + source + location + duration tag row shown under each work-history entry
+  function entryTags(w) {
+    const src = SOURCE_META[w.source] || { label: 'Self Declared', ic: 'user' };
+    const seg = `${w.sector === 'govt' ? 'Government' : 'Non-Government'} · ${RELATION_LABEL[w.relation] || ''}`;
+    return `<div class="row gap-8 wrap" style="margin-top:8px">
+      <span class="pill pill--${w.source === 'dav' ? 'blue' : 'green'} pill--dot">${App.icon(src.ic)} ${App.esc(src.label)}</span>
+      <span class="pill pill--gray">${App.icon(w.sector === 'govt' ? 'landmark' : 'briefcase')} ${App.esc(seg)}</span>
+      <span class="pill pill--gray">${App.icon('mappin')} ${App.esc(w.loc)}</span>
+      <span class="pill pill--gray">${App.icon('clock')} ${App.esc(duration(w.period))}</span>
+    </div>`;
+  }
+
   window.WorkerPortfolio = {
     toggleSkills() { skillsOpen = !skillsOpen; App.reload(); },
     toggleWork() { workOpen = !workOpen; App.reload(); },
@@ -148,10 +190,20 @@
       const u = ctx.user;
 
       const work = [
-        { role: 'Construction Supervisor', org: 'Omaxe Ltd.', period: 'Mar 2023 – Present', loc: 'Delhi', badge: { t: 'Verified · Employer / Ministry Database', c: 'green' }, active: true },
-        { role: 'Mason Foreman', org: 'Hiranandani Group', period: 'Jun 2018 – Feb 2023', loc: 'Thane', badge: { t: 'Verified · Employer / Ministry Database', c: 'green' } },
-        { role: 'Senior Mason', org: 'JMD Builders', period: 'Jan 2013 – May 2018', loc: 'Gurugram', badge: { t: 'Document / Certificate', c: 'blue' } },
-        { role: 'Mason', org: 'L&T Construction', period: 'Feb 2011 – Dec 2012', loc: 'Noida', badge: { t: 'Self Declared', c: 'amber' } },
+        { role: 'Construction Supervisor', org: 'NBCC (India) Ltd. — Govt. Housing Project', period: 'Mar 2023 – Present', loc: 'Delhi',
+          sector: 'govt', relation: 'direct', source: 'hrms-govt', active: true, badge: { t: 'Verified · Internal HRMS (Govt/PSU)', c: 'green' } },
+        { role: 'Mason Foreman', org: 'Hiranandani Group', period: 'Jun 2018 – Feb 2023', loc: 'Thane',
+          sector: 'nongovt', relation: 'direct', source: 'hrms-nongovt', badge: { t: 'Verified · HRMS + EPFO/UAN', c: 'green' } },
+        { role: 'Site Loader/Helper (Gig)', org: 'Porter Logistics Platform', period: 'Feb 2018 – May 2018', loc: 'Mumbai',
+          sector: 'nongovt', relation: 'gig', source: 'platform', badge: { t: 'Verified · Platform Records', c: 'green' } },
+        { role: 'Independent Masonry Contractor', org: 'Self-Employed — Rajan Masonry Works', period: 'Jan 2016 – Jan 2018', loc: 'Gurugram',
+          sector: 'nongovt', relation: 'self', source: 'gstin-udyam', gstin: '07ABCDE1234F1Z5', badge: { t: 'Verified · GSTIN/Udyam', c: 'green' } },
+        { role: 'Senior Mason', org: 'JMD Builders (via Sharma Manpower Agency)', period: 'Jan 2013 – Dec 2015', loc: 'Gurugram',
+          sector: 'nongovt', relation: 'agency', source: 'agency-hrms', badge: { t: 'Verified · Agency HRMS', c: 'green' } },
+        { role: 'Mason', org: 'L&T Construction (via local contractor)', period: 'Feb 2011 – Dec 2012', loc: 'Noida',
+          sector: 'nongovt', relation: 'agency', source: 'dav', badge: { t: 'Verified · Digital Address Verification', c: 'blue' } },
+        { role: 'Farm Labourer', org: 'Family farmland', period: '2007 – 2010', loc: 'Lucknow, Uttar Pradesh',
+          sector: 'nongovt', relation: 'informal', source: 'dav', badge: { t: 'Verified · Digital Address Verification', c: 'blue' } },
       ];
       const visWork = workOpen ? work : work.slice(0, 3);
 
@@ -322,7 +374,7 @@
                         <div><b>${App.esc(w.role)} · ${App.esc(w.org)}</b><div class="when">${App.esc(w.period)} · ${App.esc(w.loc)}</div></div>
                         ${w.active ? App.ui.pill('Currently Active', 'green', true) : ''}
                       </div>
-                      <div class="mt-8">${wbadge(w.badge)}</div>
+                      <div class="mt-8">${wbadge(w.badge)}${entryTags(w)}</div>
                     </div>`).join('')}
                 </div>
                 ${work.length > 3 ? `<button class="btn btn--ghost btn--sm" style="margin-top:14px" onclick="WorkerPortfolio.toggleWork()">${workOpen ? 'Show Less' : 'View Complete History'} ${App.icon(workOpen ? 'chevron' : 'chevrondown')}</button>` : ''}
