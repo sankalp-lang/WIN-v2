@@ -15,7 +15,7 @@
     dav:            { label: 'Address-verified',      kind: 'blue',  ic: 'mappin' },
     self:           { label: 'Self-declared',          kind: 'gray',  ic: 'user' },
   };
-  const RELATION_LABEL = { direct: 'Direct Employee', agency: 'Staffing Agency', gig: 'Gig / Platform', self: 'Self-Employed', informal: 'Informal / Farm' };
+  const RELATION_LABEL = { direct: 'Direct Employee', agency: 'Staffing Agency', gig: 'Gig Worker', self: 'Self-Employed', informal: 'Farmer / Other' };
 
   // "Mar 2023 - Present" / "2007 - 2010" -> "2 yr 4 mo"
   function duration(period) {

@@ -79,11 +79,11 @@
     dav: { label: 'Digital Address Verification', ic: 'mappin' },
   };
   const RELATIONS = [
-    { v: 'direct', label: 'Direct employee (own rolls)' },
-    { v: 'agency', label: 'Staffing / manpower agency (contractual)' },
-    { v: 'gig', label: 'Gig / platform work' },
-    { v: 'self', label: 'Self-employed' },
-    { v: 'informal', label: 'Farmer / other informal work' },
+    { v: 'direct', label: 'Direct Employee' },
+    { v: 'agency', label: 'Staffing Agency' },
+    { v: 'gig', label: 'Gig Worker' },
+    { v: 'self', label: 'Self-Employed' },
+    { v: 'informal', label: 'Farmer / Other' },
   ];
   // resolves the verification source for a given entry's current sector/relation.
   // agency entries keep a pre-seeded 'agency-hrms' source if present; otherwise (including
