@@ -166,9 +166,9 @@
         { role: 'Senior Mason', org: 'JMD Builders (via Sharma Manpower Agency)', period: 'Jan 2013 – Dec 2015', loc: 'Gurugram',
           sector: 'nongovt', relation: 'agency', source: 'agency-hrms', badge: { t: 'Verified · Agency HRMS', c: 'green' } },
         { role: 'Mason', org: 'L&T Construction (via local contractor)', period: 'Feb 2011 – Dec 2012', loc: 'Noida',
-          sector: 'nongovt', relation: 'agency', source: 'dav', badge: { t: 'Verified · Digital Address Verification', c: 'blue' } },
+          sector: 'nongovt', relation: 'agency', source: 'dav', badge: { t: 'Verified · Digital Address Verification', c: 'green' } },
         { role: 'Farm Labourer', org: 'Family farmland', period: '2007 – 2010', loc: 'Lucknow, Uttar Pradesh',
-          sector: 'nongovt', relation: 'informal', source: 'dav', badge: { t: 'Verified · Digital Address Verification', c: 'blue' } },
+          sector: 'nongovt', relation: 'informal', source: 'dav', badge: { t: 'Verified · Digital Address Verification', c: 'green' } },
       ];
       const visWork = workOpen ? work : work.slice(0, 3);
 

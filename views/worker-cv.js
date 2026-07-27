@@ -12,7 +12,7 @@
     'agency-hrms':  { label: 'Agency HRMS-verified',  kind: 'green', ic: 'building' },
     platform:       { label: 'Platform-verified',     kind: 'green', ic: 'briefcase' },
     'gstin-udyam':  { label: 'GSTIN/Udyam-verified',  kind: 'green', ic: 'file' },
-    dav:            { label: 'Address-verified',      kind: 'blue',  ic: 'mappin' },
+    dav:            { label: 'Address-verified',      kind: 'green', ic: 'mappin' },
     self:           { label: 'Self-declared',          kind: 'gray',  ic: 'user' },
   };
   const RELATION_LABEL = { direct: 'Direct Employee', agency: 'Staffing Agency', gig: 'Gig Worker', self: 'Self-Employed', informal: 'Farmer / Other' };
