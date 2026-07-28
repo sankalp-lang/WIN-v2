@@ -11,7 +11,7 @@
     'hrms-nongovt': { label: 'HRMS/EPFO-verified',    kind: 'green', ic: 'building' },
     'agency-hrms':  { label: 'Agency HRMS-verified',  kind: 'green', ic: 'building' },
     platform:       { label: 'Platform-verified',     kind: 'green', ic: 'briefcase' },
-    'pan-gst':      { label: 'GST via PAN-verified', kind: 'green', ic: 'file' },
+    'pan-gst':      { label: 'GST-verified', kind: 'green', ic: 'file' },
     dav:            { label: 'Address-verified',      kind: 'green', ic: 'mappin' },
     self:           { label: 'Self-declared',          kind: 'gray',  ic: 'user' },
   };

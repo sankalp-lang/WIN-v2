@@ -75,7 +75,7 @@
     'hrms-nongovt': { label: 'HRMS/EPFO', ic: 'building' },
     'agency-hrms': { label: 'Agency HRMS', ic: 'building' },
     platform: { label: 'Platform Records', ic: 'briefcase' },
-    'pan-gst': { label: 'GST Details (via PAN)', ic: 'file' },
+    'pan-gst': { label: 'GST Details', ic: 'file' },
     uan: { label: 'EPFO / UAN Lookup', ic: 'landmark' },
     ppf: { label: 'PPF Lookup', ic: 'landmark' },
     nps: { label: 'NPS / PRAN Lookup', ic: 'landmark' },

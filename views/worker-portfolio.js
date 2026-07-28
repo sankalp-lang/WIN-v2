@@ -162,7 +162,7 @@
         { role: 'Site Loader/Helper (Gig)', org: 'Porter Logistics Platform', period: 'Feb 2018 – May 2018', loc: 'Mumbai',
           sector: 'nongovt', relation: 'gig', source: 'platform', badge: { t: 'Verified · Platform Records', c: 'green' } },
         { role: 'Independent Masonry Contractor', org: 'Self-Employed — Rajan Masonry Works', period: 'Jan 2016 – Jan 2018', loc: 'Gurugram',
-          sector: 'nongovt', relation: 'self', source: 'pan-gst', pan: 'ABCPK4321F', badge: { t: 'Verified · GST Details (via PAN)', c: 'green' } },
+          sector: 'nongovt', relation: 'self', source: 'pan-gst', pan: 'ABCPK4321F', badge: { t: 'Verified · GST Details', c: 'green' } },
         { role: 'Senior Mason', org: 'JMD Builders (via Sharma Manpower Agency)', period: 'Jan 2013 – Dec 2015', loc: 'Gurugram',
           sector: 'nongovt', relation: 'agency', source: 'agency-hrms', badge: { t: 'Verified · Agency HRMS', c: 'green' } },
         { role: 'Mason', org: 'L&T Construction (via local contractor)', period: 'Feb 2011 – Dec 2012', loc: 'Noida',
