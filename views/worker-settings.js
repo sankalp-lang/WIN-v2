@@ -542,8 +542,6 @@
         </div>
       </div>
 
-      ${w.relation === 'informal' ? addressBlock(w, i) : ''}
-
       ${w.relation === 'self' ? `
       <div class="field" style="margin-top:14px;margin-bottom:0">
         <label class="label wset-flabel">PAN Number</label>
@@ -570,7 +568,6 @@
     ENTRY_MODAL_I = i;
     App.modal.open(entryFormBody(w, i), {
       title: w.role ? w.role : 'Add Work Entry', icon: 'briefcase', wide: true,
-      foot: `<button class="btn btn--primary" onclick="WorkerSettings.closeEntryModal()">${App.icon('check')} Done</button>`,
     });
   }
   function repaintEntryModal(i) { if (ENTRY_MODAL_I === i) entryModal(i); }
