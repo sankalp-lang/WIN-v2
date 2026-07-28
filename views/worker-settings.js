@@ -39,25 +39,25 @@
     work: [
       { role: 'Construction Supervisor', org: 'NBCC (India) Ltd. — Govt. Housing Project', period: 'Mar 2023 - Present', loc: 'Delhi',
         address: 'NBCC Housing Site, Sector 62', state: 'Delhi', city: 'Delhi', pincode: '110062',
-        sector: 'govt', relation: 'direct', source: 'hrms-govt', verifyStatus: 'verified', gstin: '', tier: 'verified', active: true },
+        sector: 'govt', relation: 'direct', source: 'hrms-govt', verifyStatus: 'verified', gstin: '', noGstin: false, noPlatform: false, platformName: '', platformMobile: '', tier: 'verified', active: true },
       { role: 'Mason Foreman', org: 'Hiranandani Group', period: 'Jun 2018 - Feb 2023', loc: 'Thane',
         address: 'Hiranandani Estate, Site Office', state: 'Maharashtra', city: 'Thane', pincode: '400607',
-        sector: 'nongovt', relation: 'direct', source: 'hrms-nongovt', verifyStatus: 'verified', gstin: '', tier: 'verified', active: false },
+        sector: 'nongovt', relation: 'direct', source: 'hrms-nongovt', verifyStatus: 'verified', gstin: '', noGstin: false, noPlatform: false, platformName: '', platformMobile: '', tier: 'verified', active: false },
       { role: 'Site Loader/Helper (Gig)', org: 'Porter Logistics Platform', period: 'Feb 2018 - May 2018', loc: 'Mumbai',
         address: 'Andheri East Warehouse', state: 'Maharashtra', city: 'Mumbai', pincode: '400069',
-        sector: 'nongovt', relation: 'gig', source: 'platform', verifyStatus: 'verified', gstin: '', tier: 'verified', active: false },
+        sector: 'nongovt', relation: 'gig', source: 'platform', verifyStatus: 'verified', gstin: '', noGstin: false, noPlatform: false, platformName: 'Porter Logistics Platform', platformMobile: '+91 98765 11223', tier: 'verified', active: false },
       { role: 'Independent Masonry Contractor', org: 'Self-Employed — Rajan Masonry Works', period: 'Jan 2016 - Jan 2018', loc: 'Gurugram',
         address: 'Shop 14, Sohna Road', state: 'Haryana', city: 'Gurugram', pincode: '122018',
-        sector: 'nongovt', relation: 'self', source: 'gstin-udyam', verifyStatus: 'verified', gstin: '07ABCDE1234F1Z5', tier: 'verified', active: false },
+        sector: 'nongovt', relation: 'self', source: 'gstin-udyam', verifyStatus: 'verified', gstin: '07ABCDE1234F1Z5', noGstin: false, noPlatform: false, platformName: '', platformMobile: '', tier: 'verified', active: false },
       { role: 'Senior Mason', org: 'JMD Builders (via Sharma Manpower Agency)', period: 'Jan 2013 - Dec 2015', loc: 'Gurugram',
         address: 'DLF Phase 2, Site Office', state: 'Haryana', city: 'Gurugram', pincode: '122002',
-        sector: 'nongovt', relation: 'agency', source: 'agency-hrms', verifyStatus: 'verified', gstin: '', tier: 'verified', active: false },
+        sector: 'nongovt', relation: 'agency', source: 'agency-hrms', verifyStatus: 'verified', gstin: '', noGstin: false, noPlatform: false, platformName: '', platformMobile: '', tier: 'verified', active: false },
       { role: 'Mason', org: 'L&T Construction (via local contractor)', period: 'Feb 2011 - Dec 2012', loc: 'Noida',
         address: 'Sector 62, Site Office', state: 'Uttar Pradesh', city: 'Noida', pincode: '201301',
-        sector: 'nongovt', relation: 'agency', source: 'dav', verifyStatus: 'verified', gstin: '', tier: 'verified', active: false },
+        sector: 'nongovt', relation: 'agency', source: 'dav', verifyStatus: 'verified', gstin: '', noGstin: false, noPlatform: false, platformName: '', platformMobile: '', tier: 'verified', active: false },
       { role: 'Farm Labourer', org: 'Family farmland', period: '2007 - 2010', loc: 'Lucknow, Uttar Pradesh',
         address: 'Village Rampur, Post Malihabad', state: 'Uttar Pradesh', city: 'Lucknow', pincode: '226102',
-        sector: 'nongovt', relation: 'informal', source: 'dav', verifyStatus: 'verified', gstin: '', tier: 'verified', active: false },
+        sector: 'nongovt', relation: 'informal', source: 'dav', verifyStatus: 'verified', gstin: '', noGstin: false, noPlatform: false, platformName: '', platformMobile: '', tier: 'verified', active: false },
     ],
     skills: ['Masonry', 'Scaffolding', 'Plastering', 'Tile Work', 'Concrete Finishing', 'Blueprint Reading'],
     consent: { employers: true, schemes: true, recruiters: false, notify: true },
@@ -71,29 +71,31 @@
 
   // ---- segmentation: sector/relationship -> verification source ----
   const SOURCE_META = {
-    'hrms-govt': { label: 'Internal HRMS (Govt/PSU)', ic: 'landmark' },
-    'hrms-nongovt': { label: 'HRMS + EPFO/UAN', ic: 'building' },
+    'hrms-govt': { label: 'Internal HRMS', ic: 'landmark' },
+    'hrms-nongovt': { label: 'HRMS/EPFO', ic: 'building' },
     'agency-hrms': { label: 'Agency HRMS', ic: 'building' },
     platform: { label: 'Platform Records', ic: 'briefcase' },
     'gstin-udyam': { label: 'GSTIN/Udyam', ic: 'file' },
     dav: { label: 'Digital Address Verification', ic: 'mappin' },
   };
   const RELATIONS = [
-    { v: 'direct', label: 'Direct Employee' },
-    { v: 'agency', label: 'Staffing Agency' },
+    { v: 'direct', label: 'Direct, Full-Time Employee' },
+    { v: 'agency', label: 'Contract Worker' },
     { v: 'gig', label: 'Gig Worker' },
-    { v: 'self', label: 'Self-Employed' },
-    { v: 'informal', label: 'Farmer / Other' },
+    { v: 'self', label: 'Self-Employed Worker' },
+    { v: 'informal', label: 'Farmer / Other Worker' },
   ];
   // resolves the verification source for a given entry's current sector/relation.
   // agency entries keep a pre-seeded 'agency-hrms' source if present; otherwise (including
   // any freshly-added entry) they fall back to DAV — the agency-HRMS instant-fetch path is
   // only demonstrated via seed data, there's no user-facing "does your agency have an HRMS" toggle.
+  // gig/self-employed fall back to DAV when there's no platform record (e.g. informal/domestic
+  // work) or no GSTIN/Udyam number to look up, per the worker's own "I don't have..." toggle.
   function resolveSource(w) {
     if (w.relation === 'direct') return w.sector === 'govt' ? 'hrms-govt' : 'hrms-nongovt';
     if (w.relation === 'agency') return w.source === 'agency-hrms' ? 'agency-hrms' : 'dav';
-    if (w.relation === 'gig') return 'platform';
-    if (w.relation === 'self') return 'gstin-udyam';
+    if (w.relation === 'gig') return w.noPlatform ? 'dav' : 'platform';
+    if (w.relation === 'self') return w.noGstin ? 'dav' : 'gstin-udyam';
     return 'dav';
   }
 
@@ -168,14 +170,21 @@
     addWork() {
       S.work.push({
         role: '', org: '', period: '', loc: '', address: '', state: '', city: '', pincode: '',
-        sector: 'nongovt', relation: 'direct', source: '', gstin: '', verifyStatus: 'unverified', tier: 'self', active: false,
+        sector: 'nongovt', relation: 'direct', source: '', gstin: '', noGstin: false, noPlatform: false, platformName: '', platformMobile: '',
+        verifyStatus: 'unverified', tier: 'self', active: false,
       });
       App.reload();
     },
     removeWork(i) { if (S.work.length <= 1) return; const wasActive = S.work[i] && S.work[i].active; S.work.splice(i, 1); if (wasActive && S.work[0]) S.work[0].active = true; App.reload(); },
     setCurrent(i, on) { if (on) S.work.forEach((w, j) => w.active = (j === i)); else if (S.work[i]) S.work[i].active = false; App.reload(); },
     setSector(i, v) { const w = S.work[i]; if (!w) return; w.sector = v; w.source = ''; w.verifyStatus = 'unverified'; App.reload(); },
-    setRelation(i, v) { const w = S.work[i]; if (!w) return; w.relation = v; w.source = ''; w.gstin = ''; w.verifyStatus = 'unverified'; App.reload(); },
+    setRelation(i, v) {
+      const w = S.work[i]; if (!w) return;
+      w.relation = v; w.source = ''; w.gstin = ''; w.noGstin = false; w.noPlatform = false; w.platformName = ''; w.platformMobile = ''; w.verifyStatus = 'unverified';
+      App.reload();
+    },
+    setNoGstin(i, v) { const w = S.work[i]; if (!w) return; w.noGstin = v; w.verifyStatus = 'unverified'; App.reload(); },
+    setNoPlatform(i, v) { const w = S.work[i]; if (!w) return; w.noPlatform = v; w.verifyStatus = 'unverified'; App.reload(); },
 
     // ---- verification (kicks off on Save) ----
     verifyEntry(i) {
@@ -183,6 +192,7 @@
       const source = resolveSource(w);
       if (source === 'dav') { WorkerSettings.openDAV(i); return; }
       if (source === 'gstin-udyam' && !w.gstin) { App.toast('Enter a GSTIN/Udyam number to verify this entry', 'alert'); return; }
+      if (source === 'platform' && (!w.platformName || !w.platformMobile)) { App.toast('Enter the platform name and registered mobile number to verify this entry', 'alert'); return; }
       w.source = source; w.verifyStatus = 'pending'; App.reload();
       setTimeout(() => { w.verifyStatus = 'verified'; w.tier = 'verified'; App.reload(); }, 1400);
     },
@@ -376,8 +386,28 @@
           </div>
         </div>
 
+        ${w.relation === 'gig' ? `
+        <div class="field" style="margin-top:14px;margin-bottom:0">
+          <label class="wset-check"><input type="checkbox" ${w.noPlatform ? 'checked' : ''} onchange="WorkerSettings.setNoPlatform(${i},this.checked)"> This isn't a listed platform (e.g. informal or domestic work)</label>
+        </div>
+        ${!w.noPlatform ? `
+        <div class="grid grid-2" style="margin-top:12px">
+          <div class="field" style="margin-bottom:0"><label class="label wset-flabel">Platform Name</label>
+            <input class="input" value="${App.esc(w.platformName)}" placeholder="e.g. Porter, Urban Company" oninput="WorkerSettings.editWork(${i},'platformName',this.value)"></div>
+          <div class="field" style="margin-bottom:0"><label class="label wset-flabel">Registered Mobile Number</label>
+            <input class="input mono" value="${App.esc(w.platformMobile)}" placeholder="Mobile linked to your platform account" oninput="WorkerSettings.editWork(${i},'platformMobile',this.value)"></div>
+        </div>` : ''}` : ''}
+
+        ${w.relation === 'self' ? `
+        <div class="field" style="margin-top:14px;margin-bottom:0">
+          ${!w.noGstin ? `<label class="label wset-flabel">GSTIN / Udyam Number</label>
+          <input class="input mono" value="${App.esc(w.gstin)}" placeholder="e.g. 07ABCDE1234F1Z5" oninput="WorkerSettings.setGstin(${i},this.value)">` : ''}
+        </div>
+        <label class="wset-check" style="margin-top:${w.noGstin ? '0' : '8'}px"><input type="checkbox" ${w.noGstin ? 'checked' : ''} onchange="WorkerSettings.setNoGstin(${i},this.checked)"> I don't have a GSTIN/Udyam number</label>` : ''}
+
+        ${resolveSource(w) === 'dav' ? `
         <div class="label" style="margin-top:14px;margin-bottom:2px">Work Address</div>
-        <div class="hint" style="margin-bottom:8px">${resolveSource(w) === 'dav' ? 'Required to verify this entry via Digital Address Verification.' : 'Used for your record — verification for this entry uses ' + App.esc((SOURCE_META[resolveSource(w)] || {}).label || '') + '.'}</div>
+        <div class="hint" style="margin-bottom:8px">Required to verify this entry via Digital Address Verification.</div>
         <div class="grid grid-2">
           <div class="field" style="margin-bottom:0"><label class="label wset-flabel">Address</label>
             <input class="input" value="${App.esc(w.address)}" placeholder="Street / site address" oninput="WorkerSettings.editWork(${i},'address',this.value)"></div>
@@ -389,13 +419,8 @@
             <input class="input" value="${App.esc(w.city)}" placeholder="e.g. Gurugram" oninput="WorkerSettings.editWork(${i},'city',this.value)"></div>
           <div class="field" style="margin-bottom:0"><label class="label wset-flabel">Pincode</label>
             <input class="input mono" value="${App.esc(w.pincode)}" placeholder="e.g. 122002" oninput="WorkerSettings.editWork(${i},'pincode',this.value)"></div>
-        </div>
-
-        ${w.relation === 'self' ? `
-        <div class="field" style="margin-top:12px;margin-bottom:0">
-          <label class="label wset-flabel">GSTIN / Udyam Number</label>
-          <input class="input mono" value="${App.esc(w.gstin)}" placeholder="e.g. 07ABCDE1234F1Z5" oninput="WorkerSettings.setGstin(${i},this.value)">
-        </div>` : ''}
+        </div>` : `
+        <div class="hint" style="margin-top:14px">Verification for this entry: <b>${App.esc((SOURCE_META[resolveSource(w)] || {}).label || '')}</b></div>`}
 
         <div class="row between" style="margin-top:13px;padding-top:12px;border-top:1px solid var(--line-2)">
           <label class="wset-check"><input type="checkbox" ${w.active ? 'checked' : ''} onchange="WorkerSettings.setCurrent(${i},this.checked)"> Current position</label>

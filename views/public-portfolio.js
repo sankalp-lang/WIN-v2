@@ -19,7 +19,7 @@
   // verify-flow state (survives the interval re-renders)
   let vstep = 0, vtimer = null;
 
-  const RELATION_LABEL = { direct: 'Direct Employee', agency: 'Staffing Agency', gig: 'Gig Worker', self: 'Self-Employed', informal: 'Farmer / Other' };
+  const RELATION_LABEL = { direct: 'Direct, Full-Time Employee', agency: 'Contract Worker', gig: 'Gig Worker', self: 'Self-Employed Worker', informal: 'Farmer / Other Worker' };
 
   // plain-text segment label appended to the period · location line
   function segLabel(w) {

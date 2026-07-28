@@ -7,7 +7,7 @@
 
   // ---- verification provenance shown on each work entry ----
   const VMETA = {
-    'hrms-govt':    { label: 'Govt HRMS-verified',    kind: 'green', ic: 'landmark' },
+    'hrms-govt':    { label: 'Internal HRMS-verified',    kind: 'green', ic: 'landmark' },
     'hrms-nongovt': { label: 'HRMS/EPFO-verified',    kind: 'green', ic: 'building' },
     'agency-hrms':  { label: 'Agency HRMS-verified',  kind: 'green', ic: 'building' },
     platform:       { label: 'Platform-verified',     kind: 'green', ic: 'briefcase' },
@@ -15,7 +15,7 @@
     dav:            { label: 'Address-verified',      kind: 'green', ic: 'mappin' },
     self:           { label: 'Self-declared',          kind: 'gray',  ic: 'user' },
   };
-  const RELATION_LABEL = { direct: 'Direct Employee', agency: 'Staffing Agency', gig: 'Gig Worker', self: 'Self-Employed', informal: 'Farmer / Other' };
+  const RELATION_LABEL = { direct: 'Direct, Full-Time Employee', agency: 'Contract Worker', gig: 'Gig Worker', self: 'Self-Employed Worker', informal: 'Farmer / Other Worker' };
 
   // "Mar 2023 - Present" / "2007 - 2010" -> "2 yr 4 mo"
   function duration(period) {

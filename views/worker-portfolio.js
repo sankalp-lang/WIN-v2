@@ -57,7 +57,7 @@
     return App.ui.pill(b.t, 'amber', true);
   }
 
-  const RELATION_LABEL = { direct: 'Direct Employee', agency: 'Staffing Agency', gig: 'Gig Worker', self: 'Self-Employed', informal: 'Farmer / Other' };
+  const RELATION_LABEL = { direct: 'Direct, Full-Time Employee', agency: 'Contract Worker', gig: 'Gig Worker', self: 'Self-Employed Worker', informal: 'Farmer / Other Worker' };
 
   // plain-text segment label appended to the period · location line
   function segLabel(w) {
@@ -156,9 +156,9 @@
 
       const work = [
         { role: 'Construction Supervisor', org: 'NBCC (India) Ltd. — Govt. Housing Project', period: 'Mar 2023 – Present', loc: 'Delhi',
-          sector: 'govt', relation: 'direct', source: 'hrms-govt', active: true, badge: { t: 'Verified · Internal HRMS (Govt/PSU)', c: 'green' } },
+          sector: 'govt', relation: 'direct', source: 'hrms-govt', active: true, badge: { t: 'Verified · Internal HRMS', c: 'green' } },
         { role: 'Mason Foreman', org: 'Hiranandani Group', period: 'Jun 2018 – Feb 2023', loc: 'Thane',
-          sector: 'nongovt', relation: 'direct', source: 'hrms-nongovt', badge: { t: 'Verified · HRMS + EPFO/UAN', c: 'green' } },
+          sector: 'nongovt', relation: 'direct', source: 'hrms-nongovt', badge: { t: 'Verified · HRMS/EPFO', c: 'green' } },
         { role: 'Site Loader/Helper (Gig)', org: 'Porter Logistics Platform', period: 'Feb 2018 – May 2018', loc: 'Mumbai',
           sector: 'nongovt', relation: 'gig', source: 'platform', badge: { t: 'Verified · Platform Records', c: 'green' } },
         { role: 'Independent Masonry Contractor', org: 'Self-Employed — Rajan Masonry Works', period: 'Jan 2016 – Jan 2018', loc: 'Gurugram',
