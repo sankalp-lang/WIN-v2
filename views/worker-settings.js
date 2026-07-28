@@ -211,7 +211,7 @@
                 <button class="btn btn--primary" ${!DAV.idType ? 'disabled' : ''} onclick="WorkerSettings.davAdvanceFlow()">${App.icon('arrow')} Continue</button>`;
       } else {
         // photo (office name board / interior / office ID) or idphoto (govt ID front/back)
-        const label = cs.kind === 'idphoto' ? `${DAV.idType || 'ID'} (${cs.side})` : (cs.side ? `Office ID Card (${cs.side})` : (cs.context || ''));
+        const label = cs.kind === 'idphoto' ? `${DAV.idType || 'ID'} (${cs.side})` : (cs.side ? `Office ID Card (${cs.side})` : (cs.context || 'Name Board'));
         const heading = cs.kind === 'idphoto' ? `Capture ${DAV.idType || 'ID'}` : cs.title;
         const subline = cs.kind === 'idphoto' ? `Take a clear photo of the ${cs.side.toLowerCase()} of your ${DAV.idType || 'ID'}` : cs.sub;
 
@@ -226,14 +226,19 @@
               <div class="muted" style="font-size:12.5px">Ensure good lighting &middot; keep the camera steady &middot; make sure ${cs.kind === 'idphoto' ? 'the ID is fully visible' : 'text/signage is readable'}</div></div></div>`;
           foot = `<button class="btn" onclick="App.modal.close()">Cancel</button>
                   ${cs.skippable ? `<button class="btn btn--ghost" onclick="WorkerSettings.davSkipFlow()">Skip</button>` : ''}
-                  <button class="btn btn--primary" onclick="WorkerSettings.davCapturePhoto()">${App.icon('upload')} Capture Photo</button>`;
-        } else if (DAV.phase === 'shooting') {
+                  <button class="btn btn--primary" onclick="WorkerSettings.davOpenCamera()">${App.icon('upload')} Capture Photo</button>`;
+        } else if (DAV.phase === 'camera' || DAV.phase === 'capturing') {
+          const capturing = DAV.phase === 'capturing';
           body = `
             <div class="dav-progress">Step ${stepNum} of ${stepTotal}</div>
-            <div class="dav-cam dav-cam--shooting"><span class="dav-spin-lg"></span></div>
-            <p class="muted" style="text-align:center;font-size:13px;margin-top:12px">Capturing ${App.esc(label)}…</p>`;
-          foot = `<button class="btn" disabled onclick="App.modal.close()">Cancel</button>
-                  <button class="btn btn--primary" disabled>${spinner('Capturing…')}</button>`;
+            <div class="dav-cam dav-cam--live">
+              <span class="dav-cam__rec">${App.icon('dot')} REC</span>
+              ${capturing ? `<span class="dav-spin-lg"></span>` : (cs.kind === 'idphoto' ? `<span class="dav-cam__guide"></span>` : App.icon('upload', 'dav-cam__ic'))}
+            </div>
+            ${cs.kind === 'idphoto' ? `<div class="row between" style="margin-top:12px"><span style="font-size:13px">Vertical ${App.esc(DAV.idType || 'ID')}</span><span class="toggle"></span></div>` : ''}
+            <p class="muted" style="text-align:center;font-size:12.5px;margin-top:10px">${capturing ? 'Capturing…' : `Line up ${cs.kind === 'idphoto' ? 'the document' : 'the shot'} and tap capture`}</p>`;
+          foot = `<button class="btn" ${capturing ? 'disabled' : ''} onclick="App.modal.close()">Cancel</button>
+                  <button class="btn btn--primary" ${capturing ? 'disabled' : ''} onclick="WorkerSettings.davShootPhoto()">${capturing ? spinner('Capturing…') : `${App.icon('upload')} Capture ${App.esc(label)}`}</button>`;
         } else {
           body = `
             <div class="dav-progress">Step ${stepNum} of ${stepTotal}</div>
@@ -375,11 +380,12 @@
       setTimeout(() => { DAV.step = 'flow'; DAV.idx = 0; DAV.phase = 'ready'; davModal(); }, 1600);
     },
     davSetIdType(t) { DAV.idType = t; davModal(); },
-    davCapturePhoto() {
-      DAV.phase = 'shooting'; davModal();
-      setTimeout(() => { DAV.phase = 'captured'; davModal(); }, 1100);
+    davOpenCamera() { DAV.phase = 'camera'; davModal(); },
+    davShootPhoto() {
+      DAV.phase = 'capturing'; davModal();
+      setTimeout(() => { DAV.phase = 'captured'; davModal(); }, 900);
     },
-    davRetake() { DAV.phase = 'ready'; davModal(); },
+    davRetake() { DAV.phase = 'camera'; davModal(); },
     davSkipFlow() { WorkerSettings.davAdvanceFlow(); },
     davAdvanceFlow() {
       DAV.idx++; DAV.phase = 'ready';
@@ -865,8 +871,13 @@
           .dav-progress{ font-size:11px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); text-align:center; margin-bottom:14px; }
           .dav-kv__label{ font-size:11px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); margin-bottom:4px; }
           .dav-kv__val{ font-size:13.5px; font-weight:600; line-height:1.5; }
-          .dav-cam{ width:100%; aspect-ratio:1/1; max-height:200px; border-radius:var(--r); display:grid; place-items:center; margin:0 auto; }
-          .dav-cam--shooting{ background:linear-gradient(135deg,var(--accent),#1a2f7a); color:#fff; }
+          .dav-cam{ width:100%; aspect-ratio:1/1; max-height:200px; border-radius:var(--r); display:grid; place-items:center; margin:0 auto; position:relative; }
+          .dav-cam--live{ background:linear-gradient(160deg,#2a3444,#12151d); color:#fff; }
+          .dav-cam__ic{ width:44px; height:44px; opacity:.55; }
+          .dav-cam__rec{ position:absolute; top:10px; left:10px; display:inline-flex; align-items:center; gap:4px; font-size:10px; font-weight:700; letter-spacing:.04em; color:#ff6b6b; }
+          .dav-cam__rec .ico{ width:8px; height:8px; color:#ff3b3b; animation:dav-blink 1.2s ease-in-out infinite; }
+          @keyframes dav-blink{ 50%{ opacity:.25; } }
+          .dav-cam__guide{ width:62%; height:62%; border:2px solid #ffd54a; border-radius:6px; }
           .dav-cam--captured{ background:var(--green-50); color:var(--green-600); }
           .dav-cam--captured .ico{ width:52px; height:52px; }
           .dav-spin-lg{ width:36px; height:36px; border:3px solid rgba(255,255,255,.35); border-top-color:#fff; border-radius:50%; display:inline-block; animation:spin 1s linear infinite; }
