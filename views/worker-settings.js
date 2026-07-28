@@ -39,25 +39,25 @@
     work: [
       { role: 'Construction Supervisor', org: 'NBCC (India) Ltd. — Govt. Housing Project', period: 'Mar 2023 - Present', loc: 'Delhi',
         address: 'NBCC Housing Site, Sector 62', state: 'Delhi', pincode: '110062',
-        sector: 'govt', relation: 'direct', source: 'hrms-govt', verifyStatus: 'verified', hasGst: '', gstin: '', uan: '', fallbackChoice: '', tier: 'verified', active: true },
+        sector: 'govt', relation: 'direct', source: 'hrms-govt', verifyStatus: 'verified', pan: '', uan: '', ppf: '', nps: '', fallbackChoice: '', tier: 'verified', active: true },
       { role: 'Mason Foreman', org: 'Hiranandani Group', period: 'Jun 2018 - Feb 2023', loc: 'Thane',
         address: 'Hiranandani Estate, Site Office', state: 'Maharashtra', pincode: '400607',
-        sector: 'nongovt', relation: 'direct', source: 'hrms-nongovt', verifyStatus: 'verified', hasGst: '', gstin: '', uan: '', fallbackChoice: '', tier: 'verified', active: false },
+        sector: 'nongovt', relation: 'direct', source: 'hrms-nongovt', verifyStatus: 'verified', pan: '', uan: '', ppf: '', nps: '', fallbackChoice: '', tier: 'verified', active: false },
       { role: 'Site Loader/Helper (Gig)', org: 'Porter Logistics Platform', period: 'Feb 2018 - May 2018', loc: 'Mumbai',
         address: 'Andheri East Warehouse', state: 'Maharashtra', pincode: '400069',
-        sector: 'nongovt', relation: 'gig', source: 'platform', verifyStatus: 'verified', hasGst: '', gstin: '', uan: '', fallbackChoice: '', tier: 'verified', active: false },
+        sector: 'nongovt', relation: 'gig', source: 'platform', verifyStatus: 'verified', pan: '', uan: '', ppf: '', nps: '', fallbackChoice: '', tier: 'verified', active: false },
       { role: 'Independent Masonry Contractor', org: 'Self-Employed — Rajan Masonry Works', period: 'Jan 2016 - Jan 2018', loc: 'Gurugram',
         address: 'Shop 14, Sohna Road', state: 'Haryana', pincode: '122018',
-        sector: 'nongovt', relation: 'self', source: 'gstin-udyam', verifyStatus: 'verified', hasGst: 'yes', gstin: '07ABCDE1234F1Z5', uan: '', fallbackChoice: '', tier: 'verified', active: false },
+        sector: 'nongovt', relation: 'self', source: 'pan-gst', verifyStatus: 'verified', pan: 'ABCPK4321F', uan: '', ppf: '', nps: '', fallbackChoice: '', tier: 'verified', active: false },
       { role: 'Senior Mason', org: 'JMD Builders (via Sharma Manpower Agency)', period: 'Jan 2013 - Dec 2015', loc: 'Gurugram',
         address: 'DLF Phase 2, Site Office', state: 'Haryana', pincode: '122002',
-        sector: 'nongovt', relation: 'agency', source: 'agency-hrms', verifyStatus: 'verified', hasGst: '', gstin: '', uan: '', fallbackChoice: '', tier: 'verified', active: false },
+        sector: 'nongovt', relation: 'agency', source: 'agency-hrms', verifyStatus: 'verified', pan: '', uan: '', ppf: '', nps: '', fallbackChoice: '', tier: 'verified', active: false },
       { role: 'Mason', org: 'L&T Construction (via local contractor)', period: 'Feb 2011 - Dec 2012', loc: 'Noida',
         address: 'Sector 62, Site Office', state: 'Uttar Pradesh', pincode: '201301',
-        sector: 'nongovt', relation: 'agency', source: 'dav', verifyStatus: 'verified', hasGst: '', gstin: '', uan: '', fallbackChoice: 'dav', tier: 'verified', active: false },
+        sector: 'nongovt', relation: 'agency', source: 'dav', verifyStatus: 'verified', pan: '', uan: '', ppf: '', nps: '', fallbackChoice: 'dav', tier: 'verified', active: false },
       { role: 'Farm Labourer', org: 'Family farmland', period: '2007 - 2010', loc: 'Lucknow, Uttar Pradesh',
         address: 'Village Rampur, Post Malihabad', state: 'Uttar Pradesh', pincode: '226102',
-        sector: 'nongovt', relation: 'informal', source: 'dav', verifyStatus: 'verified', hasGst: '', gstin: '', uan: '', fallbackChoice: '', tier: 'verified', active: false },
+        sector: 'nongovt', relation: 'informal', source: 'dav', verifyStatus: 'verified', pan: '', uan: '', ppf: '', nps: '', fallbackChoice: '', tier: 'verified', active: false },
     ],
     skills: ['Masonry', 'Scaffolding', 'Plastering', 'Tile Work', 'Concrete Finishing', 'Blueprint Reading'],
     consent: { employers: true, schemes: true, recruiters: false, notify: true },
@@ -75,8 +75,10 @@
     'hrms-nongovt': { label: 'HRMS/EPFO', ic: 'building' },
     'agency-hrms': { label: 'Agency HRMS', ic: 'building' },
     platform: { label: 'Platform Records', ic: 'briefcase' },
-    'gstin-udyam': { label: 'GSTIN/Udyam', ic: 'file' },
+    'pan-gst': { label: 'GST Details (via PAN)', ic: 'file' },
     uan: { label: 'EPFO / UAN Lookup', ic: 'landmark' },
+    ppf: { label: 'PPF Lookup', ic: 'landmark' },
+    nps: { label: 'NPS / PRAN Lookup', ic: 'landmark' },
     dav: { label: 'Digital Address Verification', ic: 'mappin' },
   };
   const RELATIONS = [
@@ -86,10 +88,18 @@
     { v: 'self', label: 'Self-Employed Worker' },
     { v: 'informal', label: 'Farmer / Other Worker' },
   ];
-  // whether an entry's fetch attempt would offer a UAN retry fallback (contract workers can be
-  // EPFO-covered via their agency; non-govt direct employees may also be found this way — govt
-  // direct employees have no UAN/EPFO concept, so they only fall back to DAV).
-  function offersUan(w) { return w.relation === 'agency' || (w.relation === 'direct' && w.sector !== 'govt'); }
+  // Direct employees and Contract Workers get the same fallback identifiers (UAN/PPF/NPS)
+  // regardless of sector — a govt employee can be NPS-covered, a non-govt one EPFO/UAN-covered,
+  // so we offer all three and let the worker pick whichever applies rather than pre-guessing.
+  const FALLBACK_IDS = [
+    { v: 'uan', label: 'UAN' },
+    { v: 'ppf', label: 'PPF' },
+    { v: 'nps', label: 'NPS' },
+  ];
+  // Contract Worker (agency) is sector-agnostic by design: whether the placement is at a
+  // government office or a private company, the employer of record is the agency itself, so
+  // verification always attempts the agency's own HRMS first — never the end client's HRMS.
+
 
   const spinner = (label) => `<span class="wset-spin"></span> ${label}`;
 
@@ -133,7 +143,6 @@
     editProfile(k, v) { S.profile[k] = v; },
     editWorkInfo(k, v) { S.workInfo[k] = v; },
     editWork(i, k, v) { if (S.work[i]) S.work[i][k] = v; },
-    setGstin(i, v) { if (S.work[i]) S.work[i].gstin = v; },
 
     uploadPhoto() { App.toast('Photo upload is a demo affordance in this prototype', 'upload'); },
 
@@ -155,12 +164,12 @@
 
     // ---- work experience ----
     addWork() {
-      S.work.push({
+      S.work.unshift({
         role: '', org: '', period: '', loc: '', address: '', state: '', pincode: '',
-        sector: 'nongovt', relation: 'direct', source: '', hasGst: '', gstin: '', uan: '', fallbackChoice: '',
+        sector: 'nongovt', relation: 'direct', source: '', pan: '', uan: '', ppf: '', nps: '', fallbackChoice: '',
         verifyStatus: 'unverified', tier: 'self', active: false,
       });
-      entryModal(S.work.length - 1);
+      entryModal(0);
     },
     editEntry(i) { entryModal(i); },
     closeEntryModal() { ENTRY_MODAL_I = null; App.modal.close(); App.reload(); },
@@ -170,13 +179,12 @@
       if (ENTRY_MODAL_I === i) WorkerSettings.closeEntryModal(); else App.reload();
     },
     setCurrent(i, on) { if (on) S.work.forEach((w, j) => w.active = (j === i)); else if (S.work[i]) S.work[i].active = false; App.reload(); repaintEntryModal(i); },
-    setSector(i, v) { const w = S.work[i]; if (!w) return; w.sector = v; w.source = ''; w.verifyStatus = 'unverified'; w.fallbackChoice = ''; w.uan = ''; App.reload(); repaintEntryModal(i); },
+    setSector(i, v) { const w = S.work[i]; if (!w) return; w.sector = v; w.source = ''; w.verifyStatus = 'unverified'; w.fallbackChoice = ''; w.uan = ''; w.ppf = ''; w.nps = ''; App.reload(); repaintEntryModal(i); },
     setRelation(i, v) {
       const w = S.work[i]; if (!w) return;
-      w.relation = v; w.source = ''; w.hasGst = ''; w.gstin = ''; w.uan = ''; w.fallbackChoice = ''; w.verifyStatus = 'unverified';
+      w.relation = v; w.source = ''; w.pan = ''; w.uan = ''; w.ppf = ''; w.nps = ''; w.fallbackChoice = ''; w.verifyStatus = 'unverified';
       App.reload(); repaintEntryModal(i);
     },
-    setHasGst(i, v) { const w = S.work[i]; if (!w) return; w.hasGst = v; w.verifyStatus = 'unverified'; App.reload(); repaintEntryModal(i); },
     chooseFallback(i, choice) { const w = S.work[i]; if (!w) return; w.fallbackChoice = choice; w.verifyStatus = 'unverified'; App.reload(); repaintEntryModal(i); },
 
     // ---- verification: explicit "Verify Details" click per entry ----
@@ -189,15 +197,9 @@
       }
 
       if (w.relation === 'self') {
-        if (!w.hasGst) { App.toast('Select whether you have a GSTIN/Udyam number', 'alert'); return; }
-        if (w.hasGst === 'yes') {
-          if (!w.gstin) { App.toast('Enter your GSTIN/Udyam number to verify', 'alert'); return; }
-          w.verifyStatus = 'pending'; App.reload(); repaintEntryModal(i);
-          setTimeout(() => { w.source = 'gstin-udyam'; w.verifyStatus = 'verified'; w.tier = 'verified'; App.reload(); repaintEntryModal(i); App.toast('Details verified and saved'); }, 1400);
-        } else {
-          if (!w.address || !w.state || !w.pincode) { App.toast('Fill in the address details to verify', 'alert'); return; }
-          WorkerSettings.openDAV(i);
-        }
+        if (!w.pan) { App.toast('Enter your PAN number to look up GST/Udyam details', 'alert'); return; }
+        w.verifyStatus = 'pending'; App.reload(); repaintEntryModal(i);
+        setTimeout(() => { w.source = 'pan-gst'; w.verifyStatus = 'verified'; w.tier = 'verified'; App.reload(); repaintEntryModal(i); App.toast('Details verified and saved'); }, 1400);
         return;
       }
 
@@ -216,11 +218,12 @@
         return;
       }
 
-      // direct + agency: attempt automatic fetch, or resolve a chosen fallback
-      if (w.fallbackChoice === 'uan') {
-        if (!w.uan) { App.toast('Enter your UAN number to retry', 'alert'); return; }
+      // direct + agency: attempt automatic fetch, or resolve a chosen fallback (UAN/PPF/NPS/DAV)
+      if (w.fallbackChoice === 'uan' || w.fallbackChoice === 'ppf' || w.fallbackChoice === 'nps') {
+        const idVal = w[w.fallbackChoice];
+        if (!idVal) { App.toast(`Enter your ${w.fallbackChoice.toUpperCase()} number to retry`, 'alert'); return; }
         w.verifyStatus = 'pending'; App.reload(); repaintEntryModal(i);
-        setTimeout(() => { w.source = 'uan'; w.verifyStatus = 'verified'; w.tier = 'verified'; App.reload(); repaintEntryModal(i); App.toast('Details verified and saved'); }, 1400);
+        setTimeout(() => { w.source = w.fallbackChoice; w.verifyStatus = 'verified'; w.tier = 'verified'; App.reload(); repaintEntryModal(i); App.toast('Details verified and saved'); }, 1400);
         return;
       }
       if (w.fallbackChoice === 'dav') {
@@ -234,6 +237,7 @@
       }
       w.verifyStatus = 'pending'; App.reload(); repaintEntryModal(i);
       setTimeout(() => {
+        // Contract Worker: always the agency's own HRMS, for either sector — see FALLBACK_IDS comment above.
         w.source = w.relation === 'agency' ? 'agency-hrms' : (w.sector === 'govt' ? 'hrms-govt' : 'hrms-nongovt');
         w.verifyStatus = 'verified'; w.tier = 'verified'; App.reload(); repaintEntryModal(i);
         App.toast('Details verified and saved');
@@ -325,7 +329,6 @@
   // only needs these three. Shown when the entry's path requires (or has fallen back to) DAV.
   function addressBlock(w, i) {
     const needsDav = w.relation === 'informal'
-      || (w.relation === 'self' && w.hasGst === 'no')
       || ((w.relation === 'gig' || w.relation === 'direct' || w.relation === 'agency') && w.fallbackChoice === 'dav');
     if (!needsDav) return '';
     return `
@@ -446,31 +449,22 @@
 
       ${w.relation === 'self' ? `
       <div class="field" style="margin-top:14px;margin-bottom:0">
-        <label class="label wset-flabel">Do you have a GSTIN or Udyam registration number?</label>
-        <select class="select" onchange="WorkerSettings.setHasGst(${i},this.value)">
-          <option value="" ${!w.hasGst ? 'selected' : ''} disabled>Select an option</option>
-          <option value="yes" ${w.hasGst === 'yes' ? 'selected' : ''}>Yes</option>
-          <option value="no" ${w.hasGst === 'no' ? 'selected' : ''}>No</option>
-        </select>
-      </div>
-      ${w.hasGst === 'yes' ? `
-      <div class="field" style="margin-top:12px;margin-bottom:0">
-        <label class="label wset-flabel">GSTIN / Udyam Number</label>
-        <input class="input mono" value="${App.esc(w.gstin)}" placeholder="e.g. 07ABCDE1234F1Z5" oninput="WorkerSettings.setGstin(${i},this.value)">
+        <label class="label wset-flabel">PAN Number</label>
+        <input class="input mono" value="${App.esc(w.pan)}" placeholder="e.g. ABCPK1234F" oninput="WorkerSettings.editWork(${i},'pan',this.value)">
+        <div class="hint" style="margin-top:5px">We'll look up any GST/Udyam registration linked to this PAN.</div>
       </div>` : ''}
-      ${w.hasGst === 'no' ? addressBlock(w, i) : ''}` : ''}
 
       ${(w.relation === 'direct' || w.relation === 'agency') && w.verifyStatus === 'failed' && !w.fallbackChoice ? `
       <div class="banner banner--amber" style="margin-top:14px">${App.icon('alert')}<div>Could not automatically verify from the company name provided.
         <div class="row gap-8 wrap" style="margin-top:8px">
-          ${offersUan(w) ? `<button class="btn btn--soft btn--sm" onclick="WorkerSettings.chooseFallback(${i},'uan')">${App.icon('landmark')} Enter UAN instead</button>` : ''}
+          ${FALLBACK_IDS.map(f => `<button class="btn btn--soft btn--sm" onclick="WorkerSettings.chooseFallback(${i},'${f.v}')">${App.icon('landmark')} Enter ${f.label} instead</button>`).join('')}
           <button class="btn btn--soft btn--sm" onclick="WorkerSettings.chooseFallback(${i},'dav')">${App.icon('mappin')} Verify via Address instead</button>
         </div></div></div>` : ''}
 
-      ${(w.relation === 'direct' || w.relation === 'agency') && w.fallbackChoice === 'uan' ? `
+      ${(w.relation === 'direct' || w.relation === 'agency') && FALLBACK_IDS.some(f => f.v === w.fallbackChoice) ? `
       <div class="field" style="margin-top:14px;margin-bottom:0">
-        <label class="label wset-flabel">UAN Number</label>
-        <input class="input mono" value="${App.esc(w.uan)}" placeholder="e.g. 100123456789" oninput="WorkerSettings.editWork(${i},'uan',this.value)">
+        <label class="label wset-flabel">${FALLBACK_IDS.find(f => f.v === w.fallbackChoice).label} Number</label>
+        <input class="input mono" value="${App.esc(w[w.fallbackChoice])}" placeholder="Enter your ${w.fallbackChoice.toUpperCase()} number" oninput="WorkerSettings.editWork(${i},'${w.fallbackChoice}',this.value)">
       </div>` : ''}
       ${(w.relation === 'direct' || w.relation === 'agency') ? addressBlock(w, i) : ''}
 
@@ -480,7 +474,7 @@
       </div>
       <div class="row between" style="margin-top:11px">
         ${verifyChip(w)}
-        ${w.verifyStatus !== 'verified' ? `<button class="btn btn--primary btn--sm" ${w.verifyStatus === 'pending' ? 'disabled' : ''} onclick="WorkerSettings.verifyEntry(${i})">${w.verifyStatus === 'pending' ? spinner('Verifying…') : (w.fallbackChoice === 'dav' || w.relation === 'informal' || (w.relation === 'self' && w.hasGst === 'no') ? `${App.icon('mappin')} Verify via Address` : `${App.icon('shieldcheck')} Verify Details`)}</button>` : ''}
+        ${w.verifyStatus !== 'verified' ? `<button class="btn btn--primary btn--sm" ${w.verifyStatus === 'pending' ? 'disabled' : ''} onclick="WorkerSettings.verifyEntry(${i})">${w.verifyStatus === 'pending' ? spinner('Verifying…') : (w.fallbackChoice === 'dav' || w.relation === 'informal' ? `${App.icon('mappin')} Verify via Address` : `${App.icon('shieldcheck')} Verify Details`)}</button>` : ''}
       </div>`;
   }
 

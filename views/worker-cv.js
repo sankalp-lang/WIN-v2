@@ -11,7 +11,7 @@
     'hrms-nongovt': { label: 'HRMS/EPFO-verified',    kind: 'green', ic: 'building' },
     'agency-hrms':  { label: 'Agency HRMS-verified',  kind: 'green', ic: 'building' },
     platform:       { label: 'Platform-verified',     kind: 'green', ic: 'briefcase' },
-    'gstin-udyam':  { label: 'GSTIN/Udyam-verified',  kind: 'green', ic: 'file' },
+    'pan-gst':      { label: 'GST via PAN-verified', kind: 'green', ic: 'file' },
     dav:            { label: 'Address-verified',      kind: 'green', ic: 'mappin' },
     self:           { label: 'Self-declared',          kind: 'gray',  ic: 'user' },
   };
@@ -61,7 +61,7 @@
         sector: 'nongovt', relation: 'gig', verification: 'platform', open: false,
         description: 'Short-term platform-based loading and moving assignments during an off-season gap between construction contracts.' },
       { role: 'Independent Masonry Contractor', company: 'Self-Employed — Rajan Masonry Works', period: 'Jan 2016 - Jan 2018', location: 'Gurugram', status: 'completed',
-        sector: 'nongovt', relation: 'self', verification: 'gstin-udyam', gstin: '07ABCDE1234F1Z5', open: false,
+        sector: 'nongovt', relation: 'self', verification: 'pan-gst', pan: 'ABCPK4321F', open: false,
         description: 'Ran a small masonry and labour-supply contracting business, taking on subcontracted work for residential builders.' },
       { role: 'Senior Mason', company: 'JMD Builders (via Sharma Manpower Agency)', period: 'Jan 2013 - Dec 2015', location: 'Gurugram', status: 'completed',
         sector: 'nongovt', relation: 'agency', verification: 'agency-hrms', open: false,
