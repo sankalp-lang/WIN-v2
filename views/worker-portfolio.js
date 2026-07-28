@@ -275,7 +275,7 @@
               <div style="min-width:290px;flex:1">
                 <div class="eyebrow">${App.icon('fingerprint')} Verified worker identity</div>
                 <h1 class="h-grad" style="margin-top:12px">Your verified golden record.</h1>
-                <p class="lead">One 100% digital identity that unlocks the government schemes and social security you're entitled to — plus micro-loans and insurance, portable across every employer you work for.</p>
+                <p class="lead">One 100% digital identity that unlocks the government schemes and social security you're entitled to — and turns your work history into a financial asset.</p>
                 <div class="row gap-8 wrap mt-16">
                   <span class="src-chip mono">${App.icon('idcard')} ${App.esc(WIN)}</span>
                   ${App.ui.verified('100% Verified')}
