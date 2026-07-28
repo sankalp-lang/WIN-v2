@@ -38,26 +38,26 @@
     workInfo: { role: 'Masonry Expert - Construction Supervisor', exp: '14' },
     work: [
       { role: 'Construction Supervisor', org: 'NBCC (India) Ltd. — Govt. Housing Project', period: 'Mar 2023 - Present', loc: 'Delhi',
-        address: 'NBCC Housing Site, Sector 62', state: 'Delhi', city: 'Delhi', pincode: '110062',
-        sector: 'govt', relation: 'direct', source: 'hrms-govt', verifyStatus: 'verified', gstin: '', noGstin: false, noPlatform: false, platformName: '', platformMobile: '', tier: 'verified', active: true },
+        address: 'NBCC Housing Site, Sector 62', state: 'Delhi', pincode: '110062',
+        sector: 'govt', relation: 'direct', source: 'hrms-govt', verifyStatus: 'verified', hasGst: '', gstin: '', platformName: '', platformMobile: '', uan: '', fallbackChoice: '', tier: 'verified', active: true },
       { role: 'Mason Foreman', org: 'Hiranandani Group', period: 'Jun 2018 - Feb 2023', loc: 'Thane',
-        address: 'Hiranandani Estate, Site Office', state: 'Maharashtra', city: 'Thane', pincode: '400607',
-        sector: 'nongovt', relation: 'direct', source: 'hrms-nongovt', verifyStatus: 'verified', gstin: '', noGstin: false, noPlatform: false, platformName: '', platformMobile: '', tier: 'verified', active: false },
+        address: 'Hiranandani Estate, Site Office', state: 'Maharashtra', pincode: '400607',
+        sector: 'nongovt', relation: 'direct', source: 'hrms-nongovt', verifyStatus: 'verified', hasGst: '', gstin: '', platformName: '', platformMobile: '', uan: '', fallbackChoice: '', tier: 'verified', active: false },
       { role: 'Site Loader/Helper (Gig)', org: 'Porter Logistics Platform', period: 'Feb 2018 - May 2018', loc: 'Mumbai',
-        address: 'Andheri East Warehouse', state: 'Maharashtra', city: 'Mumbai', pincode: '400069',
-        sector: 'nongovt', relation: 'gig', source: 'platform', verifyStatus: 'verified', gstin: '', noGstin: false, noPlatform: false, platformName: 'Porter Logistics Platform', platformMobile: '+91 98765 11223', tier: 'verified', active: false },
+        address: 'Andheri East Warehouse', state: 'Maharashtra', pincode: '400069',
+        sector: 'nongovt', relation: 'gig', source: 'platform', verifyStatus: 'verified', hasGst: '', gstin: '', platformName: 'Porter Logistics Platform', platformMobile: '+91 98765 11223', uan: '', fallbackChoice: '', tier: 'verified', active: false },
       { role: 'Independent Masonry Contractor', org: 'Self-Employed — Rajan Masonry Works', period: 'Jan 2016 - Jan 2018', loc: 'Gurugram',
-        address: 'Shop 14, Sohna Road', state: 'Haryana', city: 'Gurugram', pincode: '122018',
-        sector: 'nongovt', relation: 'self', source: 'gstin-udyam', verifyStatus: 'verified', gstin: '07ABCDE1234F1Z5', noGstin: false, noPlatform: false, platformName: '', platformMobile: '', tier: 'verified', active: false },
+        address: 'Shop 14, Sohna Road', state: 'Haryana', pincode: '122018',
+        sector: 'nongovt', relation: 'self', source: 'gstin-udyam', verifyStatus: 'verified', hasGst: 'yes', gstin: '07ABCDE1234F1Z5', platformName: '', platformMobile: '', uan: '', fallbackChoice: '', tier: 'verified', active: false },
       { role: 'Senior Mason', org: 'JMD Builders (via Sharma Manpower Agency)', period: 'Jan 2013 - Dec 2015', loc: 'Gurugram',
-        address: 'DLF Phase 2, Site Office', state: 'Haryana', city: 'Gurugram', pincode: '122002',
-        sector: 'nongovt', relation: 'agency', source: 'agency-hrms', verifyStatus: 'verified', gstin: '', noGstin: false, noPlatform: false, platformName: '', platformMobile: '', tier: 'verified', active: false },
+        address: 'DLF Phase 2, Site Office', state: 'Haryana', pincode: '122002',
+        sector: 'nongovt', relation: 'agency', source: 'agency-hrms', verifyStatus: 'verified', hasGst: '', gstin: '', platformName: '', platformMobile: '', uan: '', fallbackChoice: '', tier: 'verified', active: false },
       { role: 'Mason', org: 'L&T Construction (via local contractor)', period: 'Feb 2011 - Dec 2012', loc: 'Noida',
-        address: 'Sector 62, Site Office', state: 'Uttar Pradesh', city: 'Noida', pincode: '201301',
-        sector: 'nongovt', relation: 'agency', source: 'dav', verifyStatus: 'verified', gstin: '', noGstin: false, noPlatform: false, platformName: '', platformMobile: '', tier: 'verified', active: false },
+        address: 'Sector 62, Site Office', state: 'Uttar Pradesh', pincode: '201301',
+        sector: 'nongovt', relation: 'agency', source: 'dav', verifyStatus: 'verified', hasGst: '', gstin: '', platformName: '', platformMobile: '', uan: '', fallbackChoice: 'dav', tier: 'verified', active: false },
       { role: 'Farm Labourer', org: 'Family farmland', period: '2007 - 2010', loc: 'Lucknow, Uttar Pradesh',
-        address: 'Village Rampur, Post Malihabad', state: 'Uttar Pradesh', city: 'Lucknow', pincode: '226102',
-        sector: 'nongovt', relation: 'informal', source: 'dav', verifyStatus: 'verified', gstin: '', noGstin: false, noPlatform: false, platformName: '', platformMobile: '', tier: 'verified', active: false },
+        address: 'Village Rampur, Post Malihabad', state: 'Uttar Pradesh', pincode: '226102',
+        sector: 'nongovt', relation: 'informal', source: 'dav', verifyStatus: 'verified', hasGst: '', gstin: '', platformName: '', platformMobile: '', uan: '', fallbackChoice: '', tier: 'verified', active: false },
     ],
     skills: ['Masonry', 'Scaffolding', 'Plastering', 'Tile Work', 'Concrete Finishing', 'Blueprint Reading'],
     consent: { employers: true, schemes: true, recruiters: false, notify: true },
@@ -76,6 +76,7 @@
     'agency-hrms': { label: 'Agency HRMS', ic: 'building' },
     platform: { label: 'Platform Records', ic: 'briefcase' },
     'gstin-udyam': { label: 'GSTIN/Udyam', ic: 'file' },
+    uan: { label: 'EPFO / UAN Lookup', ic: 'landmark' },
     dav: { label: 'Digital Address Verification', ic: 'mappin' },
   };
   const RELATIONS = [
@@ -85,19 +86,10 @@
     { v: 'self', label: 'Self-Employed Worker' },
     { v: 'informal', label: 'Farmer / Other Worker' },
   ];
-  // resolves the verification source for a given entry's current sector/relation.
-  // agency entries keep a pre-seeded 'agency-hrms' source if present; otherwise (including
-  // any freshly-added entry) they fall back to DAV — the agency-HRMS instant-fetch path is
-  // only demonstrated via seed data, there's no user-facing "does your agency have an HRMS" toggle.
-  // gig/self-employed fall back to DAV when there's no platform record (e.g. informal/domestic
-  // work) or no GSTIN/Udyam number to look up, per the worker's own "I don't have..." toggle.
-  function resolveSource(w) {
-    if (w.relation === 'direct') return w.sector === 'govt' ? 'hrms-govt' : 'hrms-nongovt';
-    if (w.relation === 'agency') return w.source === 'agency-hrms' ? 'agency-hrms' : 'dav';
-    if (w.relation === 'gig') return w.noPlatform ? 'dav' : 'platform';
-    if (w.relation === 'self') return w.noGstin ? 'dav' : 'gstin-udyam';
-    return 'dav';
-  }
+  // whether an entry's fetch attempt would offer a UAN retry fallback (contract workers can be
+  // EPFO-covered via their agency; non-govt direct employees may also be found this way — govt
+  // direct employees have no UAN/EPFO concept, so they only fall back to DAV).
+  function offersUan(w) { return w.relation === 'agency' || (w.relation === 'direct' && w.sector !== 'govt'); }
 
   const spinner = (label) => `<span class="wset-spin"></span> ${label}`;
 
@@ -114,7 +106,7 @@
         <div class="banner banner--info" style="margin-bottom:16px">${App.icon('mappin')}<div>We'll verify this work entry against the address you've provided.</div></div>
         <div class="dav-kv">
           <div class="row between gap-12"><span class="muted">Address</span><b>${App.esc(w.address || '—')}</b></div>
-          <div class="row between gap-12"><span class="muted">City / State</span><b>${App.esc(w.city || '—')}, ${App.esc(w.state || '—')}</b></div>
+          <div class="row between gap-12"><span class="muted">City / State</span><b>${App.esc(w.loc || '—')}, ${App.esc(w.state || '—')}</b></div>
           <div class="row between gap-12"><span class="muted">Pincode</span><span class="mono">${App.esc(w.pincode || '—')}</span></div>
         </div>`;
       foot = `<button class="btn" ${sending ? 'disabled' : ''} onclick="App.modal.close()">Cancel</button>
@@ -153,12 +145,7 @@
       } catch (e) {}
 
       if (section === 'work') {
-        const toVerify = S.work.map((w, i) => i).filter(i => S.work[i].verifyStatus !== 'verified');
-        const davQueue = toVerify.filter(i => resolveSource(S.work[i]) === 'dav');
-        const instant = toVerify.filter(i => resolveSource(S.work[i]) !== 'dav');
-        instant.forEach(i => WorkerSettings.verifyEntry(i));
-        App.toast(toVerify.length ? `Work experience saved — verifying ${toVerify.length} ${toVerify.length === 1 ? 'entry' : 'entries'}…` : 'Work experience saved to your portfolio');
-        if (davQueue.length) { DAV.queue = davQueue.slice(1); WorkerSettings.openDAV(davQueue[0]); }
+        App.toast('Work experience saved to your portfolio');
       } else {
         App.toast(section === 'skills' ? 'Skills updated' : 'Profile saved');
       }
@@ -169,32 +156,82 @@
     // ---- work experience ----
     addWork() {
       S.work.push({
-        role: '', org: '', period: '', loc: '', address: '', state: '', city: '', pincode: '',
-        sector: 'nongovt', relation: 'direct', source: '', gstin: '', noGstin: false, noPlatform: false, platformName: '', platformMobile: '',
+        role: '', org: '', period: '', loc: '', address: '', state: '', pincode: '',
+        sector: 'nongovt', relation: 'direct', source: '', hasGst: '', gstin: '', platformName: '', platformMobile: '', uan: '', fallbackChoice: '',
         verifyStatus: 'unverified', tier: 'self', active: false,
       });
       App.reload();
     },
     removeWork(i) { if (S.work.length <= 1) return; const wasActive = S.work[i] && S.work[i].active; S.work.splice(i, 1); if (wasActive && S.work[0]) S.work[0].active = true; App.reload(); },
     setCurrent(i, on) { if (on) S.work.forEach((w, j) => w.active = (j === i)); else if (S.work[i]) S.work[i].active = false; App.reload(); },
-    setSector(i, v) { const w = S.work[i]; if (!w) return; w.sector = v; w.source = ''; w.verifyStatus = 'unverified'; App.reload(); },
+    setSector(i, v) { const w = S.work[i]; if (!w) return; w.sector = v; w.source = ''; w.verifyStatus = 'unverified'; w.fallbackChoice = ''; w.uan = ''; App.reload(); },
     setRelation(i, v) {
       const w = S.work[i]; if (!w) return;
-      w.relation = v; w.source = ''; w.gstin = ''; w.noGstin = false; w.noPlatform = false; w.platformName = ''; w.platformMobile = ''; w.verifyStatus = 'unverified';
+      w.relation = v; w.source = ''; w.hasGst = ''; w.gstin = ''; w.platformName = ''; w.platformMobile = ''; w.uan = ''; w.fallbackChoice = ''; w.verifyStatus = 'unverified';
       App.reload();
     },
-    setNoGstin(i, v) { const w = S.work[i]; if (!w) return; w.noGstin = v; w.verifyStatus = 'unverified'; App.reload(); },
-    setNoPlatform(i, v) { const w = S.work[i]; if (!w) return; w.noPlatform = v; w.verifyStatus = 'unverified'; App.reload(); },
+    setHasGst(i, v) { const w = S.work[i]; if (!w) return; w.hasGst = v; w.verifyStatus = 'unverified'; App.reload(); },
+    chooseFallback(i, choice) { const w = S.work[i]; if (!w) return; w.fallbackChoice = choice; w.verifyStatus = 'unverified'; App.reload(); },
 
-    // ---- verification (kicks off on Save) ----
+    // ---- verification: explicit "Verify Details" click per entry ----
     verifyEntry(i) {
       const w = S.work[i]; if (!w) return;
-      const source = resolveSource(w);
-      if (source === 'dav') { WorkerSettings.openDAV(i); return; }
-      if (source === 'gstin-udyam' && !w.gstin) { App.toast('Enter a GSTIN/Udyam number to verify this entry', 'alert'); return; }
-      if (source === 'platform' && (!w.platformName || !w.platformMobile)) { App.toast('Enter the platform name and registered mobile number to verify this entry', 'alert'); return; }
-      w.source = source; w.verifyStatus = 'pending'; App.reload();
-      setTimeout(() => { w.verifyStatus = 'verified'; w.tier = 'verified'; App.reload(); }, 1400);
+
+      if (w.relation === 'informal') {
+        if (!w.address || !w.state || !w.pincode) { App.toast('Fill in the address details to verify', 'alert'); return; }
+        WorkerSettings.openDAV(i); return;
+      }
+
+      if (w.relation === 'self') {
+        if (!w.hasGst) { App.toast('Select whether you have a GSTIN/Udyam number', 'alert'); return; }
+        if (w.hasGst === 'yes') {
+          if (!w.gstin) { App.toast('Enter your GSTIN/Udyam number to verify', 'alert'); return; }
+          w.verifyStatus = 'pending'; App.reload();
+          setTimeout(() => { w.source = 'gstin-udyam'; w.verifyStatus = 'verified'; w.tier = 'verified'; App.reload(); App.toast('Details verified and saved'); }, 1400);
+        } else {
+          if (!w.address || !w.state || !w.pincode) { App.toast('Fill in the address details to verify', 'alert'); return; }
+          WorkerSettings.openDAV(i);
+        }
+        return;
+      }
+
+      if (w.relation === 'gig') {
+        if (w.fallbackChoice === 'dav') {
+          if (!w.address || !w.state || !w.pincode) { App.toast('Fill in the address details to verify', 'alert'); return; }
+          WorkerSettings.openDAV(i); return;
+        }
+        if (!w.platformName || !w.platformMobile) {
+          w.verifyStatus = 'failed'; App.reload();
+          App.toast('No matching platform record found', 'alert');
+          return;
+        }
+        w.verifyStatus = 'pending'; App.reload();
+        setTimeout(() => { w.source = 'platform'; w.verifyStatus = 'verified'; w.tier = 'verified'; App.reload(); App.toast('Details verified and saved'); }, 1400);
+        return;
+      }
+
+      // direct + agency: attempt automatic fetch, or resolve a chosen fallback
+      if (w.fallbackChoice === 'uan') {
+        if (!w.uan) { App.toast('Enter your UAN number to retry', 'alert'); return; }
+        w.verifyStatus = 'pending'; App.reload();
+        setTimeout(() => { w.source = 'uan'; w.verifyStatus = 'verified'; w.tier = 'verified'; App.reload(); App.toast('Details verified and saved'); }, 1400);
+        return;
+      }
+      if (w.fallbackChoice === 'dav') {
+        if (!w.address || !w.state || !w.pincode) { App.toast('Fill in the address details to verify', 'alert'); return; }
+        WorkerSettings.openDAV(i); return;
+      }
+      if (!w.org) {
+        w.verifyStatus = 'failed'; App.reload();
+        App.toast('Could not automatically verify — try an alternative below', 'alert');
+        return;
+      }
+      w.verifyStatus = 'pending'; App.reload();
+      setTimeout(() => {
+        w.source = w.relation === 'agency' ? 'agency-hrms' : (w.sector === 'govt' ? 'hrms-govt' : 'hrms-nongovt');
+        w.verifyStatus = 'verified'; w.tier = 'verified'; App.reload();
+        App.toast('Details verified and saved');
+      }, 1400);
     },
     openDAV(i) { DAV.step = 'intro'; DAV.i = i; DAV.otp = ''; davModal(); },
     onDavOtp(el) {
@@ -215,7 +252,7 @@
     davNext() {
       App.modal.close();
       if (DAV.queue.length) { const next = DAV.queue.shift(); WorkerSettings.openDAV(next); }
-      else { App.toast('Address verified via DAV'); App.reload(); }
+      else { App.toast('Details verified and saved'); App.reload(); }
     },
 
     // ---- skills ----
@@ -267,15 +304,35 @@
     return App.ui.pill('Self Declared', 'amber', true);
   }
 
-  // per-entry verification status chip, shown instead of a manual per-entry action button —
-  // Save() is what actually kicks off verification (see WorkerSettings.save)
+  // per-entry verification status chip
   function verifyChip(w) {
     if (w.verifyStatus === 'verified') {
-      const src = SOURCE_META[w.source] || SOURCE_META[resolveSource(w)];
+      const src = SOURCE_META[w.source] || { label: 'Self Declared' };
       return `<span class="verified" style="font-size:11.5px">${App.icon('shieldcheck')} Verified via ${App.esc(src.label)}</span>`;
     }
     if (w.verifyStatus === 'pending') return `<span class="pill pill--blue pill--dot">${spinner('Verifying…')}</span>`;
-    return App.ui.pill('Not yet verified — click Save', 'gray', true);
+    if (w.verifyStatus === 'failed') return App.ui.pill('Could not verify automatically', 'amber', true);
+    return App.ui.pill('Not yet verified', 'gray', true);
+  }
+
+  // Address/State/Pincode — City is already collected as a general field above, so DAV
+  // only needs these three. Shown when the entry's path requires (or has fallen back to) DAV.
+  function addressBlock(w, i) {
+    const needsDav = w.relation === 'informal'
+      || (w.relation === 'self' && w.hasGst === 'no')
+      || ((w.relation === 'gig' || w.relation === 'direct' || w.relation === 'agency') && w.fallbackChoice === 'dav');
+    if (!needsDav) return '';
+    return `
+      <div class="label" style="margin-top:14px;margin-bottom:2px">Work Address</div>
+      <div class="hint" style="margin-bottom:8px">Required to verify this entry via Digital Address Verification.</div>
+      <div class="field" style="margin-bottom:0"><label class="label wset-flabel">Address</label>
+        <input class="input" value="${App.esc(w.address)}" placeholder="Street / site address" oninput="WorkerSettings.editWork(${i},'address',this.value)"></div>
+      <div class="grid grid-2" style="margin-top:12px">
+        <div class="field" style="margin-bottom:0"><label class="label wset-flabel">State</label>
+          <input class="input" value="${App.esc(w.state)}" placeholder="e.g. Haryana" oninput="WorkerSettings.editWork(${i},'state',this.value)"></div>
+        <div class="field" style="margin-bottom:0"><label class="label wset-flabel">Pincode</label>
+          <input class="input mono" value="${App.esc(w.pincode)}" placeholder="e.g. 122002" oninput="WorkerSettings.editWork(${i},'pincode',this.value)"></div>
+      </div>`;
   }
 
   function saveBtn(section, label) {
@@ -365,7 +422,7 @@
             <input class="input" value="${App.esc(w.period)}" placeholder="e.g. Mar 2023 - Present" oninput="WorkerSettings.editWork(${i},'period',this.value)">
           </div>
           <div class="field" style="margin-bottom:0">
-            <label class="label wset-flabel">Location</label>
+            <label class="label wset-flabel">City</label>
             <input class="input" value="${App.esc(w.loc)}" placeholder="e.g. Delhi" oninput="WorkerSettings.editWork(${i},'loc',this.value)">
           </div>
         </div>
@@ -386,47 +443,58 @@
           </div>
         </div>
 
+        ${w.relation === 'informal' ? addressBlock(w, i) : ''}
+
         ${w.relation === 'gig' ? `
-        <div class="field" style="margin-top:14px;margin-bottom:0">
-          <label class="wset-check"><input type="checkbox" ${w.noPlatform ? 'checked' : ''} onchange="WorkerSettings.setNoPlatform(${i},this.checked)"> This isn't a listed platform (e.g. informal or domestic work)</label>
-        </div>
-        ${!w.noPlatform ? `
-        <div class="grid grid-2" style="margin-top:12px">
+        <div class="grid grid-2" style="margin-top:14px">
           <div class="field" style="margin-bottom:0"><label class="label wset-flabel">Platform Name</label>
             <input class="input" value="${App.esc(w.platformName)}" placeholder="e.g. Porter, Urban Company" oninput="WorkerSettings.editWork(${i},'platformName',this.value)"></div>
           <div class="field" style="margin-bottom:0"><label class="label wset-flabel">Registered Mobile Number</label>
             <input class="input mono" value="${App.esc(w.platformMobile)}" placeholder="Mobile linked to your platform account" oninput="WorkerSettings.editWork(${i},'platformMobile',this.value)"></div>
-        </div>` : ''}` : ''}
+        </div>
+        ${w.verifyStatus === 'failed' ? `
+        <div class="banner banner--amber" style="margin-top:12px">${App.icon('alert')}<div>No matching platform record found — this may be informal or domestic work with no platform. <button class="btn btn--soft btn--sm" style="margin-top:8px" onclick="WorkerSettings.chooseFallback(${i},'dav')">${App.icon('mappin')} Verify via Address instead</button></div></div>` : ''}
+        ${addressBlock(w, i)}
+        ` : ''}
 
         ${w.relation === 'self' ? `
         <div class="field" style="margin-top:14px;margin-bottom:0">
-          ${!w.noGstin ? `<label class="label wset-flabel">GSTIN / Udyam Number</label>
-          <input class="input mono" value="${App.esc(w.gstin)}" placeholder="e.g. 07ABCDE1234F1Z5" oninput="WorkerSettings.setGstin(${i},this.value)">` : ''}
+          <label class="label wset-flabel">Do you have a GSTIN or Udyam registration number?</label>
+          <select class="select" onchange="WorkerSettings.setHasGst(${i},this.value)">
+            <option value="" ${!w.hasGst ? 'selected' : ''} disabled>Select an option</option>
+            <option value="yes" ${w.hasGst === 'yes' ? 'selected' : ''}>Yes</option>
+            <option value="no" ${w.hasGst === 'no' ? 'selected' : ''}>No</option>
+          </select>
         </div>
-        <label class="wset-check" style="margin-top:${w.noGstin ? '0' : '8'}px"><input type="checkbox" ${w.noGstin ? 'checked' : ''} onchange="WorkerSettings.setNoGstin(${i},this.checked)"> I don't have a GSTIN/Udyam number</label>` : ''}
+        ${w.hasGst === 'yes' ? `
+        <div class="field" style="margin-top:12px;margin-bottom:0">
+          <label class="label wset-flabel">GSTIN / Udyam Number</label>
+          <input class="input mono" value="${App.esc(w.gstin)}" placeholder="e.g. 07ABCDE1234F1Z5" oninput="WorkerSettings.setGstin(${i},this.value)">
+        </div>` : ''}
+        ${w.hasGst === 'no' ? addressBlock(w, i) : ''}` : ''}
 
-        ${resolveSource(w) === 'dav' ? `
-        <div class="label" style="margin-top:14px;margin-bottom:2px">Work Address</div>
-        <div class="hint" style="margin-bottom:8px">Required to verify this entry via Digital Address Verification.</div>
-        <div class="grid grid-2">
-          <div class="field" style="margin-bottom:0"><label class="label wset-flabel">Address</label>
-            <input class="input" value="${App.esc(w.address)}" placeholder="Street / site address" oninput="WorkerSettings.editWork(${i},'address',this.value)"></div>
-          <div class="field" style="margin-bottom:0"><label class="label wset-flabel">State</label>
-            <input class="input" value="${App.esc(w.state)}" placeholder="e.g. Haryana" oninput="WorkerSettings.editWork(${i},'state',this.value)"></div>
-        </div>
-        <div class="grid grid-2" style="margin-top:12px">
-          <div class="field" style="margin-bottom:0"><label class="label wset-flabel">City</label>
-            <input class="input" value="${App.esc(w.city)}" placeholder="e.g. Gurugram" oninput="WorkerSettings.editWork(${i},'city',this.value)"></div>
-          <div class="field" style="margin-bottom:0"><label class="label wset-flabel">Pincode</label>
-            <input class="input mono" value="${App.esc(w.pincode)}" placeholder="e.g. 122002" oninput="WorkerSettings.editWork(${i},'pincode',this.value)"></div>
-        </div>` : `
-        <div class="hint" style="margin-top:14px">Verification for this entry: <b>${App.esc((SOURCE_META[resolveSource(w)] || {}).label || '')}</b></div>`}
+        ${(w.relation === 'direct' || w.relation === 'agency') && w.verifyStatus === 'failed' && !w.fallbackChoice ? `
+        <div class="banner banner--amber" style="margin-top:14px">${App.icon('alert')}<div>Could not automatically verify from the company name provided.
+          <div class="row gap-8 wrap" style="margin-top:8px">
+            ${offersUan(w) ? `<button class="btn btn--soft btn--sm" onclick="WorkerSettings.chooseFallback(${i},'uan')">${App.icon('landmark')} Enter UAN instead</button>` : ''}
+            <button class="btn btn--soft btn--sm" onclick="WorkerSettings.chooseFallback(${i},'dav')">${App.icon('mappin')} Verify via Address instead</button>
+          </div></div></div>` : ''}
+
+        ${(w.relation === 'direct' || w.relation === 'agency') && w.fallbackChoice === 'uan' ? `
+        <div class="field" style="margin-top:14px;margin-bottom:0">
+          <label class="label wset-flabel">UAN Number</label>
+          <input class="input mono" value="${App.esc(w.uan)}" placeholder="e.g. 100123456789" oninput="WorkerSettings.editWork(${i},'uan',this.value)">
+        </div>` : ''}
+        ${(w.relation === 'direct' || w.relation === 'agency') ? addressBlock(w, i) : ''}
 
         <div class="row between" style="margin-top:13px;padding-top:12px;border-top:1px solid var(--line-2)">
           <label class="wset-check"><input type="checkbox" ${w.active ? 'checked' : ''} onchange="WorkerSettings.setCurrent(${i},this.checked)"> Current position</label>
           <button class="wset-trash" ${single ? 'disabled' : ''} onclick="WorkerSettings.removeWork(${i})" title="${single ? 'At least one entry is required' : 'Remove this entry'}">${App.icon('trash')} Remove</button>
         </div>
-        <div class="row" style="margin-top:11px">${verifyChip(w)}</div>
+        <div class="row between" style="margin-top:11px">
+          ${verifyChip(w)}
+          ${w.verifyStatus !== 'verified' ? `<button class="btn btn--primary btn--sm" ${w.verifyStatus === 'pending' ? 'disabled' : ''} onclick="WorkerSettings.verifyEntry(${i})">${w.verifyStatus === 'pending' ? spinner('Verifying…') : (w.fallbackChoice === 'dav' || w.relation === 'informal' || (w.relation === 'self' && w.hasGst === 'no') ? `${App.icon('mappin')} Verify via Address` : `${App.icon('shieldcheck')} Verify Details`)}</button>` : ''}
+        </div>
       </div>`).join('');
 
     return `
