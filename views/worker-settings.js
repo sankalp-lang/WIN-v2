@@ -160,18 +160,24 @@
         sector: 'nongovt', relation: 'direct', source: '', hasGst: '', gstin: '', platformName: '', platformMobile: '', uan: '', fallbackChoice: '',
         verifyStatus: 'unverified', tier: 'self', active: false,
       });
-      App.reload();
+      entryModal(S.work.length - 1);
     },
-    removeWork(i) { if (S.work.length <= 1) return; const wasActive = S.work[i] && S.work[i].active; S.work.splice(i, 1); if (wasActive && S.work[0]) S.work[0].active = true; App.reload(); },
-    setCurrent(i, on) { if (on) S.work.forEach((w, j) => w.active = (j === i)); else if (S.work[i]) S.work[i].active = false; App.reload(); },
-    setSector(i, v) { const w = S.work[i]; if (!w) return; w.sector = v; w.source = ''; w.verifyStatus = 'unverified'; w.fallbackChoice = ''; w.uan = ''; App.reload(); },
+    editEntry(i) { entryModal(i); },
+    closeEntryModal() { ENTRY_MODAL_I = null; App.modal.close(); App.reload(); },
+    removeWork(i) {
+      if (S.work.length <= 1) return;
+      const wasActive = S.work[i] && S.work[i].active; S.work.splice(i, 1); if (wasActive && S.work[0]) S.work[0].active = true;
+      if (ENTRY_MODAL_I === i) WorkerSettings.closeEntryModal(); else App.reload();
+    },
+    setCurrent(i, on) { if (on) S.work.forEach((w, j) => w.active = (j === i)); else if (S.work[i]) S.work[i].active = false; App.reload(); repaintEntryModal(i); },
+    setSector(i, v) { const w = S.work[i]; if (!w) return; w.sector = v; w.source = ''; w.verifyStatus = 'unverified'; w.fallbackChoice = ''; w.uan = ''; App.reload(); repaintEntryModal(i); },
     setRelation(i, v) {
       const w = S.work[i]; if (!w) return;
       w.relation = v; w.source = ''; w.hasGst = ''; w.gstin = ''; w.platformName = ''; w.platformMobile = ''; w.uan = ''; w.fallbackChoice = ''; w.verifyStatus = 'unverified';
-      App.reload();
+      App.reload(); repaintEntryModal(i);
     },
-    setHasGst(i, v) { const w = S.work[i]; if (!w) return; w.hasGst = v; w.verifyStatus = 'unverified'; App.reload(); },
-    chooseFallback(i, choice) { const w = S.work[i]; if (!w) return; w.fallbackChoice = choice; w.verifyStatus = 'unverified'; App.reload(); },
+    setHasGst(i, v) { const w = S.work[i]; if (!w) return; w.hasGst = v; w.verifyStatus = 'unverified'; App.reload(); repaintEntryModal(i); },
+    chooseFallback(i, choice) { const w = S.work[i]; if (!w) return; w.fallbackChoice = choice; w.verifyStatus = 'unverified'; App.reload(); repaintEntryModal(i); },
 
     // ---- verification: explicit "Verify Details" click per entry ----
     verifyEntry(i) {
@@ -186,8 +192,8 @@
         if (!w.hasGst) { App.toast('Select whether you have a GSTIN/Udyam number', 'alert'); return; }
         if (w.hasGst === 'yes') {
           if (!w.gstin) { App.toast('Enter your GSTIN/Udyam number to verify', 'alert'); return; }
-          w.verifyStatus = 'pending'; App.reload();
-          setTimeout(() => { w.source = 'gstin-udyam'; w.verifyStatus = 'verified'; w.tier = 'verified'; App.reload(); App.toast('Details verified and saved'); }, 1400);
+          w.verifyStatus = 'pending'; App.reload(); repaintEntryModal(i);
+          setTimeout(() => { w.source = 'gstin-udyam'; w.verifyStatus = 'verified'; w.tier = 'verified'; App.reload(); repaintEntryModal(i); App.toast('Details verified and saved'); }, 1400);
         } else {
           if (!w.address || !w.state || !w.pincode) { App.toast('Fill in the address details to verify', 'alert'); return; }
           WorkerSettings.openDAV(i);
@@ -201,20 +207,20 @@
           WorkerSettings.openDAV(i); return;
         }
         if (!w.platformName || !w.platformMobile) {
-          w.verifyStatus = 'failed'; App.reload();
+          w.verifyStatus = 'failed'; App.reload(); repaintEntryModal(i);
           App.toast('No matching platform record found', 'alert');
           return;
         }
-        w.verifyStatus = 'pending'; App.reload();
-        setTimeout(() => { w.source = 'platform'; w.verifyStatus = 'verified'; w.tier = 'verified'; App.reload(); App.toast('Details verified and saved'); }, 1400);
+        w.verifyStatus = 'pending'; App.reload(); repaintEntryModal(i);
+        setTimeout(() => { w.source = 'platform'; w.verifyStatus = 'verified'; w.tier = 'verified'; App.reload(); repaintEntryModal(i); App.toast('Details verified and saved'); }, 1400);
         return;
       }
 
       // direct + agency: attempt automatic fetch, or resolve a chosen fallback
       if (w.fallbackChoice === 'uan') {
         if (!w.uan) { App.toast('Enter your UAN number to retry', 'alert'); return; }
-        w.verifyStatus = 'pending'; App.reload();
-        setTimeout(() => { w.source = 'uan'; w.verifyStatus = 'verified'; w.tier = 'verified'; App.reload(); App.toast('Details verified and saved'); }, 1400);
+        w.verifyStatus = 'pending'; App.reload(); repaintEntryModal(i);
+        setTimeout(() => { w.source = 'uan'; w.verifyStatus = 'verified'; w.tier = 'verified'; App.reload(); repaintEntryModal(i); App.toast('Details verified and saved'); }, 1400);
         return;
       }
       if (w.fallbackChoice === 'dav') {
@@ -222,18 +228,18 @@
         WorkerSettings.openDAV(i); return;
       }
       if (!w.org) {
-        w.verifyStatus = 'failed'; App.reload();
+        w.verifyStatus = 'failed'; App.reload(); repaintEntryModal(i);
         App.toast('Could not automatically verify — try an alternative below', 'alert');
         return;
       }
-      w.verifyStatus = 'pending'; App.reload();
+      w.verifyStatus = 'pending'; App.reload(); repaintEntryModal(i);
       setTimeout(() => {
         w.source = w.relation === 'agency' ? 'agency-hrms' : (w.sector === 'govt' ? 'hrms-govt' : 'hrms-nongovt');
-        w.verifyStatus = 'verified'; w.tier = 'verified'; App.reload();
+        w.verifyStatus = 'verified'; w.tier = 'verified'; App.reload(); repaintEntryModal(i);
         App.toast('Details verified and saved');
       }, 1400);
     },
-    openDAV(i) { DAV.step = 'intro'; DAV.i = i; DAV.otp = ''; davModal(); },
+    openDAV(i) { ENTRY_MODAL_I = null; DAV.step = 'intro'; DAV.i = i; DAV.otp = ''; davModal(); },
     onDavOtp(el) {
       const v = el.value.replace(/\D/g, '').slice(0, 6);
       el.value = v; DAV.otp = v;
@@ -389,6 +395,113 @@
       </div>`;
   }
 
+  // full editable form for one work entry — used inside the Add/Edit Entry modal
+  function entryFormBody(w, i) {
+    const single = S.work.length <= 1;
+    return `
+      <div class="grid grid-2">
+        <div class="field" style="margin-bottom:0">
+          <label class="label wset-flabel">Role / Title</label>
+          <input class="input" value="${App.esc(w.role)}" placeholder="e.g. Construction Supervisor" oninput="WorkerSettings.editWork(${i},'role',this.value)">
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label class="label wset-flabel">Company</label>
+          <input class="input" value="${App.esc(w.org)}" placeholder="e.g. Omaxe Ltd." oninput="WorkerSettings.editWork(${i},'org',this.value)">
+        </div>
+      </div>
+      <div class="grid grid-2" style="margin-top:12px">
+        <div class="field" style="margin-bottom:0">
+          <label class="label wset-flabel">Period</label>
+          <input class="input" value="${App.esc(w.period)}" placeholder="e.g. Mar 2023 - Present" oninput="WorkerSettings.editWork(${i},'period',this.value)">
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label class="label wset-flabel">City</label>
+          <input class="input" value="${App.esc(w.loc)}" placeholder="e.g. Delhi" oninput="WorkerSettings.editWork(${i},'loc',this.value)">
+        </div>
+      </div>
+
+      <div class="grid grid-2" style="margin-top:12px">
+        <div class="field" style="margin-bottom:0">
+          <label class="label wset-flabel">Sector</label>
+          <select class="select" onchange="WorkerSettings.setSector(${i},this.value)">
+            <option value="nongovt" ${w.sector !== 'govt' ? 'selected' : ''}>Non-Government</option>
+            <option value="govt" ${w.sector === 'govt' ? 'selected' : ''}>Government</option>
+          </select>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label class="label wset-flabel">Employment Relationship</label>
+          <select class="select" onchange="WorkerSettings.setRelation(${i},this.value)">
+            ${RELATIONS.map(r => `<option value="${r.v}" ${w.relation === r.v ? 'selected' : ''}>${App.esc(r.label)}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+
+      ${w.relation === 'informal' ? addressBlock(w, i) : ''}
+
+      ${w.relation === 'gig' ? `
+      <div class="grid grid-2" style="margin-top:14px">
+        <div class="field" style="margin-bottom:0"><label class="label wset-flabel">Platform Name</label>
+          <input class="input" value="${App.esc(w.platformName)}" placeholder="e.g. Porter, Urban Company" oninput="WorkerSettings.editWork(${i},'platformName',this.value)"></div>
+        <div class="field" style="margin-bottom:0"><label class="label wset-flabel">Registered Mobile Number</label>
+          <input class="input mono" value="${App.esc(w.platformMobile)}" placeholder="Mobile linked to your platform account" oninput="WorkerSettings.editWork(${i},'platformMobile',this.value)"></div>
+      </div>
+      ${w.verifyStatus === 'failed' ? `
+      <div class="banner banner--amber" style="margin-top:12px">${App.icon('alert')}<div>No matching platform record found — this may be informal or domestic work with no platform. <button class="btn btn--soft btn--sm" style="margin-top:8px" onclick="WorkerSettings.chooseFallback(${i},'dav')">${App.icon('mappin')} Verify via Address instead</button></div></div>` : ''}
+      ${addressBlock(w, i)}
+      ` : ''}
+
+      ${w.relation === 'self' ? `
+      <div class="field" style="margin-top:14px;margin-bottom:0">
+        <label class="label wset-flabel">Do you have a GSTIN or Udyam registration number?</label>
+        <select class="select" onchange="WorkerSettings.setHasGst(${i},this.value)">
+          <option value="" ${!w.hasGst ? 'selected' : ''} disabled>Select an option</option>
+          <option value="yes" ${w.hasGst === 'yes' ? 'selected' : ''}>Yes</option>
+          <option value="no" ${w.hasGst === 'no' ? 'selected' : ''}>No</option>
+        </select>
+      </div>
+      ${w.hasGst === 'yes' ? `
+      <div class="field" style="margin-top:12px;margin-bottom:0">
+        <label class="label wset-flabel">GSTIN / Udyam Number</label>
+        <input class="input mono" value="${App.esc(w.gstin)}" placeholder="e.g. 07ABCDE1234F1Z5" oninput="WorkerSettings.setGstin(${i},this.value)">
+      </div>` : ''}
+      ${w.hasGst === 'no' ? addressBlock(w, i) : ''}` : ''}
+
+      ${(w.relation === 'direct' || w.relation === 'agency') && w.verifyStatus === 'failed' && !w.fallbackChoice ? `
+      <div class="banner banner--amber" style="margin-top:14px">${App.icon('alert')}<div>Could not automatically verify from the company name provided.
+        <div class="row gap-8 wrap" style="margin-top:8px">
+          ${offersUan(w) ? `<button class="btn btn--soft btn--sm" onclick="WorkerSettings.chooseFallback(${i},'uan')">${App.icon('landmark')} Enter UAN instead</button>` : ''}
+          <button class="btn btn--soft btn--sm" onclick="WorkerSettings.chooseFallback(${i},'dav')">${App.icon('mappin')} Verify via Address instead</button>
+        </div></div></div>` : ''}
+
+      ${(w.relation === 'direct' || w.relation === 'agency') && w.fallbackChoice === 'uan' ? `
+      <div class="field" style="margin-top:14px;margin-bottom:0">
+        <label class="label wset-flabel">UAN Number</label>
+        <input class="input mono" value="${App.esc(w.uan)}" placeholder="e.g. 100123456789" oninput="WorkerSettings.editWork(${i},'uan',this.value)">
+      </div>` : ''}
+      ${(w.relation === 'direct' || w.relation === 'agency') ? addressBlock(w, i) : ''}
+
+      <div class="row between" style="margin-top:13px;padding-top:12px;border-top:1px solid var(--line-2)">
+        <label class="wset-check"><input type="checkbox" ${w.active ? 'checked' : ''} onchange="WorkerSettings.setCurrent(${i},this.checked)"> Current position</label>
+        <button class="wset-trash" ${single ? 'disabled' : ''} onclick="WorkerSettings.removeWork(${i})" title="${single ? 'At least one entry is required' : 'Remove this entry'}">${App.icon('trash')} Remove</button>
+      </div>
+      <div class="row between" style="margin-top:11px">
+        ${verifyChip(w)}
+        ${w.verifyStatus !== 'verified' ? `<button class="btn btn--primary btn--sm" ${w.verifyStatus === 'pending' ? 'disabled' : ''} onclick="WorkerSettings.verifyEntry(${i})">${w.verifyStatus === 'pending' ? spinner('Verifying…') : (w.fallbackChoice === 'dav' || w.relation === 'informal' || (w.relation === 'self' && w.hasGst === 'no') ? `${App.icon('mappin')} Verify via Address` : `${App.icon('shieldcheck')} Verify Details`)}</button>` : ''}
+      </div>`;
+  }
+
+  // the Add/Edit Entry modal — repainted in place after any state change while it's open
+  let ENTRY_MODAL_I = null;
+  function entryModal(i) {
+    const w = S.work[i]; if (!w) return;
+    ENTRY_MODAL_I = i;
+    App.modal.open(entryFormBody(w, i), {
+      title: w.role ? w.role : 'Add Work Entry', icon: 'briefcase', wide: true,
+      foot: `<button class="btn btn--primary" onclick="WorkerSettings.closeEntryModal()">${App.icon('check')} Done</button>`,
+    });
+  }
+  function repaintEntryModal(i) { if (ENTRY_MODAL_I === i) entryModal(i); }
+
   function workTab() {
     const govRows = GOVIDS.map(g => `
       <div class="minirow" style="border-bottom:1px solid var(--line-2)">
@@ -399,102 +512,18 @@
 
     const single = S.work.length <= 1;
     const expCards = S.work.map((w, i) => `
-      <div class="wset-exp">
-        <div class="wset-exp__head">
-          <span class="wset-grip" title="Drag to reorder (demo)">${grip}</span>
-          <span class="wset-exp__lbl">${w.active ? 'Current Position' : 'Position ' + (i + 1)}</span>
-          <span class="grow"></span>
-          ${tierBadge(w.tier)}
-        </div>
-        <div class="grid grid-2">
-          <div class="field" style="margin-bottom:0">
-            <label class="label wset-flabel">Role / Title</label>
-            <input class="input" value="${App.esc(w.role)}" placeholder="e.g. Construction Supervisor" oninput="WorkerSettings.editWork(${i},'role',this.value)">
+      <div class="wset-exp-row">
+        <span class="wset-grip" title="Drag to reorder (demo)">${grip}</span>
+        <div class="grow" style="min-width:0">
+          <div class="row gap-8 wrap">
+            <b style="font-size:13.5px">${App.esc(w.role || 'Untitled role')}</b>
+            ${w.active ? App.ui.pill('Current', 'green', true) : ''}
           </div>
-          <div class="field" style="margin-bottom:0">
-            <label class="label wset-flabel">Company</label>
-            <input class="input" value="${App.esc(w.org)}" placeholder="e.g. Omaxe Ltd." oninput="WorkerSettings.editWork(${i},'org',this.value)">
-          </div>
+          <div class="muted" style="font-size:12.5px;margin-top:2px">${App.esc(w.org || 'Company')} · ${App.esc(w.period || 'Period')} · ${App.esc(w.loc || 'City')}</div>
+          <div style="margin-top:6px">${verifyChip(w)}</div>
         </div>
-        <div class="grid grid-2" style="margin-top:12px">
-          <div class="field" style="margin-bottom:0">
-            <label class="label wset-flabel">Period</label>
-            <input class="input" value="${App.esc(w.period)}" placeholder="e.g. Mar 2023 - Present" oninput="WorkerSettings.editWork(${i},'period',this.value)">
-          </div>
-          <div class="field" style="margin-bottom:0">
-            <label class="label wset-flabel">City</label>
-            <input class="input" value="${App.esc(w.loc)}" placeholder="e.g. Delhi" oninput="WorkerSettings.editWork(${i},'loc',this.value)">
-          </div>
-        </div>
-
-        <div class="grid grid-2" style="margin-top:12px">
-          <div class="field" style="margin-bottom:0">
-            <label class="label wset-flabel">Sector</label>
-            <select class="select" onchange="WorkerSettings.setSector(${i},this.value)">
-              <option value="nongovt" ${w.sector !== 'govt' ? 'selected' : ''}>Non-Government</option>
-              <option value="govt" ${w.sector === 'govt' ? 'selected' : ''}>Government</option>
-            </select>
-          </div>
-          <div class="field" style="margin-bottom:0">
-            <label class="label wset-flabel">Employment Relationship</label>
-            <select class="select" onchange="WorkerSettings.setRelation(${i},this.value)">
-              ${RELATIONS.map(r => `<option value="${r.v}" ${w.relation === r.v ? 'selected' : ''}>${App.esc(r.label)}</option>`).join('')}
-            </select>
-          </div>
-        </div>
-
-        ${w.relation === 'informal' ? addressBlock(w, i) : ''}
-
-        ${w.relation === 'gig' ? `
-        <div class="grid grid-2" style="margin-top:14px">
-          <div class="field" style="margin-bottom:0"><label class="label wset-flabel">Platform Name</label>
-            <input class="input" value="${App.esc(w.platformName)}" placeholder="e.g. Porter, Urban Company" oninput="WorkerSettings.editWork(${i},'platformName',this.value)"></div>
-          <div class="field" style="margin-bottom:0"><label class="label wset-flabel">Registered Mobile Number</label>
-            <input class="input mono" value="${App.esc(w.platformMobile)}" placeholder="Mobile linked to your platform account" oninput="WorkerSettings.editWork(${i},'platformMobile',this.value)"></div>
-        </div>
-        ${w.verifyStatus === 'failed' ? `
-        <div class="banner banner--amber" style="margin-top:12px">${App.icon('alert')}<div>No matching platform record found — this may be informal or domestic work with no platform. <button class="btn btn--soft btn--sm" style="margin-top:8px" onclick="WorkerSettings.chooseFallback(${i},'dav')">${App.icon('mappin')} Verify via Address instead</button></div></div>` : ''}
-        ${addressBlock(w, i)}
-        ` : ''}
-
-        ${w.relation === 'self' ? `
-        <div class="field" style="margin-top:14px;margin-bottom:0">
-          <label class="label wset-flabel">Do you have a GSTIN or Udyam registration number?</label>
-          <select class="select" onchange="WorkerSettings.setHasGst(${i},this.value)">
-            <option value="" ${!w.hasGst ? 'selected' : ''} disabled>Select an option</option>
-            <option value="yes" ${w.hasGst === 'yes' ? 'selected' : ''}>Yes</option>
-            <option value="no" ${w.hasGst === 'no' ? 'selected' : ''}>No</option>
-          </select>
-        </div>
-        ${w.hasGst === 'yes' ? `
-        <div class="field" style="margin-top:12px;margin-bottom:0">
-          <label class="label wset-flabel">GSTIN / Udyam Number</label>
-          <input class="input mono" value="${App.esc(w.gstin)}" placeholder="e.g. 07ABCDE1234F1Z5" oninput="WorkerSettings.setGstin(${i},this.value)">
-        </div>` : ''}
-        ${w.hasGst === 'no' ? addressBlock(w, i) : ''}` : ''}
-
-        ${(w.relation === 'direct' || w.relation === 'agency') && w.verifyStatus === 'failed' && !w.fallbackChoice ? `
-        <div class="banner banner--amber" style="margin-top:14px">${App.icon('alert')}<div>Could not automatically verify from the company name provided.
-          <div class="row gap-8 wrap" style="margin-top:8px">
-            ${offersUan(w) ? `<button class="btn btn--soft btn--sm" onclick="WorkerSettings.chooseFallback(${i},'uan')">${App.icon('landmark')} Enter UAN instead</button>` : ''}
-            <button class="btn btn--soft btn--sm" onclick="WorkerSettings.chooseFallback(${i},'dav')">${App.icon('mappin')} Verify via Address instead</button>
-          </div></div></div>` : ''}
-
-        ${(w.relation === 'direct' || w.relation === 'agency') && w.fallbackChoice === 'uan' ? `
-        <div class="field" style="margin-top:14px;margin-bottom:0">
-          <label class="label wset-flabel">UAN Number</label>
-          <input class="input mono" value="${App.esc(w.uan)}" placeholder="e.g. 100123456789" oninput="WorkerSettings.editWork(${i},'uan',this.value)">
-        </div>` : ''}
-        ${(w.relation === 'direct' || w.relation === 'agency') ? addressBlock(w, i) : ''}
-
-        <div class="row between" style="margin-top:13px;padding-top:12px;border-top:1px solid var(--line-2)">
-          <label class="wset-check"><input type="checkbox" ${w.active ? 'checked' : ''} onchange="WorkerSettings.setCurrent(${i},this.checked)"> Current position</label>
-          <button class="wset-trash" ${single ? 'disabled' : ''} onclick="WorkerSettings.removeWork(${i})" title="${single ? 'At least one entry is required' : 'Remove this entry'}">${App.icon('trash')} Remove</button>
-        </div>
-        <div class="row between" style="margin-top:11px">
-          ${verifyChip(w)}
-          ${w.verifyStatus !== 'verified' ? `<button class="btn btn--primary btn--sm" ${w.verifyStatus === 'pending' ? 'disabled' : ''} onclick="WorkerSettings.verifyEntry(${i})">${w.verifyStatus === 'pending' ? spinner('Verifying…') : (w.fallbackChoice === 'dav' || w.relation === 'informal' || (w.relation === 'self' && w.hasGst === 'no') ? `${App.icon('mappin')} Verify via Address` : `${App.icon('shieldcheck')} Verify Details`)}</button>` : ''}
-        </div>
+        <button class="iconbtn" title="Edit entry" onclick="WorkerSettings.editEntry(${i})">${App.icon('edit')}</button>
+        <button class="wset-trash" ${single ? 'disabled' : ''} onclick="WorkerSettings.removeWork(${i})" title="${single ? 'At least one entry is required' : 'Remove this entry'}">${App.icon('trash')}</button>
       </div>`).join('');
 
     return `
@@ -685,6 +714,8 @@
           .wset-exp{ border:1px solid var(--line); border-radius:var(--r); padding:15px 16px; background:var(--surface-2); }
           .wset-exp + .wset-exp{ margin-top:13px; }
           .wset-exp .input{ background:var(--surface); }
+          .wset-exp-row{ display:flex; align-items:flex-start; gap:11px; border:1px solid var(--line); border-radius:var(--r); padding:13px 14px; background:var(--surface-2); }
+          .wset-exp-row + .wset-exp-row{ margin-top:10px; }
           .wset-exp__head{ display:flex; align-items:center; gap:9px; margin-bottom:13px; }
           .wset-grip{ color:var(--faint); display:inline-flex; cursor:grab; }
           .wset-exp__lbl{ font-size:12px; font-weight:700; letter-spacing:.03em; text-transform:uppercase; color:var(--muted); }
