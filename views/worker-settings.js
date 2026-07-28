@@ -39,25 +39,25 @@
     work: [
       { role: 'Construction Supervisor', org: 'NBCC (India) Ltd. — Govt. Housing Project', period: 'Mar 2023 - Present', loc: 'Delhi',
         address: 'NBCC Housing Site, Sector 62', state: 'Delhi', pincode: '110062',
-        sector: 'govt', relation: 'direct', source: 'hrms-govt', verifyStatus: 'verified', hasGst: '', gstin: '', platformName: '', platformMobile: '', uan: '', fallbackChoice: '', tier: 'verified', active: true },
+        sector: 'govt', relation: 'direct', source: 'hrms-govt', verifyStatus: 'verified', hasGst: '', gstin: '', uan: '', fallbackChoice: '', tier: 'verified', active: true },
       { role: 'Mason Foreman', org: 'Hiranandani Group', period: 'Jun 2018 - Feb 2023', loc: 'Thane',
         address: 'Hiranandani Estate, Site Office', state: 'Maharashtra', pincode: '400607',
-        sector: 'nongovt', relation: 'direct', source: 'hrms-nongovt', verifyStatus: 'verified', hasGst: '', gstin: '', platformName: '', platformMobile: '', uan: '', fallbackChoice: '', tier: 'verified', active: false },
+        sector: 'nongovt', relation: 'direct', source: 'hrms-nongovt', verifyStatus: 'verified', hasGst: '', gstin: '', uan: '', fallbackChoice: '', tier: 'verified', active: false },
       { role: 'Site Loader/Helper (Gig)', org: 'Porter Logistics Platform', period: 'Feb 2018 - May 2018', loc: 'Mumbai',
         address: 'Andheri East Warehouse', state: 'Maharashtra', pincode: '400069',
-        sector: 'nongovt', relation: 'gig', source: 'platform', verifyStatus: 'verified', hasGst: '', gstin: '', platformName: 'Porter Logistics Platform', platformMobile: '+91 98765 11223', uan: '', fallbackChoice: '', tier: 'verified', active: false },
+        sector: 'nongovt', relation: 'gig', source: 'platform', verifyStatus: 'verified', hasGst: '', gstin: '', uan: '', fallbackChoice: '', tier: 'verified', active: false },
       { role: 'Independent Masonry Contractor', org: 'Self-Employed — Rajan Masonry Works', period: 'Jan 2016 - Jan 2018', loc: 'Gurugram',
         address: 'Shop 14, Sohna Road', state: 'Haryana', pincode: '122018',
-        sector: 'nongovt', relation: 'self', source: 'gstin-udyam', verifyStatus: 'verified', hasGst: 'yes', gstin: '07ABCDE1234F1Z5', platformName: '', platformMobile: '', uan: '', fallbackChoice: '', tier: 'verified', active: false },
+        sector: 'nongovt', relation: 'self', source: 'gstin-udyam', verifyStatus: 'verified', hasGst: 'yes', gstin: '07ABCDE1234F1Z5', uan: '', fallbackChoice: '', tier: 'verified', active: false },
       { role: 'Senior Mason', org: 'JMD Builders (via Sharma Manpower Agency)', period: 'Jan 2013 - Dec 2015', loc: 'Gurugram',
         address: 'DLF Phase 2, Site Office', state: 'Haryana', pincode: '122002',
-        sector: 'nongovt', relation: 'agency', source: 'agency-hrms', verifyStatus: 'verified', hasGst: '', gstin: '', platformName: '', platformMobile: '', uan: '', fallbackChoice: '', tier: 'verified', active: false },
+        sector: 'nongovt', relation: 'agency', source: 'agency-hrms', verifyStatus: 'verified', hasGst: '', gstin: '', uan: '', fallbackChoice: '', tier: 'verified', active: false },
       { role: 'Mason', org: 'L&T Construction (via local contractor)', period: 'Feb 2011 - Dec 2012', loc: 'Noida',
         address: 'Sector 62, Site Office', state: 'Uttar Pradesh', pincode: '201301',
-        sector: 'nongovt', relation: 'agency', source: 'dav', verifyStatus: 'verified', hasGst: '', gstin: '', platformName: '', platformMobile: '', uan: '', fallbackChoice: 'dav', tier: 'verified', active: false },
+        sector: 'nongovt', relation: 'agency', source: 'dav', verifyStatus: 'verified', hasGst: '', gstin: '', uan: '', fallbackChoice: 'dav', tier: 'verified', active: false },
       { role: 'Farm Labourer', org: 'Family farmland', period: '2007 - 2010', loc: 'Lucknow, Uttar Pradesh',
         address: 'Village Rampur, Post Malihabad', state: 'Uttar Pradesh', pincode: '226102',
-        sector: 'nongovt', relation: 'informal', source: 'dav', verifyStatus: 'verified', hasGst: '', gstin: '', platformName: '', platformMobile: '', uan: '', fallbackChoice: '', tier: 'verified', active: false },
+        sector: 'nongovt', relation: 'informal', source: 'dav', verifyStatus: 'verified', hasGst: '', gstin: '', uan: '', fallbackChoice: '', tier: 'verified', active: false },
     ],
     skills: ['Masonry', 'Scaffolding', 'Plastering', 'Tile Work', 'Concrete Finishing', 'Blueprint Reading'],
     consent: { employers: true, schemes: true, recruiters: false, notify: true },
@@ -157,7 +157,7 @@
     addWork() {
       S.work.push({
         role: '', org: '', period: '', loc: '', address: '', state: '', pincode: '',
-        sector: 'nongovt', relation: 'direct', source: '', hasGst: '', gstin: '', platformName: '', platformMobile: '', uan: '', fallbackChoice: '',
+        sector: 'nongovt', relation: 'direct', source: '', hasGst: '', gstin: '', uan: '', fallbackChoice: '',
         verifyStatus: 'unverified', tier: 'self', active: false,
       });
       entryModal(S.work.length - 1);
@@ -173,7 +173,7 @@
     setSector(i, v) { const w = S.work[i]; if (!w) return; w.sector = v; w.source = ''; w.verifyStatus = 'unverified'; w.fallbackChoice = ''; w.uan = ''; App.reload(); repaintEntryModal(i); },
     setRelation(i, v) {
       const w = S.work[i]; if (!w) return;
-      w.relation = v; w.source = ''; w.hasGst = ''; w.gstin = ''; w.platformName = ''; w.platformMobile = ''; w.uan = ''; w.fallbackChoice = ''; w.verifyStatus = 'unverified';
+      w.relation = v; w.source = ''; w.hasGst = ''; w.gstin = ''; w.uan = ''; w.fallbackChoice = ''; w.verifyStatus = 'unverified';
       App.reload(); repaintEntryModal(i);
     },
     setHasGst(i, v) { const w = S.work[i]; if (!w) return; w.hasGst = v; w.verifyStatus = 'unverified'; App.reload(); repaintEntryModal(i); },
@@ -206,7 +206,7 @@
           if (!w.address || !w.state || !w.pincode) { App.toast('Fill in the address details to verify', 'alert'); return; }
           WorkerSettings.openDAV(i); return;
         }
-        if (!w.platformName || !w.platformMobile) {
+        if (!w.org) {
           w.verifyStatus = 'failed'; App.reload(); repaintEntryModal(i);
           App.toast('No matching platform record found', 'alert');
           return;
@@ -439,14 +439,8 @@
       ${w.relation === 'informal' ? addressBlock(w, i) : ''}
 
       ${w.relation === 'gig' ? `
-      <div class="grid grid-2" style="margin-top:14px">
-        <div class="field" style="margin-bottom:0"><label class="label wset-flabel">Platform Name</label>
-          <input class="input" value="${App.esc(w.platformName)}" placeholder="e.g. Porter, Urban Company" oninput="WorkerSettings.editWork(${i},'platformName',this.value)"></div>
-        <div class="field" style="margin-bottom:0"><label class="label wset-flabel">Registered Mobile Number</label>
-          <input class="input mono" value="${App.esc(w.platformMobile)}" placeholder="Mobile linked to your platform account" oninput="WorkerSettings.editWork(${i},'platformMobile',this.value)"></div>
-      </div>
       ${w.verifyStatus === 'failed' ? `
-      <div class="banner banner--amber" style="margin-top:12px">${App.icon('alert')}<div>No matching platform record found — this may be informal or domestic work with no platform. <button class="btn btn--soft btn--sm" style="margin-top:8px" onclick="WorkerSettings.chooseFallback(${i},'dav')">${App.icon('mappin')} Verify via Address instead</button></div></div>` : ''}
+      <div class="banner banner--amber" style="margin-top:14px">${App.icon('alert')}<div>No matching platform record found — this may be informal or domestic work with no platform. <button class="btn btn--soft btn--sm" style="margin-top:8px" onclick="WorkerSettings.chooseFallback(${i},'dav')">${App.icon('mappin')} Verify via Address instead</button></div></div>` : ''}
       ${addressBlock(w, i)}
       ` : ''}
 
