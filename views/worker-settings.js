@@ -104,36 +104,63 @@
   const spinner = (label) => `<span class="wset-spin"></span> ${label}`;
 
   // ---- DAV (Digital Address Verification) modal journey ----
-  // step: 'intro' | 'sending' | 'otp' | 'verifying' | 'done'
-  const DAV = { step: 'intro', i: null, otp: '', queue: [] };
+  // Modelled on Tartan's real DAV product (consent → address-type check → what-you-need
+  // checklist → GPS proximity match → photo evidence → done). This prototype simulates each
+  // step rather than requesting real camera/location access.
+  // step: 'consent' | 'checklist' | 'location' | 'locating' | 'photo' | 'capturing' | 'done'
+  const DAV = { step: 'consent', i: null, queue: [] };
 
   function davModal() {
     const w = S.work[DAV.i]; if (!w) return;
-    let body, foot;
-    if (DAV.step === 'intro' || DAV.step === 'sending') {
-      const sending = DAV.step === 'sending';
+    let title, icon, body, foot;
+
+    if (DAV.step === 'consent') {
+      title = 'Verify Address'; icon = 'shieldcheck';
       body = `
-        <div class="banner banner--info" style="margin-bottom:16px">${App.icon('mappin')}<div>We'll verify this work entry against the address you've provided.</div></div>
+        <div class="center" style="margin:6px 0 16px">${App.icon('shieldcheck', 'dav-shield')}</div>
+        <h3 style="text-align:center;margin:0 0 8px">Share your data</h3>
+        <p class="muted" style="text-align:center;font-size:13.5px;line-height:1.6;max-width:38ch;margin:0 auto">
+          I consent to sharing my address details with WiN for the purpose of verifying this work
+          entry. My data is protected and shared securely, only for this verification.</p>`;
+      foot = `<button class="btn" onclick="WorkerSettings.davDecline()">I Decline</button>
+              <button class="btn btn--primary" onclick="WorkerSettings.davAgree()">${App.icon('check')} I Agree</button>`;
+    } else if (DAV.step === 'checklist') {
+      title = 'Verify Address'; icon = 'shieldcheck';
+      body = `
+        <h3 style="margin:0 0 14px">What you'll need</h3>
+        <div class="dav-check"><span class="dav-check__ic">${App.icon('idcard')}</span><div><b>Valid ID</b><div class="muted" style="font-size:12.5px">Aadhaar, PAN, or another government ID</div></div></div>
+        <div class="dav-check"><span class="dav-check__ic">${App.icon('upload')}</span><div><b>Camera &amp; Light</b><div class="muted" style="font-size:12.5px">Good lighting for a clear address photo</div></div></div>
+        <div class="banner banner--info" style="margin-top:14px">${App.icon('mappin')}<div>We'll confirm you're physically at the address you entered before capturing photo evidence.</div></div>`;
+      foot = `<button class="btn" onclick="App.modal.close()">Cancel</button>
+              <button class="btn btn--primary" onclick="WorkerSettings.davReady()">${App.icon('arrow')} Ready to Proceed</button>`;
+    } else if (DAV.step === 'location' || DAV.step === 'locating') {
+      const locating = DAV.step === 'locating';
+      title = 'Verifying Location'; icon = 'mappin';
+      body = `
+        <div class="center" style="margin:4px 0 16px">${App.icon('mappin', 'dav-pin')}</div>
         <div class="dav-kv">
-          <div class="row between gap-12"><span class="muted">Address</span><b>${App.esc(w.address || '—')}</b></div>
+          <div class="row between gap-12"><span class="muted">Target address</span><b>${App.esc(w.address || '—')}</b></div>
           <div class="row between gap-12"><span class="muted">City / State</span><b>${App.esc(w.loc || '—')}, ${App.esc(w.state || '—')}</b></div>
           <div class="row between gap-12"><span class="muted">Pincode</span><span class="mono">${App.esc(w.pincode || '—')}</span></div>
         </div>`;
-      foot = `<button class="btn" ${sending ? 'disabled' : ''} onclick="App.modal.close()">Cancel</button>
-              <button class="btn btn--primary" ${sending ? 'disabled' : ''} onclick="WorkerSettings.davSend()">${sending ? spinner('Sending code…') : `${App.icon('send')} Start Verification`}</button>`;
-    } else if (DAV.step === 'otp' || DAV.step === 'verifying') {
-      const verifying = DAV.step === 'verifying';
+      foot = `<button class="btn" ${locating ? 'disabled' : ''} onclick="App.modal.close()">Cancel</button>
+              <button class="btn btn--primary" ${locating ? 'disabled' : ''} onclick="WorkerSettings.davEnableLocation()">${locating ? spinner('Matching your location…') : `${App.icon('mappin')} Enable Location`}</button>`;
+    } else if (DAV.step === 'photo' || DAV.step === 'capturing') {
+      const capturing = DAV.step === 'capturing';
+      title = 'Verify Address'; icon = 'mappin';
       body = `
-        <div class="banner banner--green" style="margin-bottom:16px">${App.icon('checkcircle')}<div>Verification code sent to the registered contact for this address</div></div>
-        <div class="field"><label class="label">Enter Code</label>
-          <input class="input mono dav-otp num" id="davOtp" inputmode="numeric" maxlength="6" placeholder="6-digit code" value="${App.esc(DAV.otp)}" ${verifying ? 'disabled' : ''} oninput="WorkerSettings.onDavOtp(this)"></div>`;
-      foot = `<button class="btn" ${verifying ? 'disabled' : ''} onclick="App.modal.close()">Cancel</button>
-              <button class="btn btn--primary" id="davVerifyBtn" ${(DAV.otp.length !== 6 || verifying) ? 'disabled' : ''} onclick="WorkerSettings.davVerify()">${verifying ? spinner('Verifying…') : `${App.icon('lock')} Verify`}</button>`;
+        <div class="banner banner--green" style="margin-bottom:14px">${App.icon('checkcircle')}<div>Location matched — you're at the registered address.</div></div>
+        <h3 style="margin:0 0 8px">Capture address proof</h3>
+        <p class="muted" style="font-size:13px;margin:0 0 14px">Take a photo showing the entrance, name board, or workspace at this address.</p>
+        <div class="dav-check"><span class="dav-check__ic">${App.icon('upload')}</span><div class="muted" style="font-size:12.5px">Ensure good lighting &middot; keep the camera steady &middot; make signage or ID clearly readable</div></div>`;
+      foot = `<button class="btn" ${capturing ? 'disabled' : ''} onclick="App.modal.close()">Cancel</button>
+              <button class="btn btn--primary" ${capturing ? 'disabled' : ''} onclick="WorkerSettings.davCapture()">${capturing ? spinner('Capturing…') : `${App.icon('upload')} Capture Photo`}</button>`;
     } else {
+      title = 'Verify Address'; icon = 'shieldcheck';
       body = `<div class="banner banner--green" style="margin-bottom:4px">${App.icon('checkcircle')}<div><b>Address verified</b><div style="font-size:12px;opacity:.85;margin-top:3px">${App.esc(w.role || 'This entry')} at ${App.esc(w.org || '—')} is now verified via Digital Address Verification.</div></div></div>`;
       foot = `<button class="btn btn--primary" onclick="WorkerSettings.davNext()">${App.icon('check')} Done</button>`;
     }
-    App.modal.open(body, { title: 'Verify Address', icon: 'mappin', foot });
+    App.modal.open(body, { title, icon, foot });
   }
 
   window.WorkerSettings = {
@@ -243,21 +270,18 @@
         App.toast('Details verified and saved');
       }, 1400);
     },
-    openDAV(i) { ENTRY_MODAL_I = null; DAV.step = 'intro'; DAV.i = i; DAV.otp = ''; davModal(); },
-    onDavOtp(el) {
-      const v = el.value.replace(/\D/g, '').slice(0, 6);
-      el.value = v; DAV.otp = v;
-      const b = document.getElementById('davVerifyBtn'); if (b) b.disabled = v.length !== 6;
-    },
-    davSend() { DAV.step = 'sending'; davModal(); setTimeout(() => { DAV.step = 'otp'; davModal(); }, 1500); },
-    davVerify() {
-      if (DAV.otp.length !== 6) { App.toast('Enter the 6-digit code', 'alert'); return; }
-      DAV.step = 'verifying'; davModal();
+    openDAV(i) { ENTRY_MODAL_I = null; DAV.step = 'consent'; DAV.i = i; davModal(); },
+    davDecline() { App.modal.close(); App.toast('Address verification declined', 'x'); },
+    davAgree() { DAV.step = 'checklist'; davModal(); },
+    davReady() { DAV.step = 'location'; davModal(); },
+    davEnableLocation() { DAV.step = 'locating'; davModal(); setTimeout(() => { DAV.step = 'photo'; davModal(); }, 1600); },
+    davCapture() {
+      DAV.step = 'capturing'; davModal();
       setTimeout(() => {
         const w = S.work[DAV.i];
         if (w) { w.source = 'dav'; w.verifyStatus = 'verified'; w.tier = 'verified'; }
         DAV.step = 'done'; davModal(); App.reload();
-      }, 2000);
+      }, 1400);
     },
     davNext() {
       App.modal.close();
@@ -716,7 +740,11 @@
           .wset-trash[disabled]:hover{ background:transparent; color:var(--muted); }
           .wset-spin{ width:14px; height:14px; border:2px solid rgba(128,128,128,.35); border-top-color:currentColor; border-radius:50%; display:inline-block; vertical-align:-2px; animation:spin 1s linear infinite; }
           .dav-kv{ display:flex; flex-direction:column; gap:10px; font-size:13.5px; }
-          .dav-otp{ text-align:center; font-size:16px; letter-spacing:.12em; }
+          .dav-shield{ width:56px; height:56px; color:var(--accent); }
+          .dav-pin{ width:44px; height:44px; color:var(--accent); }
+          .dav-check{ display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--line-2); }
+          .dav-check:last-child{ border-bottom:none; }
+          .dav-check__ic{ width:34px; height:34px; border-radius:9px; background:var(--accent-weak); color:var(--accent-strong); display:grid; place-items:center; flex-shrink:0; }
           .wset-chip{ display:inline-flex; align-items:center; gap:6px; padding:7px 7px 7px 13px; border-radius:var(--r-full);
             background:var(--accent-weak); color:var(--accent-strong); font-size:13px; font-weight:600; }
           .wset-chip button{ width:18px; height:18px; border-radius:50%; display:grid; place-items:center; color:var(--accent-strong); opacity:.65; transition:.12s; }
