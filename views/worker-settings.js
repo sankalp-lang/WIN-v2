@@ -104,11 +104,29 @@
   const spinner = (label) => `<span class="wset-spin"></span> ${label}`;
 
   // ---- DAV (Digital Address Verification) modal journey ----
-  // Modelled on Tartan's real DAV product (consent → address-type check → what-you-need
-  // checklist → GPS proximity match → photo evidence → done). This prototype simulates each
-  // step rather than requesting real camera/location access.
-  // step: 'consent' | 'checklist' | 'location' | 'locating' | 'photo' | 'capturing' | 'done'
-  const DAV = { step: 'consent', i: null, queue: [] };
+  // Modelled step-for-step on Tartan's real DAV product (verify.tartanhq.com): consent →
+  // choose verification state → address type → what-you-need checklist → GPS proximity match
+  // → a sequence of photo captures (name board, office interior, office ID, government ID
+  // front/back) → done. This prototype simulates every capture (no real camera/location
+  // access), but keeps the same screen-by-screen structure and framing.
+  const ID_TYPES = ['Aadhaar Card', 'PAN Card', 'Passport', "Voter ID", 'Driving Licence'];
+  // the photo-capture sequence run once GPS location has matched
+  const DAV_FLOW = [
+    { kind: 'photo', title: 'Office Name Board Visibility', sub: "Take a photo of your Office Name Board" },
+    { kind: 'photo', title: 'Office Interior', context: 'Reception', sub: 'Take a photo of your office interior to verify' },
+    { kind: 'photo', title: 'Office Interior', context: 'Lobby', sub: 'Take a photo of your office interior to verify', skippable: true },
+    { kind: 'photo', title: 'Office Interior', context: 'Workstation', sub: 'Take a photo of your office interior to verify', skippable: true },
+    { kind: 'photo', title: 'Office ID Verification', sub: 'Take a photo of your office ID card', side: 'Front' },
+    { kind: 'photo', title: 'Office ID Verification', sub: 'Take a photo of your office ID card', side: 'Back' },
+    { kind: 'idselect' },
+    { kind: 'idphoto', side: 'Front' },
+    { kind: 'idphoto', side: 'Back' },
+  ];
+  // step: 'consent' | 'verifyState' | 'addressType' | 'checklist' | 'location' | 'locating'
+  //     | 'flow' | 'done'   —  flow-substep phase: 'ready' | 'shooting' | 'captured'
+  const DAV = { step: 'consent', i: null, queue: [], addressType: '', idType: '', idx: 0, phase: 'ready' };
+
+  function davBuilding() { return App.icon('building', 'dav-illus'); }
 
   function davModal() {
     const w = S.work[DAV.i]; if (!w) return;
@@ -124,43 +142,115 @@
           entry. My data is protected and shared securely, only for this verification.</p>`;
       foot = `<button class="btn" onclick="WorkerSettings.davDecline()">I Decline</button>
               <button class="btn btn--primary" onclick="WorkerSettings.davAgree()">${App.icon('check')} I Agree</button>`;
+
+    } else if (DAV.step === 'verifyState') {
+      title = 'Verify Address'; icon = 'mappin';
+      body = `
+        <div class="center" style="margin:4px 0 16px">${davBuilding()}</div>
+        <h3 style="text-align:center;margin:0 0 4px">Verify your Address</h3>
+        <p class="muted" style="text-align:center;font-size:13px;margin:0 0 16px">Select current state of your verification:</p>
+        <button class="dav-choice is-active" onclick="WorkerSettings.davStart()"><span class="dav-choice__ic" style="background:var(--green-50);color:var(--green-600)">${App.icon('check')}</span><b>Start Verification</b></button>
+        <button class="dav-choice" onclick="WorkerSettings.davToast('Rescheduling isn\\'t available in this demo')"><span class="dav-choice__ic" style="background:var(--blue-50);color:var(--blue-600)">${App.icon('clock')}</span><b>Reschedule Verification</b></button>
+        <button class="dav-choice" onclick="WorkerSettings.davDecline()"><span class="dav-choice__ic" style="background:var(--red-50);color:var(--red-600)">${App.icon('x')}</span><b>Decline Verification</b></button>`;
+      foot = `<button class="btn" onclick="App.modal.close()">Cancel</button>`;
+
+    } else if (DAV.step === 'addressType') {
+      title = 'Verify Address'; icon = 'mappin';
+      body = `
+        <div class="center" style="margin:4px 0 16px">${davBuilding()}</div>
+        <h3 style="text-align:center;margin:0 0 4px">Select Address Type</h3>
+        <p class="muted" style="text-align:center;font-size:13px;margin:0 0 16px">Choose the type of address to verify:</p>
+        <button class="dav-choice" disabled title="Not applicable for a work entry"><span class="dav-choice__ic">${App.icon('home')}</span><b>Residential Address</b></button>
+        <button class="dav-choice" onclick="WorkerSettings.davSetAddressType('office')"><span class="dav-choice__ic">${App.icon('building')}</span><b>Office Address</b></button>
+        <div class="banner banner--amber" style="margin-top:14px">${App.icon('alert')}<div>Kindly be physically available at the selected address.</div></div>`;
+      foot = `<button class="btn" onclick="App.modal.close()">Cancel</button>`;
+
     } else if (DAV.step === 'checklist') {
       title = 'Verify Address'; icon = 'shieldcheck';
       body = `
-        <h3 style="margin:0 0 14px">What you'll need</h3>
-        <div class="dav-check"><span class="dav-check__ic">${App.icon('idcard')}</span><div><b>Valid ID</b><div class="muted" style="font-size:12.5px">Aadhaar, PAN, or another government ID</div></div></div>
-        <div class="dav-check"><span class="dav-check__ic">${App.icon('upload')}</span><div><b>Camera &amp; Light</b><div class="muted" style="font-size:12.5px">Good lighting for a clear address photo</div></div></div>
-        <div class="banner banner--info" style="margin-top:14px">${App.icon('mappin')}<div>We'll confirm you're physically at the address you entered before capturing photo evidence.</div></div>`;
+        <h3 style="margin:0 0 14px">What you need for verification</h3>
+        <div class="dav-check"><span class="dav-check__ic">${App.icon('idcard')}</span><div><b>Valid ID</b><div class="muted" style="font-size:12.5px">Aadhaar, PAN, Passport, or Voter ID</div></div></div>
+        <div class="dav-check"><span class="dav-check__ic">${App.icon('upload')}</span><div><b>Camera &amp; Light</b><div class="muted" style="font-size:12.5px">Good lighting and a stable connection for photo capture</div></div></div>
+        <div class="dav-check"><span class="dav-check__ic">${App.icon('idcard')}</span><div><b>Office ID Card</b><div class="muted" style="font-size:12.5px">Keep your company ID card ready, if available</div></div></div>
+        <div class="banner banner--info" style="margin-top:14px">${App.icon('mappin')}<div>Upload clear photos of original documents. Blurry or edited photos will delay verification.</div></div>`;
       foot = `<button class="btn" onclick="App.modal.close()">Cancel</button>
               <button class="btn btn--primary" onclick="WorkerSettings.davReady()">${App.icon('arrow')} Ready to Proceed</button>`;
+
     } else if (DAV.step === 'location' || DAV.step === 'locating') {
       const locating = DAV.step === 'locating';
       title = 'Verifying Location'; icon = 'mappin';
       body = `
         <div class="center" style="margin:4px 0 16px">${App.icon('mappin', 'dav-pin')}</div>
+        <h3 style="text-align:center;margin:0 0 4px">${locating ? 'Verifying Location' : 'Location Access'}</h3>
+        <p class="muted" style="text-align:center;font-size:13px;margin:0 0 16px">${locating ? 'Please be within range of the target address' : "We need to verify your current location matches the address you're verifying"}</p>
         <div class="dav-kv">
-          <div class="row between gap-12"><span class="muted">Target address</span><b>${App.esc(w.address || '—')}</b></div>
-          <div class="row between gap-12"><span class="muted">City / State</span><b>${App.esc(w.loc || '—')}, ${App.esc(w.state || '—')}</b></div>
-          <div class="row between gap-12"><span class="muted">Pincode</span><span class="mono">${App.esc(w.pincode || '—')}</span></div>
+          <div class="dav-kv__label">Target Address</div>
+          <div class="dav-kv__val">${App.esc(w.address || '—')}, ${App.esc(w.loc || '—')}, ${App.esc(w.state || '—')}, ${App.esc(w.pincode || '—')}</div>
         </div>`;
       foot = `<button class="btn" ${locating ? 'disabled' : ''} onclick="App.modal.close()">Cancel</button>
               <button class="btn btn--primary" ${locating ? 'disabled' : ''} onclick="WorkerSettings.davEnableLocation()">${locating ? spinner('Matching your location…') : `${App.icon('mappin')} Enable Location`}</button>`;
-    } else if (DAV.step === 'photo' || DAV.step === 'capturing') {
-      const capturing = DAV.step === 'capturing';
-      title = 'Verify Address'; icon = 'mappin';
-      body = `
-        <div class="banner banner--green" style="margin-bottom:14px">${App.icon('checkcircle')}<div>Location matched — you're at the registered address.</div></div>
-        <h3 style="margin:0 0 8px">Capture address proof</h3>
-        <p class="muted" style="font-size:13px;margin:0 0 14px">Take a photo showing the entrance, name board, or workspace at this address.</p>
-        <div class="dav-check"><span class="dav-check__ic">${App.icon('upload')}</span><div class="muted" style="font-size:12.5px">Ensure good lighting &middot; keep the camera steady &middot; make signage or ID clearly readable</div></div>`;
-      foot = `<button class="btn" ${capturing ? 'disabled' : ''} onclick="App.modal.close()">Cancel</button>
-              <button class="btn btn--primary" ${capturing ? 'disabled' : ''} onclick="WorkerSettings.davCapture()">${capturing ? spinner('Capturing…') : `${App.icon('upload')} Capture Photo`}</button>`;
+
+    } else if (DAV.step === 'flow') {
+      const cs = DAV_FLOW[DAV.idx];
+      const stepNum = DAV.idx + 1, stepTotal = DAV_FLOW.length;
+      title = cs.kind === 'idselect' ? 'ID Verification' : (cs.kind === 'idphoto' ? 'Government ID' : cs.title);
+      icon = cs.kind === 'idselect' || cs.kind === 'idphoto' ? 'idcard' : 'building';
+
+      if (cs.kind === 'idselect') {
+        body = `
+          <div class="dav-progress">Step ${stepNum} of ${stepTotal}</div>
+          <div class="center" style="margin:4px 0 16px">${App.icon('idcard', 'dav-illus')}</div>
+          <h3 style="text-align:center;margin:0 0 4px">ID Verification</h3>
+          <p class="muted" style="text-align:center;font-size:13px;margin:0 0 16px">Please capture a clear photo of your government-issued ID</p>
+          <div class="field"><label class="label">ID Type</label>
+            <select class="select" onchange="WorkerSettings.davSetIdType(this.value)">
+              <option value="" ${!DAV.idType ? 'selected' : ''} disabled>Select ID type</option>
+              ${ID_TYPES.map(t => `<option value="${t}" ${DAV.idType === t ? 'selected' : ''}>${t}</option>`).join('')}
+            </select></div>`;
+        foot = `<button class="btn" onclick="App.modal.close()">Cancel</button>
+                <button class="btn btn--primary" ${!DAV.idType ? 'disabled' : ''} onclick="WorkerSettings.davAdvanceFlow()">${App.icon('arrow')} Continue</button>`;
+      } else {
+        // photo (office name board / interior / office ID) or idphoto (govt ID front/back)
+        const label = cs.kind === 'idphoto' ? `${DAV.idType || 'ID'} (${cs.side})` : (cs.side ? `Office ID Card (${cs.side})` : (cs.context || ''));
+        const heading = cs.kind === 'idphoto' ? `Capture ${DAV.idType || 'ID'}` : cs.title;
+        const subline = cs.kind === 'idphoto' ? `Take a clear photo of the ${cs.side.toLowerCase()} of your ${DAV.idType || 'ID'}` : cs.sub;
+
+        if (DAV.phase === 'ready') {
+          body = `
+            <div class="dav-progress">Step ${stepNum} of ${stepTotal}</div>
+            <div class="center" style="margin:4px 0 12px">${cs.kind === 'idphoto' ? App.icon('idcard', 'dav-illus') : davBuilding()}</div>
+            <h3 style="text-align:center;margin:0 0 2px">${App.esc(heading)}</h3>
+            ${cs.context ? `<p style="text-align:center;font-size:13px;font-weight:600;color:var(--accent-strong);margin:0 0 2px">(${App.esc(cs.context)})</p>` : ''}
+            <p class="muted" style="text-align:center;font-size:13px;margin:0 0 16px">${App.esc(subline)}</p>
+            <div class="dav-check"><span class="dav-check__ic">${App.icon('upload')}</span><div><b>Photo Guidelines</b>
+              <div class="muted" style="font-size:12.5px">Ensure good lighting &middot; keep the camera steady &middot; make sure ${cs.kind === 'idphoto' ? 'the ID is fully visible' : 'text/signage is readable'}</div></div></div>`;
+          foot = `<button class="btn" onclick="App.modal.close()">Cancel</button>
+                  ${cs.skippable ? `<button class="btn btn--ghost" onclick="WorkerSettings.davSkipFlow()">Skip</button>` : ''}
+                  <button class="btn btn--primary" onclick="WorkerSettings.davCapturePhoto()">${App.icon('upload')} Capture Photo</button>`;
+        } else if (DAV.phase === 'shooting') {
+          body = `
+            <div class="dav-progress">Step ${stepNum} of ${stepTotal}</div>
+            <div class="dav-cam dav-cam--shooting"><span class="dav-spin-lg"></span></div>
+            <p class="muted" style="text-align:center;font-size:13px;margin-top:12px">Capturing ${App.esc(label)}…</p>`;
+          foot = `<button class="btn" disabled onclick="App.modal.close()">Cancel</button>
+                  <button class="btn btn--primary" disabled>${spinner('Capturing…')}</button>`;
+        } else {
+          body = `
+            <div class="dav-progress">Step ${stepNum} of ${stepTotal}</div>
+            <div class="dav-cam dav-cam--captured">${App.icon('checkcircle')}</div>
+            <p style="text-align:center;font-size:13px;margin-top:12px"><b>${App.esc(label)} captured</b></p>
+            <div class="center"><button class="btn btn--ghost btn--sm" onclick="WorkerSettings.davRetake()">${App.icon('upload')} Retake</button></div>`;
+          foot = `<button class="btn" onclick="App.modal.close()">Cancel</button>
+                  <button class="btn btn--primary" onclick="WorkerSettings.davAdvanceFlow()">${App.icon('arrow')} Continue</button>`;
+        }
+      }
+
     } else {
       title = 'Verify Address'; icon = 'shieldcheck';
       body = `<div class="banner banner--green" style="margin-bottom:4px">${App.icon('checkcircle')}<div><b>Address verified</b><div style="font-size:12px;opacity:.85;margin-top:3px">${App.esc(w.role || 'This entry')} at ${App.esc(w.org || '—')} is now verified via Digital Address Verification.</div></div></div>`;
       foot = `<button class="btn btn--primary" onclick="WorkerSettings.davNext()">${App.icon('check')} Done</button>`;
     }
-    App.modal.open(body, { title, icon, foot });
+    App.modal.open(body, { title, icon, foot, wide: DAV.step === 'flow' || DAV.step === 'checklist' });
   }
 
   window.WorkerSettings = {
@@ -270,18 +360,36 @@
         App.toast('Details verified and saved');
       }, 1400);
     },
-    openDAV(i) { ENTRY_MODAL_I = null; DAV.step = 'consent'; DAV.i = i; davModal(); },
+    openDAV(i) {
+      ENTRY_MODAL_I = null; DAV.step = 'consent'; DAV.i = i; DAV.addressType = ''; DAV.idType = ''; DAV.idx = 0; DAV.phase = 'ready';
+      davModal();
+    },
+    davToast(msg) { App.toast(msg, 'clock'); },
     davDecline() { App.modal.close(); App.toast('Address verification declined', 'x'); },
-    davAgree() { DAV.step = 'checklist'; davModal(); },
+    davAgree() { DAV.step = 'verifyState'; davModal(); },
+    davStart() { DAV.step = 'addressType'; davModal(); },
+    davSetAddressType(t) { DAV.addressType = t; DAV.step = 'checklist'; davModal(); },
     davReady() { DAV.step = 'location'; davModal(); },
-    davEnableLocation() { DAV.step = 'locating'; davModal(); setTimeout(() => { DAV.step = 'photo'; davModal(); }, 1600); },
-    davCapture() {
-      DAV.step = 'capturing'; davModal();
-      setTimeout(() => {
+    davEnableLocation() {
+      DAV.step = 'locating'; davModal();
+      setTimeout(() => { DAV.step = 'flow'; DAV.idx = 0; DAV.phase = 'ready'; davModal(); }, 1600);
+    },
+    davSetIdType(t) { DAV.idType = t; davModal(); },
+    davCapturePhoto() {
+      DAV.phase = 'shooting'; davModal();
+      setTimeout(() => { DAV.phase = 'captured'; davModal(); }, 1100);
+    },
+    davRetake() { DAV.phase = 'ready'; davModal(); },
+    davSkipFlow() { WorkerSettings.davAdvanceFlow(); },
+    davAdvanceFlow() {
+      DAV.idx++; DAV.phase = 'ready';
+      if (DAV.idx >= DAV_FLOW.length) {
         const w = S.work[DAV.i];
         if (w) { w.source = 'dav'; w.verifyStatus = 'verified'; w.tier = 'verified'; }
         DAV.step = 'done'; davModal(); App.reload();
-      }, 1400);
+      } else {
+        davModal();
+      }
     },
     davNext() {
       App.modal.close();
@@ -745,6 +853,23 @@
           .dav-check{ display:flex; align-items:center; gap:12px; padding:10px 0; border-bottom:1px solid var(--line-2); }
           .dav-check:last-child{ border-bottom:none; }
           .dav-check__ic{ width:34px; height:34px; border-radius:9px; background:var(--accent-weak); color:var(--accent-strong); display:grid; place-items:center; flex-shrink:0; }
+          .dav-illus{ width:64px; height:64px; color:var(--accent); }
+          .dav-choice{ display:flex; align-items:center; gap:12px; width:100%; text-align:left; padding:13px 15px; margin-top:10px;
+            border:1px solid var(--line); border-radius:var(--r); background:var(--surface); cursor:pointer; font-size:13.5px; transition:.12s; }
+          .dav-choice:first-of-type{ margin-top:0; }
+          .dav-choice:hover{ border-color:var(--accent); background:var(--accent-weak); }
+          .dav-choice.is-active{ border-color:var(--green-100); background:var(--green-50); }
+          .dav-choice[disabled]{ opacity:.45; cursor:not-allowed; }
+          .dav-choice[disabled]:hover{ border-color:var(--line); background:var(--surface); }
+          .dav-choice__ic{ width:32px; height:32px; border-radius:50%; display:grid; place-items:center; background:var(--accent-weak); color:var(--accent-strong); flex-shrink:0; }
+          .dav-progress{ font-size:11px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); text-align:center; margin-bottom:14px; }
+          .dav-kv__label{ font-size:11px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); margin-bottom:4px; }
+          .dav-kv__val{ font-size:13.5px; font-weight:600; line-height:1.5; }
+          .dav-cam{ width:100%; aspect-ratio:1/1; max-height:200px; border-radius:var(--r); display:grid; place-items:center; margin:0 auto; }
+          .dav-cam--shooting{ background:linear-gradient(135deg,var(--accent),#1a2f7a); color:#fff; }
+          .dav-cam--captured{ background:var(--green-50); color:var(--green-600); }
+          .dav-cam--captured .ico{ width:52px; height:52px; }
+          .dav-spin-lg{ width:36px; height:36px; border:3px solid rgba(255,255,255,.35); border-top-color:#fff; border-radius:50%; display:inline-block; animation:spin 1s linear infinite; }
           .wset-chip{ display:inline-flex; align-items:center; gap:6px; padding:7px 7px 7px 13px; border-radius:var(--r-full);
             background:var(--accent-weak); color:var(--accent-strong); font-size:13px; font-weight:600; }
           .wset-chip button{ width:18px; height:18px; border-radius:50%; display:grid; place-items:center; color:var(--accent-strong); opacity:.65; transition:.12s; }
