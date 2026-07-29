@@ -144,11 +144,11 @@
   function syncPromptPage() {
     const previewRows = [1, 2, 3].map(() => `
       <tr>
-        <td><div class="row gap-10"><span style="width:30px;height:30px;border-radius:50%;background:var(--surface-2)"></span>
-          <div><div style="height:10px;width:90px;background:var(--surface-2);border-radius:4px"></div>
-          <div style="height:8px;width:60px;background:var(--surface-2);border-radius:4px;margin-top:6px"></div></div></div></td>
+        <td><div class="row gap-10"><span class="kpi__icon" style="width:30px;height:30px;background:var(--surface-2);color:var(--faint)">${App.icon('user')}</span>
+          <div><b style="font-size:13px;color:var(--muted)">Employee Name</b>
+          <div class="muted" style="font-size:11.5px;margin-top:2px">Employee ID</div></div></div></td>
         <td style="text-align:center">—</td><td style="text-align:center">—</td>
-        <td><div style="height:9px;width:80px;background:var(--surface-2);border-radius:4px"></div></td>
+        <td class="muted" style="font-size:12.5px">Previous Employer</td>
         <td style="text-align:center">—</td>
         <td>${App.ui.pill('Not synced', 'gray')}</td>
         <td style="text-align:center">—</td><td></td>

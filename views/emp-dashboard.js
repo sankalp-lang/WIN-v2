@@ -502,12 +502,16 @@
         <div class="kpi__val" style="color:var(--faint)">—</div>
         <div class="kpi__sub muted">Awaiting HRMS sync</div>
       </div>`).join('');
-    const previewRows = ['Employee roster', 'Verification status by source', 'Hiring pipeline'].map(t => `
+    const previewRows = [
+      { icon: 'users', title: 'Employee Roster', desc: 'Every synced employee, with role, site and current status' },
+      { icon: 'shieldcheck', title: 'Verification Status by Source', desc: 'Aadhaar, PAN and EPFO match status per employee' },
+      { icon: 'briefcase', title: 'Hiring Pipeline', desc: 'Open roles, candidates in progress, and time-to-hire' },
+    ].map(r => `
       <div class="row gap-10" style="padding:13px 8px;border-bottom:1px solid var(--line-2)">
-        <span style="width:34px;height:34px;border-radius:50%;background:var(--surface-2)"></span>
-        <div class="grow"><div style="height:11px;width:40%;background:var(--surface-2);border-radius:4px"></div>
-          <div style="height:9px;width:60%;background:var(--surface-2);border-radius:4px;margin-top:7px"></div></div>
-        <span class="muted" style="font-size:12px">${App.esc(t)}</span>
+        <span class="kpi__icon" style="width:34px;height:34px;background:var(--surface-2);color:var(--faint)">${App.icon(r.icon)}</span>
+        <div class="grow"><b style="font-size:13.5px;color:var(--muted)">${App.esc(r.title)}</b>
+          <div class="muted" style="font-size:12px;margin-top:1px">${App.esc(r.desc)}</div></div>
+        <span class="pill pill--gray" style="font-size:11.5px">Populates after sync</span>
       </div>`).join('');
 
     return `<div class="page fade-in">

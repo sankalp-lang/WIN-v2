@@ -17,7 +17,12 @@
   };
 
   function freshModal(requestId, vendor) {
-    return { requestId, vendor, step: 'method', method: '', search: '', platform: '', host: '', clientId: '', clientSecret: '', apiKey: '', agree: false };
+    return {
+      requestId, vendor, step: 'method', method: '', search: '', platform: '',
+      host: '', clientId: '', clientSecret: '', apiKey: '', agree: false,
+      sftpHost: '', sftpPort: '22', sftpUser: '', sftpPass: '', sftpDir: '',
+      csvFile: '',
+    };
   }
 
   const HS_STYLE = `<style>
@@ -65,23 +70,55 @@
         <div class="hs-platforms">${grid || `<p class="muted" style="font-size:13px;grid-column:1/-1">No match.</p>`}</div>`;
       return { title: 'Select Your HRMS Platform', icon: 'plug', body, foot: `<button class="btn" onclick="EmpHrms.backModal()">${App.icon('arrowleft')} Back</button>` };
     }
-    // credentials
+    if (m.step === 'credentials') {
+      const body = `
+        <div class="hs-connect-diagram"><span class="hs-connect-dot">${App.icon('plug')}</span><span class="muted">- - - - -&gt;</span><span class="hs-connect-dot">${App.icon('shieldcheck')}</span></div>
+        <div class="field"><label class="label">HRMS Host</label>
+          <input class="input" value="${App.esc(m.host)}" placeholder="e.g. yourcompany.keka.com" oninput="EmpHrms.set('host',this.value)"></div>
+        <div class="grid grid-2">
+          <div class="field" style="margin-bottom:0"><label class="label">Client ID</label>
+            <input class="input mono" value="${App.esc(m.clientId)}" placeholder="Client ID" oninput="EmpHrms.set('clientId',this.value)"></div>
+          <div class="field" style="margin-bottom:0"><label class="label">Client Secret</label>
+            <input class="input mono" type="password" value="${App.esc(m.clientSecret)}" placeholder="Client Secret" oninput="EmpHrms.set('clientSecret',this.value)"></div>
+        </div>
+        <div class="field" style="margin-top:16px"><label class="label">API Key <span class="muted" style="font-weight:400">(optional)</span></label>
+          <input class="input mono" value="${App.esc(m.apiKey)}" placeholder="API Key" oninput="EmpHrms.set('apiKey',this.value)"></div>
+        <label class="hs-check" style="margin-top:14px"><input type="checkbox" ${m.agree ? 'checked' : ''} onchange="EmpHrms.toggleAgree()"> I agree to the terms &amp; conditions</label>`;
+      const foot = `<button class="btn" onclick="EmpHrms.backModal()">${App.icon('arrowleft')} Back</button>
+        <button class="btn btn--primary" onclick="EmpHrms.connect()">${App.icon('plug')} Connect</button>`;
+      return { title: `Connect ${App.esc(m.platform)}`, icon: 'plug', body, foot };
+    }
+    if (m.step === 'sftp') {
+      const body = `
+        <div class="hs-connect-diagram"><span class="hs-connect-dot">${App.icon('database')}</span><span class="muted">- - - - -&gt;</span><span class="hs-connect-dot">${App.icon('shieldcheck')}</span></div>
+        <div class="field"><label class="label">SFTP Host</label>
+          <input class="input" value="${App.esc(m.sftpHost)}" placeholder="e.g. sftp.yourcompany.com" oninput="EmpHrms.set('sftpHost',this.value)"></div>
+        <div class="grid grid-2">
+          <div class="field" style="margin-bottom:0"><label class="label">Port</label>
+            <input class="input mono" value="${App.esc(m.sftpPort)}" placeholder="22" oninput="EmpHrms.set('sftpPort',this.value)"></div>
+          <div class="field" style="margin-bottom:0"><label class="label">Username</label>
+            <input class="input mono" value="${App.esc(m.sftpUser)}" placeholder="Username" oninput="EmpHrms.set('sftpUser',this.value)"></div>
+        </div>
+        <div class="field" style="margin-top:16px"><label class="label">Password / SSH Key</label>
+          <input class="input mono" type="password" value="${App.esc(m.sftpPass)}" placeholder="Password or SSH key" oninput="EmpHrms.set('sftpPass',this.value)"></div>
+        <div class="field" style="margin-top:16px"><label class="label">Directory Path <span class="muted" style="font-weight:400">(optional)</span></label>
+          <input class="input mono" value="${App.esc(m.sftpDir)}" placeholder="/exports/hrms" oninput="EmpHrms.set('sftpDir',this.value)"></div>
+        <label class="hs-check" style="margin-top:14px"><input type="checkbox" ${m.agree ? 'checked' : ''} onchange="EmpHrms.toggleAgree()"> I agree to the terms &amp; conditions</label>`;
+      const foot = `<button class="btn" onclick="EmpHrms.backModal()">${App.icon('arrowleft')} Back</button>
+        <button class="btn btn--primary" onclick="EmpHrms.connectSftp()">${App.icon('database')} Connect</button>`;
+      return { title: 'SFTP Transfer', icon: 'database', body, foot };
+    }
+    // csv
     const body = `
-      <div class="hs-connect-diagram"><span class="hs-connect-dot">${App.icon('plug')}</span><span class="muted">- - - - -&gt;</span><span class="hs-connect-dot">${App.icon('shieldcheck')}</span></div>
-      <div class="field"><label class="label">HRMS Host</label>
-        <input class="input" value="${App.esc(m.host)}" placeholder="e.g. yourcompany.keka.com" oninput="EmpHrms.set('host',this.value)"></div>
-      <div class="grid grid-2">
-        <div class="field" style="margin-bottom:0"><label class="label">Client ID</label>
-          <input class="input mono" value="${App.esc(m.clientId)}" placeholder="Client ID" oninput="EmpHrms.set('clientId',this.value)"></div>
-        <div class="field" style="margin-bottom:0"><label class="label">Client Secret</label>
-          <input class="input mono" type="password" value="${App.esc(m.clientSecret)}" placeholder="Client Secret" oninput="EmpHrms.set('clientSecret',this.value)"></div>
-      </div>
-      <div class="field" style="margin-top:16px"><label class="label">API Key <span class="muted" style="font-weight:400">(optional)</span></label>
-        <input class="input mono" value="${App.esc(m.apiKey)}" placeholder="API Key" oninput="EmpHrms.set('apiKey',this.value)"></div>
+      <div class="banner banner--info" style="margin-bottom:16px">${App.icon('share')}<div>Download our CSV template, fill in your employee data, and upload it below.</div></div>
+      <button class="btn btn--soft btn--block" onclick="EmpHrms.downloadTemplate()">${App.icon('download')} Download CSV Template</button>
+      <div class="field" style="margin-top:18px"><label class="label">Upload CSV File</label>
+        <input class="input" type="file" accept=".csv" onchange="EmpHrms.setCsvFile(this)"></div>
+      ${m.csvFile ? `<div class="banner banner--green">${App.icon('filecheck')}<div>${App.esc(m.csvFile)} selected</div></div>` : ''}
       <label class="hs-check" style="margin-top:14px"><input type="checkbox" ${m.agree ? 'checked' : ''} onchange="EmpHrms.toggleAgree()"> I agree to the terms &amp; conditions</label>`;
     const foot = `<button class="btn" onclick="EmpHrms.backModal()">${App.icon('arrowleft')} Back</button>
-      <button class="btn btn--primary" onclick="EmpHrms.connect()">${App.icon('plug')} Connect</button>`;
-    return { title: `Connect ${App.esc(m.platform)}`, icon: 'plug', body, foot };
+      <button class="btn btn--primary" onclick="EmpHrms.uploadCsv()">${App.icon('upload')} Upload</button>`;
+    return { title: 'Upload CSV', icon: 'share', body, foot };
   }
 
   function paintModal() {
@@ -100,9 +137,8 @@
     closeConnect() { HS.modal = null; App.modal.close(); },
     pickMethod(key) {
       HS.modal.method = key;
-      if (key === 'hrms') { HS.modal.step = 'platform'; paintModal(); return; }
-      App.toast('SFTP/CSV setup is a demo affordance in this prototype', 'clock');
-      EmpHrms._finishConnection(HS.modal, key === 'sftp' ? 'SFTP Transfer' : 'CSV Upload');
+      HS.modal.step = key === 'hrms' ? 'platform' : key; // 'sftp' | 'csv'
+      paintModal();
     },
     setSearch(v) { HS.modal.search = v; paintModal(); },
     pickPlatform(p) { HS.modal.platform = p; HS.modal.step = 'credentials'; paintModal(); },
@@ -118,10 +154,29 @@
       if (!m.agree) { App.toast('Please agree to the terms & conditions', 'alert'); return; }
       EmpHrms._finishConnection(m, m.platform);
     },
+    downloadTemplate() { App.toast('Downloading CSV template…', 'download'); },
+    setCsvFile(el) {
+      const f = el.files && el.files[0];
+      HS.modal.csvFile = f ? f.name : '';
+      paintModal();
+    },
+    uploadCsv() {
+      const m = HS.modal;
+      if (!m.csvFile) { App.toast('Choose a CSV file to upload', 'alert'); return; }
+      if (!m.agree) { App.toast('Please agree to the terms & conditions', 'alert'); return; }
+      EmpHrms._finishConnection(m, 'CSV Upload');
+    },
+    connectSftp() {
+      const m = HS.modal;
+      if (!m.sftpHost || !m.sftpUser || !m.sftpPass) { App.toast('Fill in your SFTP host, username and password to connect', 'alert'); return; }
+      if (!m.agree) { App.toast('Please agree to the terms & conditions', 'alert'); return; }
+      EmpHrms._finishConnection(m, 'SFTP Transfer');
+    },
     _finishConnection(m, platformLabel) {
+      const host = m.method === 'sftp' ? m.sftpHost : (m.method === 'csv' ? m.csvFile : m.host);
       HS.requests = HS.requests.filter(r => r.id !== m.requestId);
       HS.connections.push({
-        id: 'c' + (HS.connections.length + 1), vendor: m.vendor, platform: platformLabel, host: m.host || '—',
+        id: 'c' + (HS.connections.length + 1), vendor: m.vendor, platform: platformLabel, host: host || '—',
         connectedOn: new Date().toDateString().slice(4), status: 'active',
       });
       App.modal.close(); HS.modal = null;
