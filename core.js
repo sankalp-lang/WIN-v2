@@ -361,9 +361,11 @@ window.App = (function () {
   };
 
   /* ============================================================
-     EMPLOYER SIGN-UP  (create credentials → KYB → HRMS sync)
-     step: 'credentials' | 'business' | 'verifying' | 'hrms'
-     hrms sub-step (within 'hrms'): 'method' | 'platform' | 'credentials'
+     EMPLOYER SIGN-UP  (create credentials → KYB → land on HRMS Sync)
+     step: 'credentials' | 'business' | 'verifying'
+     HRMS connection itself happens on the HRMS Sync page (views/emp-hrms.js),
+     not during onboarding — signup only gets the business to the point where
+     its own "connection request" is waiting there.
      ============================================================ */
   const SU = {
     active: false, step: 'credentials',
@@ -371,8 +373,6 @@ window.App = (function () {
     hasMca: '', hasGst: '',
     address: '', city: '', state: '', pincode: '',
     tier: null,
-    hrmsSubstep: 'method', hrmsMethod: '', hrmsPlatform: '', hrmsSearch: '',
-    hrmsHost: '', hrmsClientId: '', hrmsClientSecret: '', hrmsApiKey: '', hrmsAgree: false,
   };
   // MCA (Yes/No) × GST/Udyam (Yes/No) → KYB trust tier. MCA applies only to companies/LLPs —
   // most legitimate proprietorships will never have one, so "MCA: No" isn't a deficiency,
@@ -404,59 +404,20 @@ window.App = (function () {
       const requiresDav = SU.hasMca === 'no';
       if (requiresDav && (!SU.address || !SU.city || !SU.state || !SU.pincode)) { App.toast('Fill in the address details to verify', 'alert'); return; }
       SU.step = 'verifying'; renderLogin();
-      setTimeout(() => { SU.tier = kybTier(SU); SU.step = 'hrms'; SU.hrmsSubstep = 'method'; renderLogin(); }, 1800);
+      setTimeout(() => { SU.tier = kybTier(SU); App.signup.finish(); }, 1800);
     },
-    pickHrmsMethod(m) {
-      SU.hrmsMethod = m;
-      if (m === 'hrms') { SU.hrmsSubstep = 'platform'; renderLogin(); return; }
-      App.toast('You can set this up anytime from HRMS Sync in your dashboard', 'clock');
-      App.signup.finish();
-    },
-    setHrmsSearch(v) { SU.hrmsSearch = v; renderLogin(); },
-    pickHrmsPlatform(p) { SU.hrmsPlatform = p; SU.hrmsSubstep = 'credentials'; renderLogin(); },
-    backHrms() {
-      SU.hrmsSubstep = SU.hrmsSubstep === 'credentials' ? 'platform' : 'method';
-      renderLogin();
-    },
-    toggleHrmsAgree() { SU.hrmsAgree = !SU.hrmsAgree; renderLogin(); },
-    connectHrms() {
-      if (!SU.hrmsHost || !SU.hrmsClientId || !SU.hrmsClientSecret) { App.toast('Fill in your HRMS credentials to connect', 'alert'); return; }
-      if (!SU.hrmsAgree) { App.toast('Please agree to the terms & conditions', 'alert'); return; }
-      App.toast(`Connected to ${SU.hrmsPlatform}`, 'checkcircle');
-      App.signup.finish();
-    },
-    skipHrms() { App.signup.finish(); },
     finish() {
       App.startApp('employer', {
         name: SU.legalName, subtitle: SU.legalName, org: SU.legalName,
         role: 'Admin', sector: '—', email: SU.email,
       });
+      App.navigate('emp-hrms');
     },
   };
 
   const UIDAI = `<svg viewBox="0 0 80 80" width="46" height="46"><circle cx="40" cy="40" r="38" fill="#E8372C"/><circle cx="40" cy="40" r="29" fill="#fff"/><circle cx="40" cy="40" r="21" fill="#E8372C"/><circle cx="40" cy="33" r="6" fill="#fff"/><path d="M28 51Q34 39 40 39Q46 39 52 51" fill="#fff"/><circle cx="30" cy="26" r="3" fill="#2E8B57"/><circle cx="50" cy="26" r="3" fill="#FF8C00"/></svg>`;
   const DIGILOCKER = `<svg viewBox="0 0 80 80" width="46" height="46"><rect x="4" y="4" width="72" height="72" rx="14" fill="#2B3990"/><rect x="20" y="26" width="40" height="30" rx="4" fill="#fff"/><path d="M31 26v-4a9 9 0 0 1 18 0v4" stroke="#fff" stroke-width="4" fill="none"/><circle cx="40" cy="39" r="4.5" fill="#2B3990"/><rect x="38" y="42" width="4" height="8" rx="2" fill="#2B3990"/></svg>`;
 
-  const SU_STYLE = `<style>
-    .su-kv{ display:flex; flex-direction:column; gap:10px; font-size:13.5px; background:var(--surface-2); border:1px solid var(--line); border-radius:var(--r); padding:14px 16px; }
-    .su-choice{ display:flex; align-items:center; gap:12px; width:100%; text-align:left; padding:12px 14px; margin-top:9px;
-      border:1px solid var(--line); border-radius:var(--r-sm); background:var(--surface); cursor:pointer; font-size:13.5px; transition:.12s; }
-    .su-choice:first-of-type{ margin-top:0; }
-    .su-choice:hover{ border-color:var(--accent); background:var(--accent-weak); }
-    .su-choice.is-active{ border-color:var(--accent); background:var(--accent-weak); box-shadow:0 0 0 1px var(--accent); }
-    .su-choice__ic{ width:30px; height:30px; border-radius:8px; display:grid; place-items:center; background:var(--accent-weak); color:var(--accent-strong); flex-shrink:0; }
-    .su-choice b{ font-size:13.5px; }
-    .su-choice span.muted{ display:block; font-size:12px; margin-top:1px; }
-    .su-platforms{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; max-height:320px; overflow-y:auto; margin-top:12px; }
-    .su-platform{ display:flex; align-items:center; gap:8px; padding:10px 12px; border:1px solid var(--line); border-radius:var(--r-sm);
-      background:var(--surface); cursor:pointer; font-size:13px; transition:.12s; }
-    .su-platform:hover{ border-color:var(--accent); background:var(--accent-weak); }
-    .su-connect-diagram{ display:flex; align-items:center; justify-content:center; gap:14px; margin:6px 0 18px; }
-    .su-connect-diagram .ico{ width:26px; height:26px; }
-    .su-connect-dot{ width:28px; height:28px; border-radius:8px; background:var(--accent-weak); color:var(--accent-strong); display:grid; place-items:center; }
-    .su-check{ display:flex; align-items:center; gap:8px; font-size:13px; color:var(--ink-2); cursor:pointer; }
-    .su-check input{ width:16px; height:16px; accent-color:var(--accent); cursor:pointer; }
-  </style>`;
 
   function signupForm() {
     if (SU.step === 'credentials') {
@@ -515,49 +476,6 @@ window.App = (function () {
         <p class="muted" style="font-size:13px;margin-top:6px">Checking MCA and GSTN/Udyam records…</p></div>
         <style>@keyframes spin{to{transform:rotate(360deg)}}</style>`;
     }
-    // hrms — modelled on HyperSync: Data Transfer Method → HRMS Selection → Credentials
-    if (SU.hrmsSubstep === 'method') {
-      const rows = (DB.hrmsMethods || []).map(m => `
-        <button class="su-choice" onclick="App.signup.pickHrmsMethod('${m.key}')">
-          <span class="su-choice__ic">${App.icon(m.ic)}</span>
-          <div><b style="display:block">${App.esc(m.title)}</b><span class="muted">${App.esc(m.desc)}</span></div>
-        </button>`).join('');
-      return `
-        <h2 class="auth__title" style="font-size:19px">Sync your HRMS</h2>
-        <p class="muted" style="margin:6px 0 16px;font-size:13px">Choose how you'd like to share employee data so verified worker profiles can start populating automatically.</p>
-        ${rows}
-        <p class="muted" style="text-align:center;font-size:13px;margin-top:16px"><b style="color:var(--accent-strong);cursor:pointer" onclick="App.signup.skipHrms()">Skip for now</b></p>`;
-    }
-    if (SU.hrmsSubstep === 'platform') {
-      const q = (SU.hrmsSearch || '').toLowerCase();
-      const platforms = (DB.hrmsPlatforms || []).filter(p => p.toLowerCase().includes(q));
-      const grid = platforms.map(p => `
-        <button class="su-platform" onclick="App.signup.pickHrmsPlatform('${p.replace(/'/g, "\\'")}')">${App.icon('plug')} ${App.esc(p)}</button>`).join('');
-      return `
-        <button class="btn btn--ghost btn--sm" style="margin-bottom:14px" onclick="App.signup.backHrms()">${App.icon('arrowleft')} Back</button>
-        <h2 class="auth__title" style="font-size:19px">Select your HRMS platform</h2>
-        <div class="field" style="margin-top:14px"><input class="input" placeholder="Search HRMS…" value="${App.esc(SU.hrmsSearch)}" oninput="App.signup.setHrmsSearch(this.value)"></div>
-        <div class="su-platforms">${grid || `<p class="muted" style="font-size:13px;grid-column:1/-1">No match — try a different search, or pick "Other" during setup.</p>`}</div>
-        <p class="muted" style="text-align:center;font-size:13px;margin-top:16px"><b style="color:var(--accent-strong);cursor:pointer" onclick="App.signup.skipHrms()">Skip for now</b></p>`;
-    }
-    // hrmsSubstep === 'credentials'
-    return `
-      <button class="btn btn--ghost btn--sm" style="margin-bottom:14px" onclick="App.signup.backHrms()">${App.icon('arrowleft')} Back</button>
-      <h2 class="auth__title" style="font-size:19px">Connect ${App.esc(SU.hrmsPlatform)}</h2>
-      <div class="su-connect-diagram"><span class="su-connect-dot">${App.icon('plug')}</span><span class="muted">- - - - -&gt;</span><span class="su-connect-dot">${App.icon('shieldcheck')}</span></div>
-      <div class="field"><label class="label">HRMS Host</label>
-        <input class="input" value="${App.esc(SU.hrmsHost)}" placeholder="e.g. yourcompany.keka.com" oninput="App.signup.set('hrmsHost',this.value)"></div>
-      <div class="grid grid-2">
-        <div class="field" style="margin-bottom:0"><label class="label">Client ID</label>
-          <input class="input mono" value="${App.esc(SU.hrmsClientId)}" placeholder="Client ID" oninput="App.signup.set('hrmsClientId',this.value)"></div>
-        <div class="field" style="margin-bottom:0"><label class="label">Client Secret</label>
-          <input class="input mono" type="password" value="${App.esc(SU.hrmsClientSecret)}" placeholder="Client Secret" oninput="App.signup.set('hrmsClientSecret',this.value)"></div>
-      </div>
-      <div class="field" style="margin-top:16px"><label class="label">API Key <span class="muted" style="font-weight:400">(optional)</span></label>
-        <input class="input mono" value="${App.esc(SU.hrmsApiKey)}" placeholder="API Key" oninput="App.signup.set('hrmsApiKey',this.value)"></div>
-      <label class="su-check" style="margin-top:14px"><input type="checkbox" ${SU.hrmsAgree ? 'checked' : ''} onchange="App.signup.toggleHrmsAgree()"> I agree to the terms &amp; conditions</label>
-      <button class="btn btn--primary btn--block btn--lg" style="margin-top:16px" onclick="App.signup.connectHrms()">${App.icon('plug')} Connect</button>
-      <p class="muted" style="text-align:center;font-size:13px;margin-top:14px"><b style="color:var(--accent-strong);cursor:pointer" onclick="App.signup.skipHrms()">Skip for now</b></p>`;
   }
 
   function renderLogin() {
@@ -616,7 +534,7 @@ window.App = (function () {
         ${gov ? `<div class="banner banner--info" style="margin-top:16px">${App.icon('shield')}<div>Demo credentials are pre-filled. Any input signs you in.</div></div>` : `<p class="muted" style="text-align:center;font-size:12.5px;margin-top:16px">This is a demo build - any credentials sign you in.</p>
         <p style="text-align:center;font-size:13px;margin-top:14px">New here? <b style="color:var(--accent-strong);cursor:pointer" onclick="App.signup.open()">Create an employer account</b></p>`}`;
     }
-    if (L.mode === 'employer' && SU.active) form = SU_STYLE + signupForm();
+    if (L.mode === 'employer' && SU.active) form = signupForm();
 
     $('#app').innerHTML = `
       <div class="auth" data-persona="${accent}">

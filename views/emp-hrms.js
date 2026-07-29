@@ -1,28 +1,35 @@
 /* Employer · HRMS Sync — connect the org's HRMS so employee records flow into
-   verified worker profiles automatically. Modelled on Tartan's own HyperSync
-   product: Data Transfer Method → HRMS Selection → Credentials, with an
-   Active/Terminated connections list on the main page. All flows are
+   verified worker profiles automatically. Modelled directly on Tartan's own
+   HyperSync Home tab: Connection Requests / Active Connections / Terminated
+   Connections, each request showing the Vendor Name (the business itself,
+   for a freshly signed-up org) with a Connect action that opens the Data
+   Transfer Method → HRMS Selection → Credentials wizard. All flows are
    simulated (no real host/API calls), consistent with the rest of the app. */
 (function () {
   const HS = {
-    tab: 'active', // active | terminated
+    tab: 'requests', // requests | active | terminated
+    requests: [],
     connections: [
-      { id: 'c1', platform: 'Keka', host: 'abconstruction.keka.com', connectedOn: 'Mar 12, 2024', status: 'active' },
+      { id: 'c1', vendor: 'Aditya Birla Construction Ltd.', platform: 'Keka', host: 'abconstruction.keka.com', connectedOn: 'Mar 12, 2024', status: 'active' },
     ],
     modal: null, // set when the Connect wizard is open
+    _seeded: false,
   };
 
-  function freshModal() {
-    return { step: 'method', method: '', search: '', platform: '', host: '', clientId: '', clientSecret: '', apiKey: '', agree: false };
+  function freshModal(requestId, vendor) {
+    return { requestId, vendor, step: 'method', method: '', search: '', platform: '', host: '', clientId: '', clientSecret: '', apiKey: '', agree: false };
   }
 
   const HS_STYLE = `<style>
     .hs-tabs{ display:flex; gap:6px; border-bottom:1px solid var(--line); margin-bottom:18px; }
     .hs-tab{ padding:10px 4px; margin-right:22px; font-size:13.5px; font-weight:600; color:var(--muted); cursor:pointer; border-bottom:2px solid transparent; }
     .hs-tab.is-active{ color:var(--accent-strong); border-color:var(--accent); }
-    .hs-row{ display:flex; align-items:center; gap:14px; padding:14px 16px; border:1px solid var(--line); border-radius:var(--r); background:var(--surface); }
-    .hs-row + .hs-row{ margin-top:10px; }
-    .hs-ic{ width:38px; height:38px; border-radius:10px; background:var(--accent-weak); color:var(--accent-strong); display:grid; place-items:center; flex-shrink:0; }
+    .hs-table{ width:100%; border-collapse:collapse; }
+    .hs-table th{ text-align:left; font-size:11.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); padding:0 12px 10px; border-bottom:1px solid var(--line); }
+    .hs-table td{ padding:14px 12px; border-bottom:1px solid var(--line-2); font-size:13.5px; vertical-align:middle; }
+    .hs-table tr:last-child td{ border-bottom:none; }
+    .hs-vendor{ display:flex; align-items:center; gap:10px; }
+    .hs-ic{ width:34px; height:34px; border-radius:9px; background:var(--accent-weak); color:var(--accent-strong); display:grid; place-items:center; flex-shrink:0; }
     .hs-choice{ display:flex; align-items:center; gap:12px; width:100%; text-align:left; padding:14px 16px; margin-top:10px;
       border:1px solid var(--line); border-radius:var(--r); background:var(--surface); cursor:pointer; font-size:13.5px; transition:.12s; }
     .hs-choice:first-of-type{ margin-top:0; }
@@ -47,7 +54,7 @@
           <span class="hs-choice__ic">${App.icon(x.ic)}</span>
           <div><b style="display:block">${App.esc(x.title)}</b><span class="muted" style="font-size:12px">${App.esc(x.desc)}</span></div>
         </button>`).join('');
-      return { title: 'Connect HRMS', icon: 'plug', body: rows, foot: `<button class="btn" onclick="EmpHrms.closeConnect()">Cancel</button>` };
+      return { title: 'Data Transfer Method', icon: 'plug', body: rows, foot: `<button class="btn" onclick="EmpHrms.closeConnect()">Cancel</button>` };
     }
     if (m.step === 'platform') {
       const q = (m.search || '').toLowerCase();
@@ -84,13 +91,17 @@
 
   window.EmpHrms = {
     setTab(t) { HS.tab = t; App.reload(); },
-    openConnect() { HS.modal = freshModal(); paintModal(); },
+    openConnect(requestId) {
+      const r = HS.requests.find(x => x.id === requestId);
+      HS.modal = freshModal(requestId, r ? r.vendor : '');
+      paintModal();
+    },
     closeConnect() { HS.modal = null; App.modal.close(); },
     pickMethod(key) {
       HS.modal.method = key;
       if (key === 'hrms') { HS.modal.step = 'platform'; paintModal(); return; }
-      App.toast('SFTP/CSV setup — a demo affordance in this prototype', 'clock');
-      HS.modal = null; App.modal.close();
+      App.toast('SFTP/CSV setup is a demo affordance in this prototype', 'clock');
+      EmpHrms._finishConnection(HS.modal, key === 'sftp' ? 'SFTP Transfer' : 'CSV Upload');
     },
     setSearch(v) { HS.modal.search = v; paintModal(); },
     pickPlatform(p) { HS.modal.platform = p; HS.modal.step = 'credentials'; paintModal(); },
@@ -104,12 +115,16 @@
       const m = HS.modal;
       if (!m.host || !m.clientId || !m.clientSecret) { App.toast('Fill in your HRMS credentials to connect', 'alert'); return; }
       if (!m.agree) { App.toast('Please agree to the terms & conditions', 'alert'); return; }
+      EmpHrms._finishConnection(m, m.platform);
+    },
+    _finishConnection(m, platformLabel) {
+      HS.requests = HS.requests.filter(r => r.id !== m.requestId);
       HS.connections.push({
-        id: 'c' + (HS.connections.length + 1), platform: m.platform, host: m.host,
+        id: 'c' + (HS.connections.length + 1), vendor: m.vendor, platform: platformLabel, host: m.host || '—',
         connectedOn: new Date().toDateString().slice(4), status: 'active',
       });
       App.modal.close(); HS.modal = null;
-      App.toast(`Connected to ${m.platform}`, 'checkcircle');
+      App.toast(`Connected to ${platformLabel}`, 'checkcircle');
       HS.tab = 'active'; App.reload();
     },
     disconnect(id) {
@@ -127,49 +142,69 @@
   App.registerView('emp-hrms', {
     title: 'HRMS Sync',
     subtitle: 'Connect your HR system to power verified worker profiles',
-    render() {
+    render(ctx) {
+      // a freshly signed-up business shows up here as its own pending connection
+      // request — mirrors HyperSync's model where a vendor requests to connect.
+      const org = ctx.user && ctx.user.org;
+      if (org && !HS._seeded) {
+        const already = HS.requests.some(r => r.vendor === org) || HS.connections.some(c => c.vendor === org);
+        if (!already) HS.requests.unshift({ id: 'r' + (HS.requests.length + 1), vendor: org, date: new Date().toDateString().slice(4) });
+        HS._seeded = true;
+      }
+
       const active = HS.connections.filter(c => c.status === 'active');
       const terminated = HS.connections.filter(c => c.status === 'terminated');
-      const rows = (HS.tab === 'active' ? active : terminated).map(c => `
-        <div class="hs-row">
-          <span class="hs-ic">${App.icon('plug')}</span>
-          <div class="grow">
-            <b style="font-size:13.5px">${App.esc(c.platform)}</b>
-            <div class="muted" style="font-size:12px;margin-top:1px">${App.esc(c.host)}</div>
-          </div>
-          <div class="muted" style="font-size:12px">${c.status === 'active' ? `Connected ${App.esc(c.connectedOn)}` : `Terminated ${App.esc(c.terminatedOn || '')}`}</div>
-          ${App.ui.pill(c.status === 'active' ? 'Active' : 'Terminated', c.status === 'active' ? 'green' : 'gray', true)}
-          ${c.status === 'active'
-            ? `<button class="btn btn--ghost btn--sm" onclick="EmpHrms.disconnect('${c.id}')">${App.icon('x')} Disconnect</button>`
-            : `<button class="btn btn--ghost btn--sm" onclick="EmpHrms.reconnect('${c.id}')">${App.icon('plug')} Reconnect</button>`}
-        </div>`).join('');
 
-      const list = rows || App.ui.empty('plug', HS.tab === 'active' ? 'No active connections' : 'No terminated connections',
-        HS.tab === 'active' ? 'Connect your HRMS to start syncing employee records.' : 'Connections you disconnect will show up here.');
+      let body;
+      if (HS.tab === 'requests') {
+        body = HS.requests.length ? `
+          <table class="hs-table">
+            <thead><tr><th>Vendor Name</th><th>Date</th><th>Action</th></tr></thead>
+            <tbody>${HS.requests.map(r => `
+              <tr>
+                <td><div class="hs-vendor"><span class="hs-ic">${App.icon('building')}</span><b>${App.esc(r.vendor)}</b></div></td>
+                <td class="muted">${App.esc(r.date)}</td>
+                <td><button class="btn btn--primary btn--sm" onclick="EmpHrms.openConnect('${r.id}')">${App.icon('plug')} Connect</button></td>
+              </tr>`).join('')}</tbody>
+          </table>` : App.ui.empty('plug', 'No connection requests', 'New businesses ready to sync their HRMS will show up here.');
+      } else {
+        const rows = (HS.tab === 'active' ? active : terminated);
+        body = rows.length ? `
+          <table class="hs-table">
+            <thead><tr><th>Vendor Name</th><th>Platform</th><th>${HS.tab === 'active' ? 'Connected' : 'Terminated'}</th><th>Status</th><th></th></tr></thead>
+            <tbody>${rows.map(c => `
+              <tr>
+                <td><div class="hs-vendor"><span class="hs-ic">${App.icon('building')}</span><b>${App.esc(c.vendor)}</b></div></td>
+                <td class="muted">${App.esc(c.platform)}</td>
+                <td class="muted">${App.esc(c.status === 'active' ? c.connectedOn : (c.terminatedOn || ''))}</td>
+                <td>${App.ui.pill(c.status === 'active' ? 'Active' : 'Terminated', c.status === 'active' ? 'green' : 'gray', true)}</td>
+                <td>${c.status === 'active'
+                  ? `<button class="btn btn--ghost btn--sm" onclick="EmpHrms.disconnect('${c.id}')">${App.icon('x')} Disconnect</button>`
+                  : `<button class="btn btn--ghost btn--sm" onclick="EmpHrms.reconnect('${c.id}')">${App.icon('plug')} Reconnect</button>`}</td>
+              </tr>`).join('')}</tbody>
+          </table>` : App.ui.empty('plug', HS.tab === 'active' ? 'No active connections' : 'No terminated connections',
+            HS.tab === 'active' ? 'Connect an HRMS from Connection Requests to see it here.' : 'Connections you disconnect will show up here.');
+      }
 
       return `<div class="page fade-in">
         ${HS_STYLE}
         <div class="hero reveal">
           <div class="hero__wash"></div>
           <div class="hero__in">
-            <div class="row between wrap gap-16" style="align-items:flex-start">
-              <div>
-                <div class="eyebrow">${App.icon('plug')} HRMS Sync Console</div>
-                <h1 class="h-grad" style="margin-top:12px">Sync your HRMS, verify at the source.</h1>
-                <p class="lead">Connect your HR system so employee records flow straight into verified WiN worker profiles — no manual entry, no spreadsheets.</p>
-              </div>
-              <button class="btn btn--accent" onclick="EmpHrms.openConnect()">${App.icon('plus')} Connect HRMS</button>
-            </div>
+            <div class="eyebrow">${App.icon('plug')} HRMS Sync Console</div>
+            <h1 class="h-grad" style="margin-top:12px">Sync your HRMS, verify at the source.</h1>
+            <p class="lead">Connect your HR system so employee records flow straight into verified WiN worker profiles — no manual entry, no spreadsheets.</p>
           </div>
         </div>
 
         <div class="card reveal">
           <div class="card__body">
             <div class="hs-tabs">
+              <div class="hs-tab ${HS.tab === 'requests' ? 'is-active' : ''}" onclick="EmpHrms.setTab('requests')">Connection Requests <span class="mono">${HS.requests.length}</span></div>
               <div class="hs-tab ${HS.tab === 'active' ? 'is-active' : ''}" onclick="EmpHrms.setTab('active')">Active Connections <span class="mono">${active.length}</span></div>
               <div class="hs-tab ${HS.tab === 'terminated' ? 'is-active' : ''}" onclick="EmpHrms.setTab('terminated')">Terminated Connections <span class="mono">${terminated.length}</span></div>
             </div>
-            ${list}
+            ${body}
           </div>
         </div>
       </div>`;
