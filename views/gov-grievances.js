@@ -92,13 +92,55 @@
     { id: 'GRV-88025', worker: 'Geeta Kumari', winId: 'WIN-2023-8834-2290', catKey: 'epfo', cat: 'EPFO / UAN', dept: 'EPFO', state: 'West Bengal', priority: 'Low', status: 'Resolved', date: '2026-06-30', subject: 'PF transfer between employers pending', assignedTo: 'P. Deshpande — EPFO Zonal, Delhi', detail: 'Inter-employer PF transfer was stuck at the previous employer\'s attestation. Transfer completed via the auto-transfer facility; balance reflected in the current UAN.' },
   ];
 
+  // ---- bulk-generate an extensive, realistic tail of cases (registry-scale queue) ----
+  const GEN_FIRST = ['Ramesh','Suresh','Anita','Kavita','Rajesh','Sunil','Priya','Deepak','Manoj','Geeta',
+    'Vikram','Neha','Ashok','Rekha','Sanjay','Meena','Vinod','Poonam','Arun','Shobha',
+    'Ravi','Usha','Naresh','Kiran','Mahesh','Lata','Dinesh','Sarita','Rakesh','Radha'];
+  const GEN_LAST = ['Kumar','Devi','Singh','Yadav','Sharma','Verma','Gupta','Patel','Reddy','Nair',
+    'Das','Mishra','Rao','Chauhan','Prasad','Bano','Khan','Iyer','Pillai','Joshi'];
+  const GEN_CATS = [
+    { catKey: 'eshram', cat: 'e-Shram', dept: 'e-Shram Cell', subjects: ['e-Shram card renewal pending', 'Mobile number update rejected', 'Duplicate e-Shram registration', 'Accident cover claim delayed'] },
+    { catKey: 'epfo', cat: 'EPFO / UAN', dept: 'EPFO', subjects: ['PF withdrawal stuck at KYC stage', 'UAN activation OTP not received', 'Employer PF deposit missing', 'Inter-employer PF transfer pending'] },
+    { catKey: 'esic', cat: 'ESIC', dept: 'ESIC Regional', subjects: ['ESIC claim rejected', 'Dispensary mapping incorrect', 'Maternity benefit delayed', 'Cashless treatment denied'] },
+    { catKey: 'pan', cat: 'PAN / Tax', dept: 'Income Tax', subjects: ['PAN-UAN linkage failing', 'Form-16 mismatch with declared income', 'TDS credit not reflecting', 'PAN correction request pending'] },
+  ];
+  const GEN_STATES = ['Maharashtra','Uttar Pradesh','Bihar','West Bengal','Madhya Pradesh','Tamil Nadu',
+    'Rajasthan','Karnataka','Telangana','Kerala','Gujarat','Punjab','Haryana','Odisha','Delhi NCR','Assam'];
+  const GEN_STATUS = ['Escalated', 'Under Review', 'Assigned', 'Resolved', 'Resolved', 'Under Review'];
+  const GEN_PRIORITY = ['High', 'Medium', 'Medium', 'Low'];
+
+  function genQueue(count, startId) {
+    const out = [];
+    for (let i = 0; i < count; i++) {
+      const c = GEN_CATS[i % GEN_CATS.length];
+      const status = GEN_STATUS[i % GEN_STATUS.length];
+      const priority = status === 'Escalated' ? 'High' : GEN_PRIORITY[i % GEN_PRIORITY.length];
+      const state = GEN_STATES[i % GEN_STATES.length];
+      const worker = GEN_FIRST[i % GEN_FIRST.length] + ' ' + GEN_LAST[(i * 7 + 3) % GEN_LAST.length];
+      const day = 30 - (i % 30);
+      const month = 5 + Math.floor(i / 30) % 3; // May, Jun, Jul 2026
+      const date = `2026-${String(month).padStart(2, '0')}-${String(Math.max(1, day)).padStart(2, '0')}`;
+      out.push({
+        id: 'GRV-' + (startId - i),
+        worker, winId: 'WIN-2024-' + (1000 + i * 13) + '-' + (2000 + i * 7),
+        catKey: c.catKey, cat: c.cat, dept: c.dept, state, priority, status, date,
+        subject: c.subjects[i % c.subjects.length],
+        detail: c.subjects[i % c.subjects.length] + ' — case ' + (startId - i) + ' registered via the state labour office and routed to ' + c.dept + ' for action.',
+        assignedTo: (status === 'Assigned' || status === 'Resolved') ? OFFICERS[i % OFFICERS.length] : undefined,
+        resolution: status === 'Resolved' ? 'Resolved by registry officer after source verification.' : undefined,
+      });
+    }
+    return out;
+  }
+  const QUEUE_FULL = QUEUE.concat(genQueue(108, 87990));
+
   const TODAY = new Date(2026, 6, 17); // 17 Jul 2026
   const ageOf = d => Math.max(0, Math.round((TODAY - new Date(d)) / 86400000));
 
   // =============================================================
   // local state + controller
   // =============================================================
-  const S = { status: 'all', cat: 'all', rows: QUEUE.slice(), detailId: null, mode: 'view' };
+  const S = { status: 'all', cat: 'all', state: 'all', rows: QUEUE_FULL.slice(), detailId: null, mode: 'view' };
   const alive = () => App.state.route === 'gov-grievances';
   const rowById = id => S.rows.find(r => r.id === id);
 
@@ -112,6 +154,7 @@
   const G = {
     setStatus(s) { S.status = s; App.reload(); },
     setCat(c) { S.cat = c; App.reload(); },
+    setState(v) { S.state = v; App.reload(); },
 
     // ---- detail modal ----
     openDetail(id) { S.detailId = id; S.mode = 'view'; G.renderModal(); },
@@ -217,24 +260,38 @@
 
     // ---- bulk export ----
     bulkExport() {
-      const n = filtered().length;
+      const rows = filtered();
+      const sample = rows.slice(0, 8);
+      const thead = '<tr><th>Case ID</th><th>Worker</th><th>Category</th><th>State</th><th>Priority</th><th>Status</th></tr>';
+      const tbody = sample.map(r => `<tr><td class="mono">${App.esc(r.id)}</td><td>${App.esc(r.worker)}</td><td>${App.esc(r.cat)}</td><td>${App.esc(r.state)}</td><td>${App.esc(r.priority)}</td><td>${App.esc(r.status)}</td></tr>`).join('');
       App.modal.open(`
-        <p class="muted" style="margin:0 0 16px;font-size:13px">Export the current queue view (<b class="num" style="color:var(--ink)">${n}</b> case${n === 1 ? '' : 's'} matching your filters) with worker, category, routing, priority and status. Choose a format:</p>
-        <div class="row gap-10 wrap">
-          <button class="btn btn--primary" onclick="GovGrievances.doExport('CSV')">${App.icon('download')} CSV</button>
-          <button class="btn" onclick="GovGrievances.doExport('Excel')">${App.icon('chart')} Excel workbook</button>
-          <button class="btn" onclick="GovGrievances.doExport('PDF')">${App.icon('doc')} PDF report</button>
-        </div>`, { title: 'Bulk export grievances', icon: 'download' });
+        <p class="muted" style="margin:0 0 12px;font-size:13px">Preview of the current queue view — <b class="num" style="color:var(--ink)">${rows.length}</b> case${rows.length === 1 ? '' : 's'} matching your filters. Showing the first ${sample.length}:</p>
+        <div class="tablewrap tablewrap--scroll" style="max-height:260px;overflow:auto">
+          <table class="tbl">${rows.length ? `<thead>${thead}</thead><tbody>${tbody}</tbody>` : ''}</table>
+        </div>
+        <div class="row gap-10 wrap mt-16">
+          <button class="btn btn--primary" onclick="GovGrievances.doExport('CSV')">${App.icon('download')} Download CSV</button>
+          <button class="btn" onclick="GovGrievances.doExport('Excel')">${App.icon('chart')} Download Excel</button>
+          <button class="btn" onclick="GovGrievances.doExport('PDF')">${App.icon('doc')} Download PDF</button>
+        </div>`, { title: 'Preview & Export Grievances', icon: 'download', wide: true });
     },
-    doExport(fmt) { App.modal.close(); App.toast('Queue exported as ' + fmt, 'download'); },
+    doExport(fmt) {
+      App.modal.close();
+      const rows = filtered();
+      const headers = ['Case ID', 'Worker', 'WIN ID', 'Category', 'Routed to', 'State', 'Priority', 'Status', 'Filed', 'Age (days)'];
+      const data = rows.map(r => [r.id, r.worker, r.winId, r.cat, r.dept, r.state, r.priority, r.status, r.date, ageOf(r.date)]);
+      App.downloadReport('win-grievance-queue', 'WiN Grievance Queue Export', headers, data, fmt);
+      App.toast('Queue (' + rows.length + ' cases) exported as ' + fmt, 'download');
+    },
   };
   window.GovGrievances = G;
 
-  // filtered rows (status + category)
+  // filtered rows (status + category + state)
   function filtered() {
     return S.rows.filter(r =>
       (S.status === 'all' || r.status === S.status) &&
-      (S.cat === 'all' || r.catKey === S.cat)
+      (S.cat === 'all' || r.catKey === S.cat) &&
+      (S.state === 'all' || r.state === S.state)
     );
   }
 
@@ -347,6 +404,13 @@
         `<button class="gg-chip ${S.cat === c.key ? 'is-active' : ''}" onclick="GovGrievances.setCat('${c.key}')">${App.esc(c.label)}</button>`
       ).join('');
 
+      const govStates = (window.DB && DB.govStates) || [];
+      const stateNames = Array.from(new Set(S.rows.map(r => r.state)));
+      const orderedStates = govStates.filter(n => stateNames.includes(n)).concat(stateNames.filter(n => govStates.indexOf(n) === -1).sort());
+      const stateOptions = ['<option value="all">All States</option>'].concat(
+        orderedStates.map(n => `<option value="${App.esc(n)}" ${S.state === n ? 'selected' : ''}>${App.esc(n)}</option>`)
+      ).join('');
+
       let tbody;
       if (!rows.length) {
         tbody = `<tr><td colspan="7" style="padding:0"><div class="empty" style="padding:34px 20px">${App.icon('search', 'empty__ic')}<b>No grievances match</b><span>Adjust the status or category filters.</span></div></td></tr>`;
@@ -377,6 +441,7 @@
             <div class="gg-filters">
               <div class="gg-filterline"><span class="gg-flabel">Status</span><div class="gg-chips">${statusChips}</div></div>
               <div class="gg-filterline"><span class="gg-flabel">Category</span><div class="gg-chips">${catChips}</div></div>
+              <div class="gg-filterline"><span class="gg-flabel">State</span><select class="select gg-stsel" onchange="GovGrievances.setState(this.value)" aria-label="Filter by state">${stateOptions}</select></div>
             </div>
           </div>
           <div class="tablewrap tablewrap--scroll" style="border:none;border-radius:0;box-shadow:none">
@@ -392,6 +457,7 @@
         .gg-dot{ width:9px; height:9px; border-radius:50%; flex-shrink:0; display:inline-block; }
         .gg-filters{ display:flex; flex-direction:column; gap:12px; margin-bottom:8px; }
         .gg-filterline{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+        .gg-stsel{ min-width:180px; font-weight:600; }
         .gg-flabel{ font-family:var(--font-mono); font-size:10.5px; font-weight:500; letter-spacing:.08em; text-transform:uppercase; color:var(--faint); width:64px; flex-shrink:0; }
         .gg-chips{ display:flex; gap:8px; flex-wrap:wrap; }
         .gg-chip{ padding:6px 13px; border-radius:var(--r-full); font-size:12.5px; font-weight:600; border:1px solid var(--line); background:var(--surface); color:var(--muted); cursor:pointer; transition:.13s; white-space:nowrap; }

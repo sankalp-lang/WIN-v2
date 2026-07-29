@@ -25,79 +25,125 @@
     { id: 'migration',    title: 'Interstate Worker Migration Report', cat: 'Migration', ic: 'mappin', size: '3.1 MB', last: 'Nov 12, 2024', freq: 'Quarterly', desc: 'Origin-destination migration corridors, seasonal labour flow, and top sending/receiving states for informal workers.' },
   ];
 
-  // ---- realistic CSV payloads keyed by report id — actually downloaded, not simulated ----
+  // ---- shared seed lists for generating extensive (100+ row), realistic report data ----
+  const ALL_STATES = [
+    'Uttar Pradesh', 'Maharashtra', 'Bihar', 'West Bengal', 'Madhya Pradesh', 'Tamil Nadu',
+    'Rajasthan', 'Karnataka', 'Gujarat', 'Andhra Pradesh', 'Odisha', 'Telangana', 'Kerala',
+    'Jharkhand', 'Assam', 'Punjab', 'Chhattisgarh', 'Haryana', 'Delhi NCR', 'Uttarakhand',
+  ];
+  const SECTOR_LIST = ['Construction', 'Manufacturing', 'Gig & Platform', 'Agriculture', 'Domestic & Services'];
+  const DISTRICT_SEED = ['Central', 'North', 'South', 'East', 'West', 'Rural Belt'];
+
+  // deterministic pseudo-random (no Math.random) so the seed data is stable across renders
+  function seeded(i, salt) { return ((i * 9301 + salt * 49297 + 233280) % 100000) / 100000; }
+
+  function genEmpMonthly() {
+    const months = ['May 2024', 'Jun 2024', 'Jul 2024', 'Aug 2024', 'Sep 2024', 'Oct 2024'];
+    const rows = [];
+    ALL_STATES.forEach((st, si) => months.forEach((m, mi) => {
+      const base = 200000 + si * 41000 + mi * 9000;
+      const enrolled = Math.round(base * (0.9 + seeded(si, mi) * 0.3));
+      const rate = Math.round((60 + seeded(mi, si) * 30) * 10) / 10;
+      const verified = Math.round(enrolled * rate / 100);
+      rows.push([st, m, enrolled, verified, rate, SECTOR_LIST[(si + mi) % SECTOR_LIST.length]]);
+    }));
+    return { headers: ['State', 'Month', 'Enrolled', 'Verified', 'Verification Rate %', 'Top Sector'], rows };
+  }
+
+  function genGrievance() {
+    const cats = ['Wage Disputes', 'ESIC Coverage', 'PF Withdrawal Delay', 'Contract Violations', 'Workplace Safety'];
+    const rows = [];
+    for (let d = 1; d <= 100; d++) {
+      const cat = cats[d % cats.length];
+      const filed = 800 + Math.round(seeded(d, 3) * 1400);
+      const resolved = Math.round(filed * (0.75 + seeded(d, 7) * 0.15));
+      const escalated = Math.round(filed * (0.03 + seeded(d, 11) * 0.06));
+      const avgRes = Math.round((4 + seeded(d, 13) * 10) * 10) / 10;
+      const date = '2024-' + String(1 + Math.floor((d - 1) / 30) % 9 + 1).padStart(2, '0') + '-' + String(((d - 1) % 28) + 1).padStart(2, '0');
+      rows.push([date, cat, filed, resolved, escalated, avgRes]);
+    }
+    return { headers: ['Date', 'Category', 'Filed', 'Resolved', 'Escalated', 'Avg. Resolution (days)'], rows };
+  }
+
+  function genDemographics() {
+    const rows = [];
+    ALL_STATES.forEach((st, si) => DISTRICT_SEED.forEach((d, di) => {
+      const total = Math.round((900000 + si * 210000) * (0.7 + seeded(si, di) * 0.6));
+      const malePct = Math.round((58 + seeded(di, si) * 16) * 10) / 10;
+      const femalePct = Math.round((100 - malePct) * 10) / 10;
+      const urban = Math.round(24 + seeded(si + di, 5) * 50);
+      const avgAge = 28 + (si + di) % 10;
+      rows.push([st, st + ' ' + d, total, malePct, femalePct, urban, avgAge]);
+    }));
+    return { headers: ['State', 'District', 'Total Enrolled', 'Male %', 'Female %', 'Urban %', 'Avg Age'], rows };
+  }
+
+  function genCompliance() {
+    const SUFFIX = ['Pvt Ltd', 'Constructions', 'Enterprises', 'Industries', 'Group', '& Sons', 'Infra', 'Textiles'];
+    const NAMEROOT = ['Bharat', 'Shakti', 'Ganga', 'Om', 'Sunrise', 'National', 'United', 'Metro', 'Prime', 'Star',
+      'Global', 'Everest', 'Silver', 'Golden', 'Royal', 'Bluepeak', 'Greenfield', 'Ironclad', 'Vishnu', 'Laxmi'];
+    const rows = [];
+    for (let i = 0; i < 100; i++) {
+      const name = NAMEROOT[i % NAMEROOT.length] + ' ' + SUFFIX[(i * 3 + 1) % SUFFIX.length];
+      const sector = SECTOR_LIST[i % SECTOR_LIST.length];
+      const state = ALL_STATES[i % ALL_STATES.length];
+      const pf = Math.round(30 + seeded(i, 2) * 65);
+      const esic = Math.round(25 + seeded(i, 4) * 68);
+      const wage = Math.round(45 + seeded(i, 6) * 50);
+      const change = Math.round((seeded(i, 8) * 8 - 3) * 10) / 10;
+      rows.push([name, sector, state, pf, esic, wage, change]);
+    }
+    return { headers: ['Employer', 'Sector', 'State', 'PF Compliance %', 'ESIC Coverage %', 'Min. Wage Adherence %', 'YoY Change %'], rows };
+  }
+
+  function genEconomic() {
+    const quarters = ['Q1 FY 22-23', 'Q2 FY 22-23', 'Q3 FY 22-23', 'Q4 FY 22-23', 'Q1 FY 23-24', 'Q2 FY 23-24', 'Q3 FY 23-24', 'Q4 FY 23-24'];
+    const rows = [];
+    quarters.forEach((q, qi) => ALL_STATES.slice(0, 13).forEach((st, si) => {
+      const formalized = Math.round((0.08 + seeded(qi, si) * 0.3) * 100) / 100;
+      const uplift = Math.round(180 + seeded(si, qi) * 620);
+      const newEmp = Math.round(1800 + seeded(qi + si, 9) * 6200);
+      rows.push([q, st, formalized, uplift, newEmp]);
+    }));
+    return { headers: ['Quarter', 'State', 'Formalized Workers (Cr)', 'Est. Wage Uplift (₹ Cr)', 'New Employer Registrations'], rows };
+  }
+
+  function genSector() {
+    const rows = [];
+    SECTOR_LIST.forEach((sec, sci) => ALL_STATES.forEach((st, si) => {
+      const current = Math.round((900000 + si * 180000 + sci * 240000) * (0.8 + seeded(si, sci) * 0.5));
+      const prev = Math.round(current / (1 + (0.04 + seeded(sci, si) * 0.35)));
+      const growth = Math.round((current - prev) / prev * 1000) / 10;
+      rows.push([sec, st, current, prev, growth]);
+    }));
+    return { headers: ['Sector', 'State', 'Current Workers', 'Previous Year', 'YoY Growth %'], rows };
+  }
+
+  function genMigration() {
+    const origins = ['Bihar', 'Uttar Pradesh', 'Odisha', 'West Bengal', 'Madhya Pradesh', 'Rajasthan', 'Jharkhand', 'Chhattisgarh', 'Assam', 'Uttarakhand'];
+    const dests = ['Maharashtra', 'Delhi NCR', 'Gujarat', 'Tamil Nadu', 'Karnataka', 'Telangana', 'Kerala', 'Punjab', 'Haryana', 'Andhra Pradesh'];
+    const seasons = ['Year-round', 'Oct - Mar', 'Nov - Apr', 'Jun - Sep', 'Dec - Feb'];
+    const rows = [];
+    let i = 0;
+    origins.forEach((o, oi) => dests.forEach((d, di) => {
+      if (o === d) return;
+      i++;
+      const workers = Math.round((60000 + oi * 9000 + di * 4000) * (0.6 + seeded(oi, di) * 0.8));
+      rows.push([o, d, workers, SECTOR_LIST[(oi + di) % SECTOR_LIST.length], seasons[(oi * 3 + di) % seasons.length]]);
+    }));
+    rows.sort((a, b) => b[2] - a[2]);
+    return { headers: ['Origin State', 'Destination State', 'Workers (est.)', 'Dominant Sector', 'Peak Season'], rows: rows.slice(0, 100) };
+  }
+
+  // ---- realistic, extensive (100+ row) CSV/Excel/PDF payloads keyed by report id ----
   const REPORT_DATA = {
-    'emp-monthly': {
-      headers: ['State', 'Enrolled (MTD)', 'Verified (MTD)', 'Verification Rate %', 'Top Sector'],
-      rows: [
-        ['Uttar Pradesh', 842000, 601109, 71.4, 'Agriculture'],
-        ['Maharashtra', 716000, 560012, 78.2, 'Construction'],
-        ['Bihar', 548000, 366064, 66.8, 'Agriculture'],
-        ['West Bengal', 464000, 322480, 69.5, 'Domestic Work'],
-        ['Tamil Nadu', 380000, 304380, 80.1, 'Manufacturing'],
-      ],
-    },
-    grievance: {
-      headers: ['Category', 'Filed (MTD)', 'Resolved', 'Escalated', 'Avg. Resolution (days)'],
-      rows: [
-        ['Wage Disputes', 168400, 142800, 8600, 6.2],
-        ['ESIC Coverage', 92300, 81400, 4100, 8.9],
-        ['PF Withdrawal Delay', 74200, 63900, 5200, 11.4],
-        ['Contract Violations', 51600, 39200, 6800, 14.1],
-        ['Workplace Safety', 38900, 33100, 2900, 5.8],
-      ],
-    },
-    demographics: {
-      headers: ['State', 'Total Enrolled', 'Male %', 'Female %', 'Urban %', 'Avg Age'],
-      rows: [
-        ['Uttar Pradesh', 51234000, 68.0, 32.0, 34, 33],
-        ['Maharashtra', 42856000, 65.0, 35.0, 62, 31],
-        ['Bihar', 34218000, 70.0, 30.0, 24, 32],
-        ['West Bengal', 29845000, 65.3, 34.7, 42, 34],
-        ['Tamil Nadu', 23478000, 60.2, 39.8, 58, 32],
-      ],
-    },
-    compliance: {
-      headers: ['Sector', 'PF Compliance %', 'ESIC Coverage %', 'Min. Wage Adherence %', 'YoY Change %'],
-      rows: [
-        ['Construction', 68, 71, 82, 3.2],
-        ['Manufacturing', 84, 88, 91, 1.8],
-        ['Gig & Platform', 42, 38, 65, -2.1],
-        ['Agriculture', 31, 29, 54, -0.9],
-        ['Services', 76, 79, 88, 2.4],
-        ['Domestic Workers', 24, 18, 49, -1.5],
-      ],
-    },
-    economic: {
-      headers: ['Quarter', 'Formalized Workers (Cr)', 'Est. Wage Uplift (₹ Cr)', 'New Employer Registrations'],
-      rows: [
-        ['Q1 FY 2024-25', 1.8, 4200, 68400],
-        ['Q2 FY 2024-25', 2.1, 4950, 74200],
-        ['Q3 FY 2024-25', 2.6, 5680, 81900],
-      ],
-    },
-    sector: {
-      headers: ['Sector', 'Current Workers', 'Previous Year', 'YoY Growth %'],
-      rows: [
-        ['Construction', 88412000, 74421000, 18.8],
-        ['Manufacturing', 53818000, 47312000, 13.7],
-        ['Gig & Platform', 38412600, 27489000, 39.7],
-        ['Agriculture', 124824000, 118512000, 5.3],
-        ['Domestic & Services', 34612000, 31356000, 10.4],
-      ],
-    },
-    migration: {
-      headers: ['Origin State', 'Destination State', 'Workers (est.)', 'Dominant Sector', 'Peak Season'],
-      rows: [
-        ['Bihar', 'Maharashtra', 412000, 'Construction', 'Oct - Mar'],
-        ['Uttar Pradesh', 'Delhi NCR', 386000, 'Construction', 'Year-round'],
-        ['Odisha', 'Gujarat', 214000, 'Manufacturing', 'Nov - Apr'],
-        ['West Bengal', 'Tamil Nadu', 168000, 'Textiles', 'Year-round'],
-        ['Madhya Pradesh', 'Maharashtra', 142000, 'Agriculture', 'Jun - Sep'],
-        ['Rajasthan', 'Gujarat', 121000, 'Construction', 'Year-round'],
-        ['Jharkhand', 'Karnataka', 96000, 'Manufacturing', 'Year-round'],
-      ],
-    },
+    'emp-monthly': genEmpMonthly(),
+    grievance: genGrievance(),
+    demographics: genDemographics(),
+    compliance: genCompliance(),
+    economic: genEconomic(),
+    sector: genSector(),
+    migration: genMigration(),
   };
 
   // ---- scheduled queue (mutable so "Run now" changes state) ----
@@ -141,16 +187,17 @@
       </div>`;
   }
 
-  // actually trigger a CSV file download for a report (falls back to a registry-overview
-  // extract for the ad-hoc "custom" type, which has no fixed dataset)
-  function downloadReportCSV(rep) {
+  // actually trigger a real file download for a report (falls back to a registry-overview
+  // extract for the ad-hoc "custom" type, which has no fixed dataset). fmt is one of the
+  // format labels used across the console ("PDF summary" / "Excel (.xlsx)" / "CSV data extract").
+  function downloadReportCSV(rep, fmt) {
     const data = REPORT_DATA[rep.id];
     if (data) {
-      App.downloadCSV('win-' + rep.id + '-report.csv', data.headers, data.rows);
+      App.downloadReport('win-' + rep.id + '-report', rep.title || rep.id, data.headers, data.rows, fmt || 'CSV');
     } else {
-      App.downloadCSV('win-custom-extract.csv',
+      App.downloadReport('win-custom-extract', 'Custom extract',
         ['Report', 'Category', 'Frequency', 'Last generated'],
-        REPORTS.map(r => [r.title, r.cat, r.freq, r.last]));
+        REPORTS.map(r => [r.title, r.cat, r.freq, r.last]), fmt || 'CSV');
     }
   }
 
@@ -196,13 +243,40 @@
       }, 1350);
     },
 
-    // download an existing report → real CSV file + bump download count
+    // show a data preview + format picker before the actual download fires
     download(id) {
       const rep = REPORTS.find(r => r.id === id);
       if (!rep) return;
+      const data = REPORT_DATA[rep.id];
+      const headers = data ? data.headers : ['Report', 'Category', 'Frequency', 'Last generated'];
+      const allRows = data ? data.rows : REPORTS.map(r => [r.title, r.cat, r.freq, r.last]);
+      const sample = allRows.slice(0, 8);
+      const thead = '<tr>' + headers.map(h => `<th>${App.esc(h)}</th>`).join('') + '</tr>';
+      const tbody = sample.map(r => '<tr>' + r.map(c => `<td>${App.esc(c)}</td>`).join('') + '</tr>').join('');
+      App.modal.open(`
+        <p class="muted" style="font-size:13px;margin-bottom:12px">Preview of <b>${App.esc(rep.title)}</b> — <span class="num">${App.num(allRows.length)}</span> total rows. Showing the first ${sample.length}:</p>
+        <div class="tablewrap tablewrap--scroll" style="max-height:280px;overflow:auto">
+          <table class="tbl"><thead>${thead}</thead><tbody>${tbody}</tbody></table>
+        </div>
+        <div class="row gap-10 wrap mt-16">
+          <button class="btn btn--primary" onclick="GovReports.confirmDownload('${rep.id}','CSV')">${App.icon('download')} Download CSV</button>
+          <button class="btn" onclick="GovReports.confirmDownload('${rep.id}','Excel')">${App.icon('chart')} Download Excel</button>
+          <button class="btn" onclick="GovReports.confirmDownload('${rep.id}','PDF')">${App.icon('doc')} Download PDF</button>
+        </div>
+      `, {
+        title: 'Preview & Download', icon: 'download', wide: true,
+        foot: `<button class="btn" onclick="App.modal.close()">Cancel</button>`
+      });
+    },
+
+    // fires the real file download once a format button is clicked
+    confirmDownload(id, fmt) {
+      const rep = REPORTS.find(r => r.id === id);
+      if (!rep) return;
       STATS.downloads += 1;
-      downloadReportCSV(rep);
-      App.toast(rep.title + ' downloaded', 'download');
+      downloadReportCSV(rep, fmt || 'CSV');
+      App.modal.close();
+      App.toast(rep.title + ' downloaded as ' + fmt, 'download');
       App.reload();
     },
 

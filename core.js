@@ -86,16 +86,80 @@ window.App = (function () {
   App.money = n => '₹' + App.num(n);
   App.currentUser = () => App.state.user;
 
-  // real CSV file download (used by Government console "Export"/"Download" flows so
-  // the demo produces an actual file with realistic rows, not just a toast).
-  App.downloadCSV = (filename, headers, rows) => {
-    const cell = v => { const s = String(v == null ? '' : v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
-    const csv = [headers.map(cell).join(',')].concat(rows.map(r => r.map(cell).join(','))).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  // real file download (used by Government console "Export"/"Download" flows so the
+  // demo produces an actual file with realistic rows, not just a toast).
+  App.downloadFile = (filename, content, mime) => {
+    const blob = new Blob([content], { type: mime });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; a.download = filename; document.body.appendChild(a); a.click(); document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
+  App.downloadCSV = (filename, headers, rows) => {
+    const cell = v => { const s = String(v == null ? '' : v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+    const csv = [headers.map(cell).join(',')].concat(rows.map(r => r.map(cell).join(','))).join('\n');
+    App.downloadFile(filename, csv, 'text/csv;charset=utf-8;');
+  };
+
+  // Excel opens an HTML table saved with an .xls extension without complaint — no
+  // xlsx library available in this no-build-step prototype, so this is the realistic
+  // "real file" option for the Excel format choice.
+  App.downloadXLS = (filename, headers, rows) => {
+    const thead = '<tr>' + headers.map(h => `<th>${App.esc(h)}</th>`).join('') + '</tr>';
+    const tbody = rows.map(r => '<tr>' + r.map(c => `<td>${App.esc(c)}</td>`).join('') + '</tr>').join('');
+    const html = `<html><head><meta charset="UTF-8"></head><body><table border="1">${thead}${tbody}</table></body></html>`;
+    App.downloadFile(filename, html, 'application/vnd.ms-excel');
+  };
+
+  // hand-rolled, dependency-free single/multi-page PDF (Courier, one row per line) —
+  // no PDF library available in this no-build-step prototype.
+  App.downloadPDF = (filename, title, headers, rows) => {
+    const escPdf = s => String(s).replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
+    const lines = [title, ''].concat([headers.join('   |   ')]).concat(rows.map(r => r.map(c => String(c == null ? '' : c)).join('   |   ')));
+    const perPage = 54;
+    const pages = [];
+    for (let i = 0; i < lines.length; i += perPage) pages.push(lines.slice(i, i + perPage));
+    if (!pages.length) pages.push([]);
+
+    const pageObjStart = 3;
+    const fontObjNum = pageObjStart + pages.length;
+    const contentObjStart = fontObjNum + 1;
+    const kids = pages.map((_, p) => (pageObjStart + p) + ' 0 R').join(' ');
+
+    const objects = [];
+    objects.push(`1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n`);
+    objects.push(`2 0 obj\n<< /Type /Pages /Kids [${kids}] /Count ${pages.length} >>\nendobj\n`);
+    pages.forEach((_, p) => {
+      const pageNum = pageObjStart + p, contentNum = contentObjStart + p;
+      objects.push(`${pageNum} 0 obj\n<< /Type /Page /Parent 2 0 R /Resources << /Font << /F1 ${fontObjNum} 0 R >> >> /MediaBox [0 0 612 792] /Contents ${contentNum} 0 R >>\nendobj\n`);
+    });
+    objects.push(`${fontObjNum} 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>\nendobj\n`);
+    pages.forEach(pageLines => {
+      let stream = `BT /F1 8 Tf 40 760 Td 10 TL\n`;
+      pageLines.forEach(line => { stream += `(${escPdf(line)}) Tj T*\n`; });
+      stream += `ET`;
+      objects.push(`${contentObjStart + pages.indexOf(pageLines)} 0 obj\n<< /Length ${stream.length} >>\nstream\n${stream}\nendstream\nendobj\n`);
+    });
+
+    let pdf = '%PDF-1.4\n';
+    const offsets = [0];
+    objects.forEach(o => { offsets.push(pdf.length); pdf += o; });
+    const xrefStart = pdf.length;
+    const totalObjs = objects.length + 1;
+    let xref = `xref\n0 ${totalObjs}\n0000000000 65535 f \n`;
+    for (let i = 1; i < totalObjs; i++) xref += String(offsets[i]).padStart(10, '0') + ' 00000 n \n';
+    pdf += xref + `trailer\n<< /Size ${totalObjs} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF`;
+    App.downloadFile(filename, pdf, 'application/pdf');
+  };
+
+  // dispatch to the right real-file download by the format label used across the
+  // Government console's export/generate modals ("PDF summary", "Excel (.xlsx)", "CSV data extract")
+  App.downloadReport = (baseName, title, headers, rows, fmtLabel) => {
+    const fmt = String(fmtLabel || '').toUpperCase();
+    if (fmt.indexOf('EXCEL') === 0 || fmt.indexOf('XLS') === 0) App.downloadXLS(baseName + '.xls', headers, rows);
+    else if (fmt.indexOf('PDF') === 0) App.downloadPDF(baseName + '.pdf', title, headers, rows);
+    else App.downloadCSV(baseName + '.csv', headers, rows);
   };
 
   App.ui = {
