@@ -204,10 +204,13 @@
     subtitle: 'Track resolutions and manage your grievances',
     render(ctx) {
       const u = ctx.user;
-      const rows = WG.added.concat(base);
-      const openN = 2 + WG.added.length;
-      const resolvedN = 14;
-      const totalN = 16 + WG.added.length;
+      const fresh = !!(u && u._fresh);
+      // a freshly signed-up worker has no grievance history yet — only what they
+      // file this session counts, not the seeded demo history.
+      const rows = fresh ? WG.added : WG.added.concat(base);
+      const openN = fresh ? rows.filter(r => r.status === 'In Progress').length : 2 + WG.added.length;
+      const resolvedN = fresh ? rows.filter(r => r.status === 'Resolved').length : 14;
+      const totalN = fresh ? rows.length : 16 + WG.added.length;
 
       const counts = {
         all: rows.length,
@@ -271,12 +274,15 @@
         { t: 'Case Escalated for Priority Processing',  d: '' },
         { t: 'Case Resolved: Benefit Info Sent',        d: '' },
       ];
-      const tracker = `
+      const tracker = !rows.length ? `
+        <div class="card">
+          <div class="card__body">${App.ui.empty('message', 'No grievances yet', 'File a grievance and its live resolution status will track here.')}</div>
+        </div>` : `
         <div class="card">
           <div class="card__head">
             <h3 class="grow">Live Resolution Tracker</h3>
-            <span class="pill pill--gray mono">GRV-4521</span>
-            ${App.ui.statusPill('Resolved')}
+            <span class="pill pill--gray mono">${App.esc(rows[0].id)}</span>
+            ${App.ui.statusPill(rows[0].status)}
           </div>
           <div class="card__body">
             <div class="wg-routebox">

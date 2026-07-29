@@ -175,11 +175,12 @@ window.App = (function () {
   /* ---------------- shell ---------------- */
   function navHtml() {
     const p = App.persona(); const route = App.state.route;
+    const fresh = !!(App.state.user && App.state.user._fresh);
     return p.nav.map(group => `
       <div class="nav__section">${group.section}</div>
       ${group.items.map(it => `
         <div class="nav__item ${it.id === route ? 'is-active' : ''}" onclick="App.navigate('${it.id}')">
-          ${App.icon(it.icon)}<span>${it.label}</span>${it.tag ? `<span class="nav__tag">${it.tag}</span>` : ''}
+          ${App.icon(it.icon)}<span>${it.label}</span>${it.tag && !fresh ? `<span class="nav__tag">${it.tag}</span>` : ''}
         </div>`).join('')}
     `).join('');
   }

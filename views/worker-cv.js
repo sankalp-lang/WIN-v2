@@ -42,7 +42,7 @@
 
   // ---- editable working copy (hydrated from the verified record on first render) ----
   const state = {
-    _init: false,
+    _initFor: null,
     personal: {
       name: '', age: 34,
       title: 'Masonry Expert - Construction Supervisor',
@@ -78,6 +78,12 @@
     saved: false,
     previewOpen: true,
   };
+  // pristine copy of the demo persona's seed data, taken before any render can mutate
+  // state — needed so switching back to the demo persona (after a fresh-worker session
+  // blanked things out) restores the original Rajan data rather than staying empty.
+  const DEMO_SNAPSHOT = JSON.parse(JSON.stringify({
+    personal: state.personal, entries: state.entries, skills: state.skills, education: state.education,
+  }));
 
   // ---- pure helpers (shared by render + controller) ----
   function buildSummary() {
@@ -154,11 +160,29 @@
     subtitle: 'Build and export your professional CV',
     render(ctx) {
       const u = ctx.user;
-      if (!state._init) {
-        state._init = true;
-        state.personal.name = u.name || 'Rajan Kumar';
-        state.personal.winId = u.winId || 'WIN-2024-8834-1029';
-        state.summary = buildSummary();
+      // keyed on winId (or 'demo') rather than a one-shot boolean, so switching between
+      // a fresh worker and the demo persona within the same browser session — without a
+      // full page reload — re-initializes instead of leaking one identity's state into the other.
+      const initKey = (u && u.winId) || 'demo';
+      if (state._initFor !== initKey) {
+        state._initFor = initKey;
+        if (u && u._fresh) {
+          // a freshly signed-up worker starts with a blank CV — nothing here should
+          // be auto-filled with the Rajan demo persona's details.
+          state.personal = { name: '', age: '', title: '', location: '', years: '', email: '', phone: u.phone || '', winId: u.winId || '' };
+          state.entries = [];
+          state.skills = [];
+          state.education = { level: '', board: '', year: '', school: '', percentage: '' };
+          state.summary = '';
+        } else {
+          state.personal = JSON.parse(JSON.stringify(DEMO_SNAPSHOT.personal));
+          state.entries = JSON.parse(JSON.stringify(DEMO_SNAPSHOT.entries));
+          state.skills = JSON.parse(JSON.stringify(DEMO_SNAPSHOT.skills));
+          state.education = JSON.parse(JSON.stringify(DEMO_SNAPSHOT.education));
+          state.personal.name = u.name || 'Rajan Kumar';
+          state.personal.winId = u.winId || 'WIN-2024-8834-1029';
+          state.summary = buildSummary();
+        }
       }
       const p = state.personal;
 

@@ -90,8 +90,9 @@
   ];
 
   /* ---- SKILLS TAB ---- */
-  function skillsTab() {
-    const certCards = certified.map(s => `
+  function skillsTab(fresh) {
+    const certList = fresh ? [] : certified;
+    const certCards = certList.map(s => `
       <div class="card card--pad">
         <div class="row between" style="align-items:flex-start">
           <div>
@@ -127,9 +128,10 @@
       <div class="reveal">
         <div class="row between wrap gap-8 mb-12">
           <div class="row gap-8"><span style="color:var(--green-600);display:inline-flex">${App.icon('checkcircle')}</span><span class="section-title" style="margin:0">Your Certified Skills</span></div>
-          ${App.ui.pill('6 Verified', 'green')}
+          ${App.ui.pill(certList.length + ' Verified', 'green')}
         </div>
-        <div class="grid grid-3">${certCards}</div>
+        ${certList.length ? `<div class="grid grid-3">${certCards}</div>`
+          : App.ui.empty('award', 'No certified skills yet', 'Add your work history and skills in Profile & Settings to get certified skill matches.')}
       </div>
 
       <div class="reveal" style="margin-top:30px">
@@ -270,6 +272,7 @@
     subtitle: 'Certified skills & career guidance',
     render(ctx) {
       const fn = ((ctx && ctx.user && ctx.user.name) || 'there').split(' ')[0];
+      const fresh = !!(ctx && ctx.user && ctx.user._fresh);
       return `<div class="page fade-in">
         <style>
           .ws-lvl{ display:inline-flex; align-items:center; padding:3px 10px; border-radius:var(--r-full); font-size:11px; font-weight:700; white-space:nowrap; }
@@ -310,9 +313,9 @@
                 <h1 class="h-grad">Grow your daily rate, ${App.esc(fn)}.</h1>
                 <p class="lead">Your certified skills, the fastest-rising trades in construction, and courses matched to higher-paying roles.</p>
                 <div class="ws-stats mt-16">
-                  <div class="ws-stat"><span class="ws-stat__v num" style="color:var(--accent-strong)">6</span><span class="ws-stat__l">Certified skills</span></div>
-                  <div class="ws-stat"><span class="ws-stat__v num" style="color:var(--green-700)">+₹400</span><span class="ws-stat__l">Top daily boost</span></div>
-                  <div class="ws-stat"><span class="ws-stat__v num">2</span><span class="ws-stat__l">Courses in progress</span></div>
+                  <div class="ws-stat"><span class="ws-stat__v num" style="color:var(--accent-strong)">${fresh ? 0 : 6}</span><span class="ws-stat__l">Certified skills</span></div>
+                  <div class="ws-stat"><span class="ws-stat__v num" style="color:var(--green-700)">${fresh ? '—' : '+₹400'}</span><span class="ws-stat__l">Top daily boost</span></div>
+                  <div class="ws-stat"><span class="ws-stat__v num">${fresh ? 0 : 2}</span><span class="ws-stat__l">Courses in progress</span></div>
                 </div>
               </div>
               <div class="row gap-10">
@@ -328,7 +331,7 @@
           <div class="tab ${S.tab === 'courses' ? 'is-active' : ''}" onclick="WorkerSkills.setTab('courses')">Courses</div>
         </div>
 
-        ${S.tab === 'skills' ? skillsTab() : coursesTab()}
+        ${S.tab === 'skills' ? skillsTab(fresh) : coursesTab()}
       </div>`;
     }
   });

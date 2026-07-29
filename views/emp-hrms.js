@@ -42,9 +42,10 @@
     .hs-choice__ic{ width:34px; height:34px; border-radius:9px; display:grid; place-items:center; background:var(--accent-weak); color:var(--accent-strong); flex-shrink:0; }
     .hs-platforms{ display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; max-height:340px; overflow-y:auto; margin-top:12px; }
     @media (max-width:760px){ .hs-platforms{ grid-template-columns:repeat(2,minmax(0,1fr)); } }
-    .hs-platform{ display:flex; align-items:center; gap:8px; padding:10px 12px; border:1px solid var(--line); border-radius:var(--r-sm);
+    .hs-platform{ display:flex; align-items:center; gap:9px; padding:10px 12px; border:1px solid var(--line); border-radius:var(--r-sm);
       background:var(--surface); cursor:pointer; font-size:13px; transition:.12s; }
     .hs-platform:hover{ border-color:var(--accent); background:var(--accent-weak); }
+    .hs-platform__logo{ width:26px; height:26px; border-radius:7px; display:grid; place-items:center; color:#fff; font-size:11px; font-weight:700; flex-shrink:0; }
     .hs-connect-diagram{ display:flex; align-items:center; justify-content:center; gap:14px; margin:6px 0 20px; }
     .hs-connect-dot{ width:30px; height:30px; border-radius:9px; background:var(--accent-weak); color:var(--accent-strong); display:grid; place-items:center; }
     .hs-check{ display:flex; align-items:center; gap:8px; font-size:13px; color:var(--ink-2); cursor:pointer; }
@@ -64,7 +65,11 @@
     if (m.step === 'platform') {
       const q = (m.search || '').toLowerCase();
       const platforms = (DB.hrmsPlatforms || []).filter(p => p.toLowerCase().includes(q));
-      const grid = platforms.map(p => `<button class="hs-platform" onclick="EmpHrms.pickPlatform('${p.replace(/'/g, "\\'")}')">${App.icon('plug')} ${App.esc(p)}</button>`).join('');
+      const grid = platforms.map(p => `
+        <button class="hs-platform" onclick="EmpHrms.pickPlatform('${p.replace(/'/g, "\\'")}')">
+          <span class="hs-platform__logo" style="background:${App.color(p)}">${App.initials(p)}</span>
+          ${App.esc(p)}
+        </button>`).join('');
       const body = `
         <div class="field"><input class="input" placeholder="Search HRMS…" value="${App.esc(m.search)}" oninput="EmpHrms.setSearch(this.value)"></div>
         <div class="hs-platforms">${grid || `<p class="muted" style="font-size:13px;grid-column:1/-1">No match.</p>`}</div>`;

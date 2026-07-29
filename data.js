@@ -47,9 +47,9 @@ window.DB = {
     { key: 'sftp', ic: 'database', title: 'SFTP Transfer', desc: 'Upload files securely via SFTP for automated ingestion. Scheduled pickups and encrypted file transfer included.' },
     { key: 'csv', ic: 'share', title: 'Upload CSV', desc: 'Quickly upload your data using CSV files. Download our template, fill in your data, and upload — simple and fast.' },
   ],
+  // trimmed to a representative ~15 for the demo — "Other" in the search covers the rest
   hrmsPlatforms: [
     'GreytHR', 'Uknowva', 'Keka', 'SAP SuccessFactors', 'Zoho People', 'Beehive', 'DarwinBox',
-    'ZingHR', 'FreshTeam', 'BambooHR', 'Paycor', 'Workline', 'Paychex', 'PeopleStrong',
-    'PeopleHR', 'SumHR', 'Peopleworks', 'Paybooks', 'Odoo', 'Oracle Fusion', 'HROne', 'Sage',
+    'ZingHR', 'FreshTeam', 'BambooHR', 'Paychex', 'PeopleStrong', 'SumHR', 'Odoo', 'HROne',
   ],
 };
