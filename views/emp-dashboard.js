@@ -486,9 +486,30 @@
     ['pipeline', 'Hiring Pipeline'],
   ];
 
-  // shown instead of the dashboard until the employer has synced an HRMS —
-  // there's no real employee data to show here otherwise.
+  // shown instead of the dashboard until the employer has synced an HRMS — there's no
+  // real employee data yet, but a faded preview hints at what this page will look like
+  // once connected, instead of leaving the tab blank.
   function syncPromptPage() {
+    const previewKpis = [
+      { icon: 'shield', label: 'Total Employees' },
+      { icon: 'checkcircle', label: 'Verified' },
+      { icon: 'clock', label: 'In Progress' },
+      { icon: 'alert', label: 'Pending' },
+    ].map(k => `
+      <div class="kpi">
+        <div class="kpi__top"><div class="kpi__label">${App.esc(k.label)}</div>
+          <div class="kpi__icon" style="background:var(--surface-2);color:var(--faint)">${App.icon(k.icon)}</div></div>
+        <div class="kpi__val" style="color:var(--faint)">—</div>
+        <div class="kpi__sub muted">Awaiting HRMS sync</div>
+      </div>`).join('');
+    const previewRows = ['Employee roster', 'Verification status by source', 'Hiring pipeline'].map(t => `
+      <div class="row gap-10" style="padding:13px 8px;border-bottom:1px solid var(--line-2)">
+        <span style="width:34px;height:34px;border-radius:50%;background:var(--surface-2)"></span>
+        <div class="grow"><div style="height:11px;width:40%;background:var(--surface-2);border-radius:4px"></div>
+          <div style="height:9px;width:60%;background:var(--surface-2);border-radius:4px;margin-top:7px"></div></div>
+        <span class="muted" style="font-size:12px">${App.esc(t)}</span>
+      </div>`).join('');
+
     return `<div class="page fade-in">
       <div class="hero reveal">
         <div class="hero__wash"></div>
@@ -498,6 +519,11 @@
           <p class="lead">Connect your HR system first — your workforce stats, hiring pipeline and worker profiles will populate here once employee records start syncing.</p>
           <button class="btn btn--accent" style="margin-top:16px" onclick="App.navigate('emp-hrms')">${App.icon('plug')} Go to HRMS Sync</button>
         </div>
+      </div>
+      <div class="grid grid-4 reveal" style="margin-bottom:22px;opacity:.6;pointer-events:none">${previewKpis}</div>
+      <div class="card reveal" style="opacity:.6;pointer-events:none">
+        <div class="card__head"><h3 class="grow">What you'll see here</h3></div>
+        <div class="card__body" style="padding-top:0">${previewRows}</div>
       </div>
     </div>`;
   }

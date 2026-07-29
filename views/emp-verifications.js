@@ -139,9 +139,21 @@
     return `<span class="pill pill--${k} pill--dot">${App.esc(s)}</span>`;
   }
 
-  // shown instead of the roster until the employer has synced an HRMS —
-  // there are no real employee records to verify here otherwise.
+  // shown instead of the roster until the employer has synced an HRMS — there are no
+  // real employee records yet, but a faded table preview hints at the roster's shape.
   function syncPromptPage() {
+    const previewRows = [1, 2, 3].map(() => `
+      <tr>
+        <td><div class="row gap-10"><span style="width:30px;height:30px;border-radius:50%;background:var(--surface-2)"></span>
+          <div><div style="height:10px;width:90px;background:var(--surface-2);border-radius:4px"></div>
+          <div style="height:8px;width:60px;background:var(--surface-2);border-radius:4px;margin-top:6px"></div></div></div></td>
+        <td style="text-align:center">—</td><td style="text-align:center">—</td>
+        <td><div style="height:9px;width:80px;background:var(--surface-2);border-radius:4px"></div></td>
+        <td style="text-align:center">—</td>
+        <td>${App.ui.pill('Not synced', 'gray')}</td>
+        <td style="text-align:center">—</td><td></td>
+      </tr>`).join('');
+
     return `<div class="page fade-in">
       <div class="hero reveal">
         <div class="hero__wash"></div>
@@ -150,6 +162,19 @@
           <h1 class="h-grad" style="margin-top:12px">Sync your HRMS to see your employees.</h1>
           <p class="lead">Connect your HR system first — employee records and verification status will populate here automatically once synced.</p>
           <button class="btn btn--accent" style="margin-top:16px" onclick="App.navigate('emp-hrms')">${App.icon('plug')} Go to HRMS Sync</button>
+        </div>
+      </div>
+      <div class="card reveal" style="overflow:hidden;opacity:.6;pointer-events:none">
+        <div class="card__head"><div class="grow"><h3>Verification roster</h3><div class="muted" style="font-size:12.5px;margin-top:2px">This is what your roster will look like once synced</div></div></div>
+        <div class="tablewrap tablewrap--scroll" style="border:none;border-radius:0;box-shadow:none">
+          <table class="tbl ev-tbl">
+            <thead><tr>
+              <th>Employee</th><th style="text-align:center">Aadhaar</th><th style="text-align:center">PAN</th>
+              <th>Prev. Employment</th><th style="text-align:center">EPFO</th><th>Status</th>
+              <th style="text-align:center">Score</th><th></th>
+            </tr></thead>
+            <tbody>${previewRows}</tbody>
+          </table>
         </div>
       </div>
     </div>`;
