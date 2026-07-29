@@ -299,10 +299,14 @@
 
     } else {
       title = 'Verify Address'; icon = 'shieldcheck';
-      body = `<div class="banner banner--green" style="margin-bottom:4px">${App.icon('checkcircle')}<div><b>Address verified</b><div style="font-size:12px;opacity:.85;margin-top:3px">${App.esc(w.role || 'This entry')} at ${App.esc(w.org || '—')} is now verified via Digital Address Verification.</div></div></div>`;
+      const entryLabel = App.esc(w.role || 'This entry') + (w.org ? ' at ' + App.esc(w.org) : '');
+      body = `<div class="banner banner--green" style="margin-bottom:4px">${App.icon('checkcircle')}<div><b>Address verified</b><div style="font-size:12px;opacity:.85;margin-top:3px">${entryLabel} is now verified via Digital Address Verification.</div></div></div>`;
       foot = `<button class="btn btn--primary" onclick="WorkerSettings.davNext()">${App.icon('check')} Done</button>`;
     }
-    App.modal.open(body, { title, icon, foot, wide: DAV.step === 'flow' || DAV.step === 'checklist' });
+    // onClose covers every dismiss path (✕, backdrop click, Cancel) so the camera stream
+    // never keeps running after the modal disappears, even if a step's Cancel button just
+    // calls App.modal.close() directly instead of a dedicated davCancelCamera().
+    App.modal.open(body, { title, icon, foot, wide: DAV.step === 'flow' || DAV.step === 'checklist', onClose: stopDavCamera });
   }
 
   window.WorkerSettings = {
@@ -586,8 +590,11 @@
   function entryFormBody(w, i) {
     const single = S.work.length <= 1;
     const isInformal = w.relation === 'informal';
-    const companyLabel = isInformal ? 'Company / Landowner (optional)' : 'Company';
-    const companyPlaceholder = isInformal ? 'Type company/landowner name (optional)' : 'Type your company name';
+    const isSelf = w.relation === 'self';
+    // farmers and self-employed workers have no formal employer to pick from a list —
+    // free text only, no company dropdown.
+    const companyLabel = isInformal ? 'Company / Landowner (optional)' : isSelf ? 'Business Name (optional)' : 'Company';
+    const companyPlaceholder = isInformal ? 'e.g. Family farmland (optional)' : isSelf ? 'e.g. Rajan Masonry Works (optional)' : 'e.g. Omaxe Ltd.';
     return `
       <div class="grid grid-2">
         <div class="field" style="margin-bottom:0">
@@ -619,13 +626,15 @@
       <div class="grid grid-2" style="margin-top:12px">
         <div class="field" style="margin-bottom:0">
           <label class="label wset-flabel">${companyLabel}</label>
+          ${isInformal || isSelf ? `
+          <input class="input" value="${App.esc(w.org)}" placeholder="${companyPlaceholder}" oninput="WorkerSettings.editWork(${i},'org',this.value)">` : `
           <select class="select" onchange="WorkerSettings.setOrgChoice(${i},this.value)">
-            <option value="" ${!w.org ? 'selected' : ''} ${isInformal ? '' : 'disabled'}>${isInformal ? 'None / not applicable' : 'Select company'}</option>
+            <option value="" ${!w.org ? 'selected' : ''} disabled>Select company</option>
             ${KNOWN_COMPANIES.map(c => `<option value="${App.esc(c)}" ${w.org === c && !w._orgCustom ? 'selected' : ''}>${App.esc(c)}</option>`).join('')}
             <option value="others" ${w._orgCustom || (w.org && !KNOWN_COMPANIES.includes(w.org)) ? 'selected' : ''}>Others (type company name)</option>
           </select>
           ${w._orgCustom || (w.org && !KNOWN_COMPANIES.includes(w.org)) ? `
-          <input class="input mt-8" value="${App.esc(w.org)}" placeholder="${companyPlaceholder}" oninput="WorkerSettings.editWork(${i},'org',this.value)">` : ''}
+          <input class="input mt-8" value="${App.esc(w.org)}" placeholder="Type your company name" oninput="WorkerSettings.editWork(${i},'org',this.value)">` : ''}`}
         </div>
         <div class="field" style="margin-bottom:0">
           <label class="label wset-flabel">City</label>

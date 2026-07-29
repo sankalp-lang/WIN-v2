@@ -343,8 +343,14 @@ window.App = (function () {
 
   /* ---------------- modal ---------------- */
   App.modal = {
+    _onClose: null,
     open(html, opts) {
       opts = opts || {};
+      // any close path (✕, backdrop click, or an explicit Cancel button that just calls
+      // App.modal.close()) should still run cleanup — e.g. stopping a live camera stream —
+      // so callers can register a one-shot onClose instead of relying on every button
+      // remembering to call it.
+      App.modal._onClose = opts.onClose || null;
       const root = $('#modal-root');
       root.innerHTML = `<div class="modal-backdrop" onclick="if(event.target===this)App.modal.close()">
         <div class="modal ${opts.wide ? 'modal--lg' : ''}">
@@ -353,7 +359,10 @@ window.App = (function () {
           ${opts.foot ? `<div class="modal__foot">${opts.foot}</div>` : ''}
         </div></div>`;
     },
-    close() { $('#modal-root').innerHTML = ''; }
+    close() {
+      if (App.modal._onClose) { const fn = App.modal._onClose; App.modal._onClose = null; fn(); }
+      $('#modal-root').innerHTML = '';
+    }
   };
 
   /* ---------------- toast ---------------- */
