@@ -38,4 +38,18 @@ window.DB = {
     { key: 'digilocker', label: 'DigiLocker', color: '#2B3990' },
     { key: 'eshram', label: 'e-Shram', color: '#0d9488' },
   ],
+
+  // shared HRMS-sync setup data — used by both the employer sign-up flow (core.js)
+  // and the persistent HRMS Sync workspace page (views/emp-hrms.js), modelled on
+  // Tartan's own HyperSync product (Data Transfer Method → HRMS Selection → Credentials)
+  hrmsMethods: [
+    { key: 'hrms', ic: 'plug', title: 'HRMS Integration', desc: 'Connect your HRMS for seamless, automated data transfer. Supports major platforms like SAP, Workday, BambooHR and more.' },
+    { key: 'sftp', ic: 'database', title: 'SFTP Transfer', desc: 'Upload files securely via SFTP for automated ingestion. Scheduled pickups and encrypted file transfer included.' },
+    { key: 'csv', ic: 'share', title: 'Upload CSV', desc: 'Quickly upload your data using CSV files. Download our template, fill in your data, and upload — simple and fast.' },
+  ],
+  hrmsPlatforms: [
+    'GreytHR', 'Uknowva', 'Keka', 'SAP SuccessFactors', 'Zoho People', 'Beehive', 'DarwinBox',
+    'ZingHR', 'FreshTeam', 'BambooHR', 'Paycor', 'Workline', 'Paychex', 'PeopleStrong',
+    'PeopleHR', 'SumHR', 'Peopleworks', 'Paybooks', 'Odoo', 'Oracle Fusion', 'HROne', 'Sage',
+  ],
 };

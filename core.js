@@ -360,63 +360,74 @@ window.App = (function () {
   };
 
   /* ============================================================
-     EMPLOYER SIGN-UP  (create credentials → KYB → trust tier → HRMS sync)
-     step: 'credentials' | 'business' | 'verifying' | 'result' | 'hrms'
+     EMPLOYER SIGN-UP  (create credentials → KYB → HRMS sync)
+     step: 'credentials' | 'business' | 'verifying' | 'hrms'
+     hrms sub-step (within 'hrms'): 'method' | 'platform' | 'credentials'
      ============================================================ */
   const SU = {
     active: false, step: 'credentials',
-    name: '', legalName: '', email: '', password: '', confirm: '',
-    pan: '', gstin: '', hasMca: '', cin: '', udyam: '',
+    legalName: '', email: '', password: '', confirm: '',
+    hasMca: '', hasGst: '',
     address: '', city: '', state: '', pincode: '',
-    hrms: '', tier: null,
+    tier: null,
+    hrmsSubstep: 'method', hrmsMethod: '', hrmsPlatform: '', hrmsSearch: '',
+    hrmsHost: '', hrmsClientId: '', hrmsClientSecret: '', hrmsApiKey: '', hrmsAgree: false,
   };
-  // Structural registry match (MCA or Udyam) × GST presence → onboarding trust tier.
-  // MCA applies only to companies/LLPs; most legitimate proprietorships will never have
-  // one, so Udyam (the MSME registry) is treated as an equally valid structural match —
-  // "no MCA" reflects business structure, not deficiency.
+  // MCA (Yes/No) × GST/Udyam (Yes/No) → KYB trust tier. MCA applies only to companies/LLPs —
+  // most legitimate proprietorships will never have one, so "MCA: No" isn't a deficiency,
+  // it's a different business structure that needs a Digital Address Verification (DAV)
+  // instead, since there's no MCA registry record to corroborate against.
   function kybTier(su) {
-    const structural = !!(su.cin || su.udyam);
-    const gst = !!su.gstin;
-    if (structural && gst) return { name: 'Gold Standard', color: 'green', confidence: 'High', tat: 'Minutes',
-      action: "Straight-through verification using your MCA/Udyam and GSTN records. You're ready to go." };
-    if (structural && !gst) return { name: 'Financials Reconciliation', color: 'blue', confidence: 'Medium–High', tat: '1–2 business days',
-      action: "We'll reconcile your filed financials (ITR/AOC-4) against your registration. You can continue in the meantime." };
-    if (!structural && gst) return { name: 'Field-Verified', color: 'amber', confidence: 'Medium', tat: 'Field visit',
-      action: "We'll schedule a Digital Address Verification (DAV) visit at your registered address." };
-    return { name: 'Full Verification', color: 'amber', confidence: 'Varies', tat: 'Field visit + docs',
-      action: "We'll schedule a site visit and request audited financials for full verification." };
+    const mca = su.hasMca === 'yes', gst = su.hasGst === 'yes';
+    if (mca && gst) return { name: 'Gold Standard', requiresDav: false };
+    if (mca && !gst) return { name: 'Financials Reconciliation', requiresDav: false };
+    if (!mca && gst) return { name: 'Field-Verified', requiresDav: true };
+    return { name: 'Full Verification', requiresDav: true };
   }
-  const HRMS_PROVIDERS = ['Darwinbox', 'Keka', 'greytHR', 'Zoho People', 'SAP SuccessFactors', 'Other / Manual entry'];
   App.signup = {
     open() { SU.active = true; SU.step = 'credentials'; renderLogin(); },
     cancel() { SU.active = false; renderLogin(); },
     set(k, v) { SU[k] = v; },
     setHasMca(v) { SU.hasMca = v; renderLogin(); },
+    setHasGst(v) { SU.hasGst = v; renderLogin(); },
     submitCredentials() {
-      if (!SU.name || !SU.legalName || !SU.email) { App.toast('Fill in your name, organisation and email', 'alert'); return; }
+      if (!SU.legalName || !SU.email) { App.toast('Fill in your organisation name and email', 'alert'); return; }
       if (SU.password.length < 8) { App.toast('Password must be at least 8 characters', 'alert'); return; }
       if (SU.password !== SU.confirm) { App.toast('Passwords do not match', 'alert'); return; }
       SU.step = 'business'; renderLogin();
     },
     backToCredentials() { SU.step = 'credentials'; renderLogin(); },
     toVerifying() {
-      if (!SU.pan) { App.toast('Enter your business PAN to continue', 'alert'); return; }
       if (!SU.hasMca) { App.toast('Let us know if you\'re registered with the MCA', 'alert'); return; }
-      if (SU.hasMca === 'yes' && !SU.cin) { App.toast('Enter your CIN / LLPIN', 'alert'); return; }
+      if (!SU.hasGst) { App.toast('Let us know if you have GST/Udyam registration', 'alert'); return; }
+      const requiresDav = SU.hasMca === 'no';
+      if (requiresDav && (!SU.address || !SU.city || !SU.state || !SU.pincode)) { App.toast('Fill in the address details to verify', 'alert'); return; }
       SU.step = 'verifying'; renderLogin();
-      setTimeout(() => { SU.tier = kybTier(SU); SU.step = 'result'; renderLogin(); }, 1800);
+      setTimeout(() => { SU.tier = kybTier(SU); SU.step = 'hrms'; SU.hrmsSubstep = 'method'; renderLogin(); }, 1800);
     },
-    toHrms() { SU.step = 'hrms'; renderLogin(); },
-    pickHrms(name) { SU.hrms = name; renderLogin(); },
+    pickHrmsMethod(m) {
+      SU.hrmsMethod = m;
+      if (m === 'hrms') { SU.hrmsSubstep = 'platform'; renderLogin(); return; }
+      App.toast('You can set this up anytime from HRMS Sync in your dashboard', 'clock');
+      App.signup.finish();
+    },
+    setHrmsSearch(v) { SU.hrmsSearch = v; renderLogin(); },
+    pickHrmsPlatform(p) { SU.hrmsPlatform = p; SU.hrmsSubstep = 'credentials'; renderLogin(); },
+    backHrms() {
+      SU.hrmsSubstep = SU.hrmsSubstep === 'credentials' ? 'platform' : 'method';
+      renderLogin();
+    },
+    toggleHrmsAgree() { SU.hrmsAgree = !SU.hrmsAgree; renderLogin(); },
     connectHrms() {
-      if (!SU.hrms) { App.toast('Select an HRMS to connect', 'alert'); return; }
-      App.toast(`Connected to ${SU.hrms}`, 'checkcircle');
+      if (!SU.hrmsHost || !SU.hrmsClientId || !SU.hrmsClientSecret) { App.toast('Fill in your HRMS credentials to connect', 'alert'); return; }
+      if (!SU.hrmsAgree) { App.toast('Please agree to the terms & conditions', 'alert'); return; }
+      App.toast(`Connected to ${SU.hrmsPlatform}`, 'checkcircle');
       App.signup.finish();
     },
     skipHrms() { App.signup.finish(); },
     finish() {
       App.startApp('employer', {
-        name: SU.name, subtitle: SU.legalName, org: SU.legalName,
+        name: SU.legalName, subtitle: SU.legalName, org: SU.legalName,
         role: 'Admin', sector: '—', email: SU.email,
       });
     },
@@ -433,6 +444,17 @@ window.App = (function () {
     .su-choice:hover{ border-color:var(--accent); background:var(--accent-weak); }
     .su-choice.is-active{ border-color:var(--accent); background:var(--accent-weak); box-shadow:0 0 0 1px var(--accent); }
     .su-choice__ic{ width:30px; height:30px; border-radius:8px; display:grid; place-items:center; background:var(--accent-weak); color:var(--accent-strong); flex-shrink:0; }
+    .su-choice b{ font-size:13.5px; }
+    .su-choice span.muted{ display:block; font-size:12px; margin-top:1px; }
+    .su-platforms{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; max-height:320px; overflow-y:auto; margin-top:12px; }
+    .su-platform{ display:flex; align-items:center; gap:8px; padding:10px 12px; border:1px solid var(--line); border-radius:var(--r-sm);
+      background:var(--surface); cursor:pointer; font-size:13px; transition:.12s; }
+    .su-platform:hover{ border-color:var(--accent); background:var(--accent-weak); }
+    .su-connect-diagram{ display:flex; align-items:center; justify-content:center; gap:14px; margin:6px 0 18px; }
+    .su-connect-diagram .ico{ width:26px; height:26px; }
+    .su-connect-dot{ width:28px; height:28px; border-radius:8px; background:var(--accent-weak); color:var(--accent-strong); display:grid; place-items:center; }
+    .su-check{ display:flex; align-items:center; gap:8px; font-size:13px; color:var(--ink-2); cursor:pointer; }
+    .su-check input{ width:16px; height:16px; accent-color:var(--accent); cursor:pointer; }
   </style>`;
 
   function signupForm() {
@@ -440,8 +462,6 @@ window.App = (function () {
       return `
         <h2 class="auth__title">Create an employer account</h2>
         <p class="muted" style="margin:6px 0 22px">Let's start with your account details.</p>
-        <div class="field"><label class="label">Your Full Name</label>
-          <input class="input" value="${App.esc(SU.name)}" placeholder="e.g. Priya Nair" oninput="App.signup.set('name',this.value)"></div>
         <div class="field"><label class="label">Organisation Name</label>
           <input class="input" value="${App.esc(SU.legalName)}" placeholder="e.g. Aditya Birla Construction Ltd." oninput="App.signup.set('legalName',this.value)"></div>
         <div class="field"><label class="label">Work Email</label>
@@ -456,26 +476,25 @@ window.App = (function () {
         <p class="muted" style="text-align:center;font-size:13px;margin-top:16px">Already have an account? <b style="color:var(--accent-strong);cursor:pointer" onclick="App.signup.cancel()">Sign in</b></p>`;
     }
     if (SU.step === 'business') {
+      const requiresDav = SU.hasMca === 'no';
       return `
         <button class="btn btn--ghost btn--sm" style="margin-bottom:14px" onclick="App.signup.backToCredentials()">${App.icon('arrowleft')} Back</button>
-        <h2 class="auth__title" style="font-size:19px">Business details</h2>
-        <p class="muted" style="margin:6px 0 18px;font-size:13px">We use these to verify your business (KYB) before activating your account.</p>
-        <div class="field"><label class="label">Business PAN</label>
-          <input class="input mono" value="${App.esc(SU.pan)}" placeholder="e.g. AAACB1234C" oninput="App.signup.set('pan',this.value)"></div>
-        <div class="field"><label class="label">GSTIN <span class="muted" style="font-weight:400">(optional)</span></label>
-          <input class="input mono" value="${App.esc(SU.gstin)}" placeholder="e.g. 07AAACB1234C1Z5" oninput="App.signup.set('gstin',this.value)"></div>
-        <div class="field"><label class="label">Registered as a Company/LLP with the MCA?</label>
+        <h2 class="auth__title" style="font-size:19px">Business verification</h2>
+        <p class="muted" style="margin:6px 0 18px;font-size:13px">Two quick questions to verify your business (KYB) before activating your account.</p>
+        <div class="field"><label class="label">Registered with the MCA (Company/LLP)?</label>
           <select class="select" onchange="App.signup.setHasMca(this.value)">
             <option value="" ${!SU.hasMca ? 'selected' : ''} disabled>Select an option</option>
             <option value="yes" ${SU.hasMca === 'yes' ? 'selected' : ''}>Yes</option>
-            <option value="no" ${SU.hasMca === 'no' ? 'selected' : ''}>No — proprietorship / partnership</option>
+            <option value="no" ${SU.hasMca === 'no' ? 'selected' : ''}>No</option>
           </select></div>
-        ${SU.hasMca === 'yes' ? `
-        <div class="field"><label class="label">CIN / LLPIN</label>
-          <input class="input mono" value="${App.esc(SU.cin)}" placeholder="e.g. U45201MH2010PTC123456" oninput="App.signup.set('cin',this.value)"></div>` : ''}
-        ${SU.hasMca === 'no' ? `
-        <div class="field"><label class="label">Udyam Registration Number <span class="muted" style="font-weight:400">(if registered)</span></label>
-          <input class="input mono" value="${App.esc(SU.udyam)}" placeholder="e.g. UDYAM-MH-01-0012345" oninput="App.signup.set('udyam',this.value)"></div>` : ''}
+        <div class="field"><label class="label">Have GST/Udyam Registration?</label>
+          <select class="select" onchange="App.signup.setHasGst(this.value)">
+            <option value="" ${!SU.hasGst ? 'selected' : ''} disabled>Select an option</option>
+            <option value="yes" ${SU.hasGst === 'yes' ? 'selected' : ''}>Yes</option>
+            <option value="no" ${SU.hasGst === 'no' ? 'selected' : ''}>No</option>
+          </select></div>
+        ${requiresDav ? `
+        <div class="banner banner--info" style="margin:16px 0">${App.icon('mappin')}<div>Since you're not MCA-registered, we'll verify your business address instead.</div></div>
         <div class="field"><label class="label">Registered / Operating Address</label>
           <input class="input" value="${App.esc(SU.address)}" placeholder="Street / site address" oninput="App.signup.set('address',this.value)"></div>
         <div class="grid grid-2">
@@ -485,38 +504,57 @@ window.App = (function () {
             <input class="input" value="${App.esc(SU.state)}" placeholder="e.g. Haryana" oninput="App.signup.set('state',this.value)"></div>
         </div>
         <div class="field" style="margin-top:16px"><label class="label">Pincode</label>
-          <input class="input mono" value="${App.esc(SU.pincode)}" placeholder="e.g. 122002" oninput="App.signup.set('pincode',this.value)"></div>
+          <input class="input mono" value="${App.esc(SU.pincode)}" placeholder="e.g. 122002" oninput="App.signup.set('pincode',this.value)"></div>` : ''}
         <button class="btn btn--primary btn--block btn--lg" style="margin-top:8px" onclick="App.signup.toVerifying()">${App.icon('shieldcheck')} Verify Business</button>`;
     }
     if (SU.step === 'verifying') {
       return `<div style="text-align:center;padding:30px 0">
         <div class="spin" style="width:46px;height:46px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;margin:0 auto 20px;animation:spin 1s linear infinite"></div>
         <h2 class="auth__title" style="font-size:20px">Verifying your business</h2>
-        <p class="muted" style="font-size:13px;margin-top:6px">Checking MCA, Udyam and GSTN records…</p></div>
+        <p class="muted" style="font-size:13px;margin-top:6px">Checking MCA and GSTN/Udyam records…</p></div>
         <style>@keyframes spin{to{transform:rotate(360deg)}}</style>`;
     }
-    if (SU.step === 'result') {
-      const t = SU.tier;
+    // hrms — modelled on HyperSync: Data Transfer Method → HRMS Selection → Credentials
+    if (SU.hrmsSubstep === 'method') {
+      const rows = (DB.hrmsMethods || []).map(m => `
+        <button class="su-choice" onclick="App.signup.pickHrmsMethod('${m.key}')">
+          <span class="su-choice__ic">${App.icon(m.ic)}</span>
+          <div><b style="display:block">${App.esc(m.title)}</b><span class="muted">${App.esc(m.desc)}</span></div>
+        </button>`).join('');
       return `
-        <div class="center" style="margin:4px 0 16px">${App.icon('shieldcheck')}</div>
-        <h2 class="auth__title" style="text-align:center;font-size:20px">Business verified</h2>
-        <div class="center" style="margin:10px 0"><span class="pill pill--${t.color} pill--dot" style="font-size:13px">${App.esc(t.name)}</span></div>
-        <p class="muted" style="text-align:center;font-size:13.5px;line-height:1.6;max-width:38ch;margin:0 auto 18px">${App.esc(t.action)}</p>
-        <div class="su-kv" style="margin-bottom:18px">
-          <div class="row between gap-12"><span class="muted">Confidence</span><b>${App.esc(t.confidence)}</b></div>
-          <div class="row between gap-12"><span class="muted">Turnaround</span><b>${App.esc(t.tat)}</b></div>
-        </div>
-        <button class="btn btn--primary btn--block btn--lg" onclick="App.signup.toHrms()">Continue ${App.icon('arrow')}</button>`;
+        <h2 class="auth__title" style="font-size:19px">Sync your HRMS</h2>
+        <p class="muted" style="margin:6px 0 16px;font-size:13px">Choose how you'd like to share employee data so verified worker profiles can start populating automatically.</p>
+        ${rows}
+        <p class="muted" style="text-align:center;font-size:13px;margin-top:16px"><b style="color:var(--accent-strong);cursor:pointer" onclick="App.signup.skipHrms()">Skip for now</b></p>`;
     }
-    // hrms
-    const rows = HRMS_PROVIDERS.map(p => `
-      <button class="su-choice ${SU.hrms === p ? 'is-active' : ''}" onclick="App.signup.pickHrms('${p.replace(/'/g, "\\'")}')">
-        <span class="su-choice__ic">${App.icon('plug')}</span><b>${App.esc(p)}</b>
-      </button>`).join('');
+    if (SU.hrmsSubstep === 'platform') {
+      const q = (SU.hrmsSearch || '').toLowerCase();
+      const platforms = (DB.hrmsPlatforms || []).filter(p => p.toLowerCase().includes(q));
+      const grid = platforms.map(p => `
+        <button class="su-platform" onclick="App.signup.pickHrmsPlatform('${p.replace(/'/g, "\\'")}')">${App.icon('plug')} ${App.esc(p)}</button>`).join('');
+      return `
+        <button class="btn btn--ghost btn--sm" style="margin-bottom:14px" onclick="App.signup.backHrms()">${App.icon('arrowleft')} Back</button>
+        <h2 class="auth__title" style="font-size:19px">Select your HRMS platform</h2>
+        <div class="field" style="margin-top:14px"><input class="input" placeholder="Search HRMS…" value="${App.esc(SU.hrmsSearch)}" oninput="App.signup.setHrmsSearch(this.value)"></div>
+        <div class="su-platforms">${grid || `<p class="muted" style="font-size:13px;grid-column:1/-1">No match — try a different search, or pick "Other" during setup.</p>`}</div>
+        <p class="muted" style="text-align:center;font-size:13px;margin-top:16px"><b style="color:var(--accent-strong);cursor:pointer" onclick="App.signup.skipHrms()">Skip for now</b></p>`;
+    }
+    // hrmsSubstep === 'credentials'
     return `
-      <h2 class="auth__title" style="font-size:19px">Sync your HRMS</h2>
-      <p class="muted" style="margin:6px 0 16px;font-size:13px">Connect your HRMS so employee records can start populating verified worker profiles automatically.</p>
-      ${rows}
+      <button class="btn btn--ghost btn--sm" style="margin-bottom:14px" onclick="App.signup.backHrms()">${App.icon('arrowleft')} Back</button>
+      <h2 class="auth__title" style="font-size:19px">Connect ${App.esc(SU.hrmsPlatform)}</h2>
+      <div class="su-connect-diagram"><span class="su-connect-dot">${App.icon('plug')}</span><span class="muted">- - - - -&gt;</span><span class="su-connect-dot">${App.icon('shieldcheck')}</span></div>
+      <div class="field"><label class="label">HRMS Host</label>
+        <input class="input" value="${App.esc(SU.hrmsHost)}" placeholder="e.g. yourcompany.keka.com" oninput="App.signup.set('hrmsHost',this.value)"></div>
+      <div class="grid grid-2">
+        <div class="field" style="margin-bottom:0"><label class="label">Client ID</label>
+          <input class="input mono" value="${App.esc(SU.hrmsClientId)}" placeholder="Client ID" oninput="App.signup.set('hrmsClientId',this.value)"></div>
+        <div class="field" style="margin-bottom:0"><label class="label">Client Secret</label>
+          <input class="input mono" type="password" value="${App.esc(SU.hrmsClientSecret)}" placeholder="Client Secret" oninput="App.signup.set('hrmsClientSecret',this.value)"></div>
+      </div>
+      <div class="field" style="margin-top:16px"><label class="label">API Key <span class="muted" style="font-weight:400">(optional)</span></label>
+        <input class="input mono" value="${App.esc(SU.hrmsApiKey)}" placeholder="API Key" oninput="App.signup.set('hrmsApiKey',this.value)"></div>
+      <label class="su-check" style="margin-top:14px"><input type="checkbox" ${SU.hrmsAgree ? 'checked' : ''} onchange="App.signup.toggleHrmsAgree()"> I agree to the terms &amp; conditions</label>
       <button class="btn btn--primary btn--block btn--lg" style="margin-top:16px" onclick="App.signup.connectHrms()">${App.icon('plug')} Connect</button>
       <p class="muted" style="text-align:center;font-size:13px;margin-top:14px"><b style="color:var(--accent-strong);cursor:pointer" onclick="App.signup.skipHrms()">Skip for now</b></p>`;
   }
