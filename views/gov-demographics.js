@@ -72,9 +72,39 @@
   const S = { state: 'All' };
   const jsq = s => String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 
+  // ---- state -> district drill-down (once a state is selected in the header select) ----
+  function districtRows(stateName) {
+    const s = STATES.find(x => x.name === stateName);
+    const shares = (window.DB && DB.districtShares && DB.districtShares[stateName]) || [];
+    if (!s || !shares.length) return null;
+    return shares.map(d => {
+      const total = Math.round(s.total * d.p / 100);
+      return {
+        name: d.n, total,
+        male: Math.round(total * s.male / s.total),
+        female: Math.round(total * s.female / s.total),
+        urban: s.urban, avg: s.avg, sector: s.sector, g: s.g,
+      };
+    });
+  }
+
   window.GovDemo = {
     setState(v) { S.state = v; App.reload(); },
     ask(q) { App.assistant.toggle(true); App.assistant.ask(q || 'Give me the headline takeaways from the current employment demographics.'); },
+
+    exportCSV() {
+      const dist = S.state !== 'All' ? districtRows(S.state) : null;
+      if (dist) {
+        App.downloadCSV('win-' + S.state.toLowerCase().replace(/\s+/g, '-') + '-district-demographics.csv',
+          ['District', 'Total', 'Male', 'Female', 'Urban %', 'Avg Age', 'Top Sector', 'Growth %'],
+          dist.map(d => [d.name, d.total, d.male, d.female, d.urban, d.avg, d.sector, d.g]));
+      } else {
+        App.downloadCSV('win-state-demographics.csv',
+          ['State', 'Total', 'Male', 'Female', 'Urban %', 'Avg Age', 'Top Sector', 'Growth %'],
+          STATES.map(s => [s.name, s.total, s.male, s.female, s.urban, s.avg, s.sector, s.g]));
+      }
+      App.toast('Demographics CSV downloaded', 'download');
+    },
 
     generate() {
       const scope = S.state === 'All' ? 'All States (Top 10)' : S.state;
@@ -101,6 +131,7 @@
     download() {
       const fmt = (document.getElementById('gdFmt') || {}).value || 'report';
       App.modal.close();
+      if (fmt.indexOf('CSV') === 0) { GovDemo.exportCSV(); return; }
       App.toast('Demographics ' + fmt.split(' ')[0] + ' report generated', 'download');
     },
 
@@ -166,8 +197,11 @@
     title: 'Employment Demographics',
     subtitle: 'Workforce composition & geographic distribution',
     render() {
-      // ---- state filter options ----
-      const options = ['All'].concat(STATES.map(s => s.name))
+      // ---- state filter options — Maharashtra first, per the govStates ordering ----
+      const govStates = (window.DB && DB.govStates) || [];
+      const orderedNames = govStates.filter(n => STATES.some(s => s.name === n))
+        .concat(STATES.map(s => s.name).filter(n => govStates.indexOf(n) === -1));
+      const options = ['All'].concat(orderedNames)
         .map(n => `<option value="${App.esc(n)}" ${S.state === n ? 'selected' : ''}>${n === 'All' ? 'All States' : App.esc(n)}</option>`).join('');
 
       // ---- editorial hero ----
@@ -280,13 +314,16 @@
           <div class="card__body" style="padding-top:4px;padding-bottom:8px"><div class="list--divided">${insightRows}</div></div>
         </div>`;
 
-      // ---- state-wise table ----
-      const rows = STATES.filter(s => S.state === 'All' || s.name === S.state);
+      // ---- state-wise table (drills to district-wise once a state is selected) ----
+      const filtered = S.state !== 'All';
+      const dist = filtered ? districtRows(S.state) : null;
+      const rows = dist || STATES.filter(s => S.state === 'All' || s.name === S.state);
       const tableRows = rows.map(s => {
         const mPct = Math.round(s.male / s.total * 1000) / 10;
         const fPct = Math.round(s.female / s.total * 1000) / 10;
         const rural = 100 - s.urban;
-        return `<tr class="clickable" onclick="GovDemo.openState('${jsq(s.name)}')">
+        const clickAttr = dist ? '' : ` class="clickable" onclick="GovDemo.openState('${jsq(s.name)}')"`;
+        return `<tr${clickAttr}>
           <td><b>${App.esc(s.name)}</b></td>
           <td class="num">${App.num(s.total)}</td>
           <td><span class="num" style="color:var(--blue-600)">${App.num(s.male)}</span><div class="faint num" style="font-size:10.5px;margin-top:2px">${mPct}%</div></td>
@@ -300,12 +337,11 @@
           <td><span class="gd-up">${upTri} +${s.g}%</span></td>
         </tr>`;
       }).join('');
-      const filtered = S.state !== 'All';
       const tableCard = `
         <div class="card reveal mb-20">
           <div class="card__head">
-            <h3>State-wise Demographics</h3>
-            <span class="faint" style="font-size:12px">${filtered ? '1 state' : 'Top 10 states by enrollment'}</span>
+            <h3>${dist ? App.esc(S.state) + ' — District-wise Demographics' : 'State-wise Demographics'}</h3>
+            <span class="faint" style="font-size:12px">${dist ? rows.length + ' districts' : filtered ? '1 state' : 'Top 10 states by enrollment'}</span>
             <div class="grow"></div>
             <span class="gd-legend"><i style="background:var(--blue-600)"></i>Urban</span>
             <span class="gd-legend"><i style="background:var(--amber-600)"></i>Rural</span>
@@ -313,7 +349,7 @@
           </div>
           <div class="tablewrap tablewrap--scroll" style="border:none;border-radius:0;box-shadow:none">
             <table class="tbl">
-              <thead><tr><th>State</th><th>Total Enrolled</th><th>Male</th><th>Female</th><th>Urban / Rural</th><th>Avg Age</th><th>Top Sector</th><th>Growth</th></tr></thead>
+              <thead><tr><th>${dist ? 'District' : 'State'}</th><th>Total Enrolled</th><th>Male</th><th>Female</th><th>Urban / Rural</th><th>Avg Age</th><th>Top Sector</th><th>Growth</th></tr></thead>
               <tbody>${tableRows}</tbody>
             </table>
           </div>

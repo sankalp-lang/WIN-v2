@@ -52,11 +52,27 @@
   ];
 
   // ---- local state ----
-  const S = { trend: '6m', table: 'state' };
+  const S = { trend: '6m', table: 'state', state: 'All' };
+
+  // ---- state -> district drill-down (once a state is selected in the header select) ----
+  function districtRows(stateName) {
+    const s = STATES.find(x => x.name === stateName);
+    const shares = (window.DB && DB.districtShares && DB.districtShares[stateName]) || [];
+    if (!s || !shares.length) return null;
+    return shares.map(d => ({
+      name: d.n,
+      n: Math.round(s.n * d.p / 100),
+      pct: Math.round(s.pct * d.p) / 100,
+      cum: Math.round(s.cum * d.p / 100),
+      rate: s.rate,
+      src: s.src,
+    }));
+  }
 
   window.GovEnroll = {
     setTrend(r) { S.trend = r; App.reload(); },
     setTable(v) { S.table = v; App.reload(); },
+    setState(v) { S.state = v; App.reload(); },
     ask(q) { App.assistant.toggle(true); if (q) App.assistant.ask(q); },
 
     /* ---- export flow ---- */
@@ -82,6 +98,20 @@
     exportRun() {
       const fmt = (document.getElementById('geFmt') || {}).value || 'PDF summary';
       App.modal.close();
+      if (fmt.indexOf('CSV') === 0) {
+        const dist = S.state !== 'All' ? districtRows(S.state) : null;
+        if (dist) {
+          App.downloadCSV('win-' + S.state.toLowerCase().replace(/\s+/g, '-') + '-district-enrollment.csv',
+            ['District', 'New this month', 'Cumulative', 'Verified %', 'Primary source'],
+            dist.map(d => [d.name, d.n, d.cum, d.rate, d.src]));
+        } else {
+          App.downloadCSV('win-enrollment-by-state.csv',
+            ['State', 'New this month', 'Cumulative', 'Verified %', 'Primary source'],
+            STATES.map(s => [s.name, s.n, s.cum, s.rate, s.src]));
+        }
+        App.toast('Enrollment CSV downloaded', 'download');
+        return;
+      }
       App.toast('Enrollment ' + fmt.split(' ')[0] + ' report generated', 'download');
     },
 
@@ -178,6 +208,10 @@
     subtitle: 'Registrations & verification status',
     render() {
       /* ---------- hero ---------- */
+      const govStates = (window.DB && DB.govStates) || [];
+      const stateOptions = ['All'].concat(govStates.filter(n => STATES.some(s => s.name === n)))
+        .map(n => `<option value="${App.esc(n)}" ${S.state === n ? 'selected' : ''}>${n === 'All' ? 'All States' : App.esc(n)}</option>`).join('');
+
       const hero = `
         <div class="hero reveal">
           <div class="hero__wash"></div>
@@ -188,7 +222,10 @@
                 <h1 class="h-grad" style="margin-top:12px">Worker enrollment across India.</h1>
                 <p class="lead">Track worker registrations and verification status across every state and source system — updated live from the WiN golden record.</p>
               </div>
-              <div class="row gap-10">
+              <div class="row gap-10 wrap" style="align-items:center">
+                <div class="ge-selwrap">${App.icon('filter')}
+                  <select class="select ge-sel" onchange="GovEnroll.setState(this.value)" aria-label="Filter by state">${stateOptions}</select>
+                </div>
                 <button class="btn" onclick="GovEnroll.ask('Where are the biggest enrollment and verification gaps this month?')">${App.icon('sparkles')} Ask WiN</button>
                 <button class="btn btn--primary" onclick="GovEnroll.exportOpen()">${App.icon('download')} Export Data</button>
               </div>
@@ -275,12 +312,14 @@
         </div>`;
 
       /* ---------- breakdown table (state / scheme) ---------- */
+      const dist = (S.table === 'state' && S.state !== 'All') ? districtRows(S.state) : null;
       let tableHead, tableRows, tableCap;
       if (S.table === 'state') {
-        tableCap = 'Top 5 states · this month';
-        tableHead = `<tr><th>State</th><th>New enrolled</th><th style="min-width:140px">Share</th><th>Cumulative</th><th>Verified</th></tr>`;
-        tableRows = STATES.map(s => `
-          <tr class="clickable" onclick="GovEnroll.openState('${jsq(s.name)}')">
+        tableCap = dist ? S.state + ' · ' + dist.length + ' districts' : 'Top 5 states · this month';
+        tableHead = `<tr><th>${dist ? 'District' : 'State'}</th><th>New enrolled</th><th style="min-width:140px">Share</th><th>Cumulative</th><th>Verified</th></tr>`;
+        const rows = dist || STATES;
+        tableRows = rows.map(s => `
+          <tr${dist ? '' : ` class="clickable" onclick="GovEnroll.openState('${jsq(s.name)}')"`}>
             <td><b>${App.esc(s.name)}</b></td>
             <td class="mono">${App.num(s.n)}</td>
             <td>
@@ -288,14 +327,14 @@
             </td>
             <td class="mono">${cr(s.cum)}</td>
             <td><span class="mono" style="color:var(--green-700)">${s.rate}%</span></td>
-          </tr>`).join('') + `
+          </tr>`).join('') + (dist ? '' : `
           <tr class="ge-otherrow">
             <td><span class="muted">Other states &amp; UTs</span></td>
             <td class="mono muted">${App.num(OTHERS.n)}</td>
             <td><div class="ge-trow">${App.ui.bar(OTHERS.pct * 5, 'var(--faint)')}<span class="ge-trow__pct num muted">${OTHERS.pct}%</span></div></td>
             <td class="mono muted">—</td>
             <td class="muted">—</td>
-          </tr>`;
+          </tr>`);
       } else {
         tableCap = '6 schemes · this month';
         tableHead = `<tr><th>Scheme</th><th>New enrolled</th><th style="min-width:140px">Share</th><th>Beneficiaries</th><th>Ministry</th></tr>`;
@@ -314,6 +353,7 @@
             ${App.icon(S.table === 'state' ? 'mappin' : 'award')}<h3>Enrollment Breakdown</h3>
             <span class="faint" style="font-size:12px">${tableCap}</span>
             <div class="grow"></div>
+            ${dist ? `<button class="btn btn--ghost btn--sm" onclick="GovEnroll.setState('All')">${App.icon('x')} Clear</button>` : ''}
             <div class="seg" aria-label="Breakdown mode">
               <button class="${S.table === 'state' ? 'is-active' : ''}" onclick="GovEnroll.setTable('state')">By State</button>
               <button class="${S.table === 'scheme' ? 'is-active' : ''}" onclick="GovEnroll.setTable('scheme')">By Scheme</button>
@@ -345,6 +385,9 @@
 
       /* ---------- scoped styles ---------- */
       const style = `<style>
+        .ge-selwrap{ position:relative; display:inline-flex; align-items:center; }
+        .ge-selwrap .ico{ position:absolute; left:11px; color:var(--muted); pointer-events:none; }
+        .ge-sel{ padding-left:34px; min-width:172px; font-weight:600; }
         .ge-donutwrap{ display:flex; align-items:center; gap:24px; }
         .ge-donut{ position:relative; width:132px; height:132px; border-radius:50%; flex-shrink:0;
           background:conic-gradient(var(--accent) 0 calc(var(--p)*1%), var(--amber-500,var(--amber-600)) calc(var(--p)*1%) 100%); }

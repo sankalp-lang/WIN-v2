@@ -86,6 +86,18 @@ window.App = (function () {
   App.money = n => '₹' + App.num(n);
   App.currentUser = () => App.state.user;
 
+  // real CSV file download (used by Government console "Export"/"Download" flows so
+  // the demo produces an actual file with realistic rows, not just a toast).
+  App.downloadCSV = (filename, headers, rows) => {
+    const cell = v => { const s = String(v == null ? '' : v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+    const csv = [headers.map(cell).join(',')].concat(rows.map(r => r.map(cell).join(','))).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
   App.ui = {
     avatar(nameOrObj, size) {
       const name = typeof nameOrObj === 'string' ? nameOrObj : (nameOrObj && nameOrObj.name) || '?';

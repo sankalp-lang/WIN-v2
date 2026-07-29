@@ -52,4 +52,26 @@ window.DB = {
     'GreytHR', 'Uknowva', 'Keka', 'SAP SuccessFactors', 'Zoho People', 'Beehive', 'DarwinBox',
     'ZingHR', 'FreshTeam', 'BambooHR', 'Paychex', 'PeopleStrong', 'SumHR', 'Odoo', 'HROne',
   ],
+
+  // shared state-select ordering for the Government Registry consoles (dashboard,
+  // demographics, enrollment) — Maharashtra pinned first per demo priority, rest A-Z.
+  govStates: [
+    'Maharashtra', 'Bihar', 'Karnataka', 'Kerala', 'Madhya Pradesh', 'Rajasthan',
+    'Tamil Nadu', 'Telangana', 'Uttar Pradesh', 'West Bengal',
+  ],
+
+  // district-level split (% share of a state's totals) used to drill a state-wise
+  // table down to district-wise once a state is selected in a Government console.
+  districtShares: {
+    'Maharashtra':    [{ n: 'Mumbai', p: 26 }, { n: 'Pune', p: 22 }, { n: 'Thane', p: 18 }, { n: 'Nagpur', p: 14 }, { n: 'Nashik', p: 12 }, { n: 'Others', p: 8 }],
+    'Uttar Pradesh':  [{ n: 'Lucknow', p: 18 }, { n: 'Kanpur', p: 16 }, { n: 'Noida', p: 15 }, { n: 'Ghaziabad', p: 13 }, { n: 'Varanasi', p: 12 }, { n: 'Others', p: 26 }],
+    'Bihar':          [{ n: 'Patna', p: 24 }, { n: 'Gaya', p: 17 }, { n: 'Muzaffarpur', p: 15 }, { n: 'Bhagalpur', p: 13 }, { n: 'Others', p: 31 }],
+    'West Bengal':    [{ n: 'Kolkata', p: 28 }, { n: 'Howrah', p: 19 }, { n: 'Siliguri', p: 14 }, { n: 'Durgapur', p: 12 }, { n: 'Others', p: 27 }],
+    'Madhya Pradesh': [{ n: 'Indore', p: 22 }, { n: 'Bhopal', p: 20 }, { n: 'Jabalpur', p: 15 }, { n: 'Gwalior', p: 13 }, { n: 'Others', p: 30 }],
+    'Tamil Nadu':     [{ n: 'Chennai', p: 27 }, { n: 'Coimbatore', p: 20 }, { n: 'Madurai', p: 14 }, { n: 'Salem', p: 12 }, { n: 'Others', p: 27 }],
+    'Rajasthan':      [{ n: 'Jaipur', p: 25 }, { n: 'Jodhpur', p: 17 }, { n: 'Udaipur', p: 13 }, { n: 'Kota', p: 12 }, { n: 'Others', p: 33 }],
+    'Karnataka':      [{ n: 'Bengaluru Urban', p: 34 }, { n: 'Mysuru', p: 15 }, { n: 'Mangaluru', p: 12 }, { n: 'Belagavi', p: 11 }, { n: 'Others', p: 28 }],
+    'Telangana':      [{ n: 'Hyderabad', p: 42 }, { n: 'Warangal', p: 14 }, { n: 'Nizamabad', p: 10 }, { n: 'Others', p: 34 }],
+    'Kerala':         [{ n: 'Ernakulam', p: 24 }, { n: 'Thiruvananthapuram', p: 20 }, { n: 'Kozhikode', p: 16 }, { n: 'Thrissur', p: 13 }, { n: 'Others', p: 27 }],
+  },
 };

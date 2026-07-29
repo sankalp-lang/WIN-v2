@@ -118,15 +118,32 @@
   // =============================================================
   // local state + controller
   // =============================================================
-  const S = { tab: 'overview', sector: 'All', audience: 'all', pushTitle: '', pushBody: '', sent: false, recent: RECENT.slice() };
+  const S = { tab: 'overview', sector: 'All', audience: 'all', pushTitle: '', pushBody: '', sent: false, recent: RECENT.slice(), state: 'All' };
   const jsq = s => String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
   const alive = () => App.state.route === 'gov-dashboard';
+
+  // ---- state -> district drill-down (once a state is selected in the header select) ----
+  function districtRows(stateName) {
+    const s = STATES.find(x => x.name === stateName);
+    const shares = (window.DB && DB.districtShares && DB.districtShares[stateName]) || [];
+    if (!s || !shares.length) return null;
+    const num = str => Number(String(str).replace(/,/g, '')) || 0;
+    const enrolledTotal = num(s.enrolled);
+    return shares.map(d => ({
+      name: d.n,
+      enrolled: Math.round(enrolledTotal * d.p / 100).toLocaleString('en-IN'),
+      employers: Math.round(s.employers * d.p / 100),
+      grievances: Math.round(s.grievances * d.p / 100),
+      verif: s.verif,
+    }));
+  }
 
   window.GovDash = {
     setTab(t) { S.tab = t; App.reload(); },
     pushScheme() { S.tab = 'push'; App.reload(); },
     setSector(s) { S.sector = s; App.reload(); },
     setAudience(a) { S.audience = a; App.reload(); },
+    setState(v) { S.state = v; App.reload(); },
     setField(k, v) { S[k] = v; },   // silent bind — no reload, so inputs keep focus
     viewAll() { App.toast('Full activity log is a demo affordance in this prototype'); },
     viewRiskList(t) { App.toast('Opening flagged-employer list · ' + t); },
@@ -139,7 +156,24 @@
           <button class="btn" onclick="GovDash.doExport('CSV')">${App.icon('download')} Raw CSV</button>
         </div>`, { title: 'Export National Report', icon: 'chart' });
     },
-    doExport(fmt) { App.modal.close(); App.toast('National report exported as ' + fmt, 'download'); },
+    doExport(fmt) {
+      App.modal.close();
+      if (fmt === 'CSV') {
+        const dist = S.state !== 'All' ? districtRows(S.state) : null;
+        if (dist) {
+          App.downloadCSV('win-' + S.state.toLowerCase().replace(/\s+/g, '-') + '-district-enrollment.csv',
+            ['District', 'Enrolled', 'Employers', 'Grievances', 'Verification %'],
+            dist.map(d => [d.name, d.enrolled, d.employers, d.grievances, d.verif]));
+        } else {
+          App.downloadCSV('win-national-state-enrollment.csv',
+            ['State', 'Enrolled', 'Employers', 'Grievances', 'Verification %'],
+            STATES.map(s => [s.name, s.enrolled, s.employers, s.grievances, s.verif]));
+        }
+        App.toast('National report exported as CSV', 'download');
+      } else {
+        App.toast('National report exported as ' + fmt, 'download');
+      }
+    },
     useTemplate(i) {
       const t = TEMPLATES[i]; if (!t) return;
       S.pushTitle = t.title; S.pushBody = t.body; S.sent = false;
@@ -239,7 +273,8 @@
         </div>
       </div>`;
 
-    const stateRows = STATES.map(s => {
+    const dist = S.state !== 'All' ? districtRows(S.state) : null;
+    const stateRows = (dist || STATES).map(s => {
       const gv = s.grievances > 50000;
       return `<tr>
         <td><b>${App.esc(s.name)}</b></td>
@@ -257,10 +292,11 @@
 
     const stateTable = `
       <div class="card">
-        <div class="card__head"><h3 class="grow">State-wise Enrollment</h3><button class="btn btn--ghost btn--sm" onclick="App.navigate('gov-demographics')">View full map ${App.icon('arrow')}</button></div>
+        <div class="card__head"><h3 class="grow">${dist ? App.esc(S.state) + ' — District-wise Enrollment' : 'State-wise Enrollment'}</h3>
+          ${dist ? `<button class="btn btn--ghost btn--sm" onclick="GovDash.setState('All')">${App.icon('x')} Clear</button>` : `<button class="btn btn--ghost btn--sm" onclick="App.navigate('gov-demographics')">View full map ${App.icon('arrow')}</button>`}</div>
         <div class="tablewrap tablewrap--scroll" style="border:none;border-radius:0;box-shadow:none">
           <table class="tbl">
-            <thead><tr><th>State</th><th>Enrolled</th><th>Employers</th><th>Grievances</th><th>Verification</th></tr></thead>
+            <thead><tr><th>${dist ? 'District' : 'State'}</th><th>Enrolled</th><th>Employers</th><th>Grievances</th><th>Verification</th></tr></thead>
             <tbody>${stateRows}</tbody>
           </table>
         </div>
@@ -515,7 +551,14 @@
         : S.tab === 'compliance' ? complianceTab()
         : pushTab();
 
+      const govStates = (window.DB && DB.govStates) || [];
+      const stateOptions = ['All'].concat(govStates.filter(n => STATES.some(s => s.name === n)))
+        .map(n => `<option value="${App.esc(n)}" ${S.state === n ? 'selected' : ''}>${n === 'All' ? 'All States' : App.esc(n)}</option>`).join('');
+
       const style = `<style>
+        .gd-selwrap{ position:relative; display:inline-flex; align-items:center; }
+        .gd-selwrap .ico{ position:absolute; left:11px; color:var(--muted); pointer-events:none; }
+        .gd-sel{ padding-left:34px; min-width:172px; font-weight:600; }
         .gd-grid-main{ display:grid; grid-template-columns:1.5fr 1fr; gap:20px; align-items:start; }
         .gd-alert{ display:flex; gap:12px; align-items:flex-start; padding:13px 14px; border:1px solid var(--line); border-radius:var(--r); background:var(--surface-2); }
         .gd-dot{ width:9px; height:9px; border-radius:50%; flex-shrink:0; display:inline-block; }
@@ -575,6 +618,9 @@
                 </div>
               </div>
               <div class="row gap-12 wrap" style="align-items:center">
+                <div class="gd-selwrap">${App.icon('filter')}
+                  <select class="select gd-sel" onchange="GovDash.setState(this.value)" aria-label="Filter by state">${stateOptions}</select>
+                </div>
                 <button class="btn" onclick="GovDash.exportReport()">${ICO.fileChart} Export Report</button>
                 <button class="btn btn--primary" onclick="GovDash.pushScheme()">${ICO.radio} Push Scheme</button>
               </div>
