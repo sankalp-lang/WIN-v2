@@ -243,13 +243,20 @@
   // OVERVIEW
   // =============================================================
   function overviewTab() {
+    const sel = STATES.find(x => x.name === S.state);
+    const stateStats = sel ? [
+      { label: 'Workers Enrolled', val: sel.enrolled, sub: sel.name, delta: 'State total', up: true, icon: 'users', c: '#0d9488' },
+      { label: 'Employers Registered', val: App.num(sel.employers), sub: sel.name, delta: 'State total', up: true, icon: 'building', c: '#2f5fd0' },
+      { label: 'Active Grievances', val: App.num(sel.grievances), sub: sel.name, delta: sel.grievances > 50000 ? 'Above national avg' : 'Within national avg', up: sel.grievances <= 50000, icon: 'alert', c: '#c07d10' },
+      { label: 'Verification Rate', val: sel.verif + '%', sub: sel.name, delta: sel.verif >= 74.2 ? 'Above national avg' : 'Below national avg', up: sel.verif >= 74.2, icon: 'shield', c: '#0e9f6e' },
+    ] : STATS;
     const stats = `
       <div class="reveal">
         <div class="row between wrap gap-12 mb-12" style="align-items:center">
-          <div class="section-title" style="margin:0">National snapshot</div>
+          <div class="section-title" style="margin:0">${sel ? sel.name + ' snapshot' : 'National snapshot'}</div>
           <span class="faint" style="font-size:12px">Live · FY 2024-25</span>
         </div>
-        <div class="grid grid-4 mb-20">${STATS.map(statCard).join('')}</div>
+        <div class="grid grid-4 mb-20">${stateStats.map(statCard).join('')}</div>
       </div>`;
 
     const alertTint = { info: '#0d9488', warn: '#c07d10', alert: '#d64545' };

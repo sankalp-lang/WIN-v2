@@ -226,8 +226,18 @@
           </div>
         </div>`;
 
-      // ---- overview statstrip ----
-      const strip = `
+      // ---- overview statstrip (reflects the selected state, if any) ----
+      const selState = STATES.find(x => x.name === S.state);
+      const strip = selState ? (() => {
+        const fPct = Math.round(selState.female / selState.total * 1000) / 10;
+        return `
+        <div class="statstrip reveal mb-20">
+          <div class="statstrip__cell"><div class="statstrip__label">${App.esc(selState.name)} enrolled</div><div class="statstrip__val num">${App.num(selState.total)}</div></div>
+          <div class="statstrip__cell"><div class="statstrip__label">Female participation</div><div class="statstrip__val num">${fPct}%</div></div>
+          <div class="statstrip__cell"><div class="statstrip__label">Average age</div><div class="statstrip__val num">${selState.avg} yrs</div></div>
+          <div class="statstrip__cell"><div class="statstrip__label">Urban share</div><div class="statstrip__val num">${selState.urban}%</div></div>
+        </div>`;
+      })() : `
         <div class="statstrip reveal mb-20">
           <div class="statstrip__cell"><div class="statstrip__label">Total enrolled workers</div><div class="statstrip__val num">38.4 Cr</div></div>
           <div class="statstrip__cell"><div class="statstrip__label">Female participation</div><div class="statstrip__val num">32.7%</div></div>

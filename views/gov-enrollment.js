@@ -233,8 +233,15 @@
           </div>
         </div>`;
 
-      /* ---------- stat strip ---------- */
-      const strip = `
+      /* ---------- stat strip (reflects the selected state, if any) ---------- */
+      const selState = STATES.find(x => x.name === S.state);
+      const strip = selState ? `
+        <div class="statstrip reveal mb-20">
+          <div class="statstrip__cell"><div class="statstrip__label">${App.esc(selState.name)} cumulative</div><div class="statstrip__val num">${cr(selState.cum)}</div></div>
+          <div class="statstrip__cell"><div class="statstrip__label">New this month</div><div class="statstrip__val num">${lakh(selState.n)}</div></div>
+          <div class="statstrip__cell"><div class="statstrip__label">Verification rate</div><div class="statstrip__val num">${selState.rate}%</div></div>
+          <div class="statstrip__cell"><div class="statstrip__label">Primary source</div><div class="statstrip__val" style="font-size:15px">${App.esc(selState.src)}</div></div>
+        </div>` : `
         <div class="statstrip reveal mb-20">
           <div class="statstrip__cell"><div class="statstrip__label">Total enrolled</div><div class="statstrip__val num">38.4 Cr</div></div>
           <div class="statstrip__cell"><div class="statstrip__label">New this month</div><div class="statstrip__val num">${lakh(MONTH.total)}</div></div>

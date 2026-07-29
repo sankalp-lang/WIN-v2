@@ -11,6 +11,7 @@
     Demographics:'#2f5fd0',
     Compliance:  '#6b4fc7',
     Economics:   '#0e9f6e',
+    Migration:   '#0891a7',
   };
 
   // ---- report library (from the GovReports spec) ----
@@ -21,19 +22,95 @@
     { id: 'compliance',   title: 'Employer Compliance Report', cat: 'Compliance',   ic: 'building',  size: '980 KB', last: 'Nov 10, 2024', freq: 'Weekly',    desc: 'Verification compliance rates and outstanding employer obligations.' },
     { id: 'economic',     title: 'Quarterly Economic Impact',  cat: 'Economics',    ic: 'trend',    size: '5.2 MB', last: 'Sep 30, 2024', freq: 'Quarterly', desc: 'Assessment of WiN platform impact on formalization of the informal workforce.' },
     { id: 'sector',       title: 'Sector Growth Analysis',     cat: 'Employment',   ic: 'chart',    size: '2.0 MB', last: 'Nov 5, 2024',  freq: 'Monthly',   desc: 'Sector-wise employment growth trends and forward projections.' },
+    { id: 'migration',    title: 'Interstate Worker Migration Report', cat: 'Migration', ic: 'mappin', size: '3.1 MB', last: 'Nov 12, 2024', freq: 'Quarterly', desc: 'Origin-destination migration corridors, seasonal labour flow, and top sending/receiving states for informal workers.' },
   ];
+
+  // ---- realistic CSV payloads keyed by report id — actually downloaded, not simulated ----
+  const REPORT_DATA = {
+    'emp-monthly': {
+      headers: ['State', 'Enrolled (MTD)', 'Verified (MTD)', 'Verification Rate %', 'Top Sector'],
+      rows: [
+        ['Uttar Pradesh', 842000, 601109, 71.4, 'Agriculture'],
+        ['Maharashtra', 716000, 560012, 78.2, 'Construction'],
+        ['Bihar', 548000, 366064, 66.8, 'Agriculture'],
+        ['West Bengal', 464000, 322480, 69.5, 'Domestic Work'],
+        ['Tamil Nadu', 380000, 304380, 80.1, 'Manufacturing'],
+      ],
+    },
+    grievance: {
+      headers: ['Category', 'Filed (MTD)', 'Resolved', 'Escalated', 'Avg. Resolution (days)'],
+      rows: [
+        ['Wage Disputes', 168400, 142800, 8600, 6.2],
+        ['ESIC Coverage', 92300, 81400, 4100, 8.9],
+        ['PF Withdrawal Delay', 74200, 63900, 5200, 11.4],
+        ['Contract Violations', 51600, 39200, 6800, 14.1],
+        ['Workplace Safety', 38900, 33100, 2900, 5.8],
+      ],
+    },
+    demographics: {
+      headers: ['State', 'Total Enrolled', 'Male %', 'Female %', 'Urban %', 'Avg Age'],
+      rows: [
+        ['Uttar Pradesh', 51234000, 68.0, 32.0, 34, 33],
+        ['Maharashtra', 42856000, 65.0, 35.0, 62, 31],
+        ['Bihar', 34218000, 70.0, 30.0, 24, 32],
+        ['West Bengal', 29845000, 65.3, 34.7, 42, 34],
+        ['Tamil Nadu', 23478000, 60.2, 39.8, 58, 32],
+      ],
+    },
+    compliance: {
+      headers: ['Sector', 'PF Compliance %', 'ESIC Coverage %', 'Min. Wage Adherence %', 'YoY Change %'],
+      rows: [
+        ['Construction', 68, 71, 82, 3.2],
+        ['Manufacturing', 84, 88, 91, 1.8],
+        ['Gig & Platform', 42, 38, 65, -2.1],
+        ['Agriculture', 31, 29, 54, -0.9],
+        ['Services', 76, 79, 88, 2.4],
+        ['Domestic Workers', 24, 18, 49, -1.5],
+      ],
+    },
+    economic: {
+      headers: ['Quarter', 'Formalized Workers (Cr)', 'Est. Wage Uplift (₹ Cr)', 'New Employer Registrations'],
+      rows: [
+        ['Q1 FY 2024-25', 1.8, 4200, 68400],
+        ['Q2 FY 2024-25', 2.1, 4950, 74200],
+        ['Q3 FY 2024-25', 2.6, 5680, 81900],
+      ],
+    },
+    sector: {
+      headers: ['Sector', 'Current Workers', 'Previous Year', 'YoY Growth %'],
+      rows: [
+        ['Construction', 88412000, 74421000, 18.8],
+        ['Manufacturing', 53818000, 47312000, 13.7],
+        ['Gig & Platform', 38412600, 27489000, 39.7],
+        ['Agriculture', 124824000, 118512000, 5.3],
+        ['Domestic & Services', 34612000, 31356000, 10.4],
+      ],
+    },
+    migration: {
+      headers: ['Origin State', 'Destination State', 'Workers (est.)', 'Dominant Sector', 'Peak Season'],
+      rows: [
+        ['Bihar', 'Maharashtra', 412000, 'Construction', 'Oct - Mar'],
+        ['Uttar Pradesh', 'Delhi NCR', 386000, 'Construction', 'Year-round'],
+        ['Odisha', 'Gujarat', 214000, 'Manufacturing', 'Nov - Apr'],
+        ['West Bengal', 'Tamil Nadu', 168000, 'Textiles', 'Year-round'],
+        ['Madhya Pradesh', 'Maharashtra', 142000, 'Agriculture', 'Jun - Sep'],
+        ['Rajasthan', 'Gujarat', 121000, 'Construction', 'Year-round'],
+        ['Jharkhand', 'Karnataka', 96000, 'Manufacturing', 'Year-round'],
+      ],
+    },
+  };
 
   // ---- scheduled queue (mutable so "Run now" changes state) ----
   const SCHED = [
-    { id: 's1', title: 'December Monthly Summary', due: 'Dec 1, 2024',  status: 'Scheduled' },
-    { id: 's2', title: 'Grievance Bi-weekly #24',  due: 'Nov 30, 2024', status: 'In Progress' },
-    { id: 's3', title: 'Weekly Compliance Check',   due: 'Nov 25, 2024', status: 'Scheduled' },
+    { id: 's1', repId: 'emp-monthly', title: 'December Monthly Summary', due: 'Dec 1, 2024',  status: 'Scheduled' },
+    { id: 's2', repId: 'grievance',   title: 'Grievance Bi-weekly #24',  due: 'Nov 30, 2024', status: 'In Progress' },
+    { id: 's3', repId: 'compliance',  title: 'Weekly Compliance Check',   due: 'Nov 25, 2024', status: 'Scheduled' },
   ];
 
   // ---- live quick-stats (mutable so generate/download move the numbers) ----
   const STATS = { generated: 24, downloads: 1247, avg: '2.4 min' };
 
-  const CATS = ['All', 'Employment', 'Grievances', 'Demographics', 'Compliance', 'Economics'];
+  const CATS = ['All', 'Employment', 'Grievances', 'Demographics', 'Compliance', 'Economics', 'Migration'];
   const PERIODS = ['This month (Nov 2024)', 'Last month (Oct 2024)', 'Q3 FY 2024–25', 'FY 2024–25 (YTD)', 'Custom range…'];
 
   // ---- view state ----
@@ -62,6 +139,19 @@
             ${chips.map(c => `<span class="chip">${App.icon('check')} ${App.esc(c)}</span>`).join('')}
           </div></div>
       </div>`;
+  }
+
+  // actually trigger a CSV file download for a report (falls back to a registry-overview
+  // extract for the ad-hoc "custom" type, which has no fixed dataset)
+  function downloadReportCSV(rep) {
+    const data = REPORT_DATA[rep.id];
+    if (data) {
+      App.downloadCSV('win-' + rep.id + '-report.csv', data.headers, data.rows);
+    } else {
+      App.downloadCSV('win-custom-extract.csv',
+        ['Report', 'Category', 'Frequency', 'Last generated'],
+        REPORTS.map(r => [r.title, r.cat, r.freq, r.last]));
+    }
   }
 
   window.GovReports = {
@@ -98,19 +188,21 @@
       }
       setTimeout(() => {
         STATS.generated += 1;
-        if (rep) rep.last = 'Nov 17, 2024';
+        STATS.downloads += 1;
+        if (rep) { rep.last = 'Nov 17, 2024'; downloadReportCSV(rep); } else { downloadReportCSV({ id: 'custom' }); }
         App.modal.close();
-        App.toast(name + ' generated', 'download');
+        App.toast(name + ' generated & downloaded', 'download');
         App.reload();
       }, 1350);
     },
 
-    // download an existing report → toast + bump download count
+    // download an existing report → real CSV file + bump download count
     download(id) {
       const rep = REPORTS.find(r => r.id === id);
       if (!rep) return;
       STATS.downloads += 1;
-      App.toast(rep.title + ' · ' + rep.size + ' downloaded', 'download');
+      downloadReportCSV(rep);
+      App.toast(rep.title + ' downloaded', 'download');
       App.reload();
     },
 
@@ -154,7 +246,9 @@
       setTimeout(() => {
         item.status = 'Completed';
         STATS.generated += 1;
-        App.toast(item.title + ' ready', 'checkcircle');
+        const rep = REPORTS.find(r => r.id === item.repId);
+        if (rep) downloadReportCSV(rep);
+        App.toast(item.title + ' ready & downloaded', 'checkcircle');
         App.reload();
       }, 1400);
     },
@@ -181,7 +275,7 @@
     addScheduled() {
       const rep = REPORTS.find(r => r.id === val('grSchType')) || REPORTS[0];
       const due = val('grSchDue') || 'Dec 1, 2024';
-      SCHED.unshift({ id: 's' + (SCHED.length + 1) + '-' + Date.now(), title: rep.title, due, status: 'Scheduled' });
+      SCHED.unshift({ id: 's' + (SCHED.length + 1) + '-' + Date.now(), repId: rep.id, title: rep.title, due, status: 'Scheduled' });
       App.modal.close();
       App.toast(rep.title + ' scheduled for ' + due, 'calendar');
       App.reload();
@@ -270,7 +364,7 @@
           </div>
           ${App.ui.statusPill(s.status)}
           ${done
-            ? `<button class="btn btn--soft btn--sm" onclick="GovReports.download('${REPORTS[0].id}')">${App.icon('download')} Get</button>`
+            ? `<button class="btn btn--soft btn--sm" onclick="GovReports.download('${s.repId}')">${App.icon('download')} Get</button>`
             : `<button class="btn btn--sm" ${busy ? 'disabled style="opacity:.55"' : ''} onclick="GovReports.runScheduled('${s.id}')">${App.icon('bolt')} Run now</button>`}
         </div>`;
       }).join('');
