@@ -143,6 +143,7 @@ window.App = (function () {
         { section: 'Workspace', items: [
           { id: 'emp-dashboard', label: 'Dashboard', icon: 'home' },
           { id: 'emp-verifications', label: 'Employees', icon: 'shieldcheck' },
+          { id: 'emp-hrms', label: 'HRMS Sync', icon: 'plug' },
         ]},
         { section: 'Build', items: [
           { id: 'emp-apidocs', label: 'API & Docs', icon: 'code' },
