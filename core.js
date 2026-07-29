@@ -345,7 +345,7 @@ window.App = (function () {
   const L = { mode: 'worker', method: 'choose', step: 'input', otp: '', phone: '', pin: '' };
   App.login = {
     set(k, v) { L[k] = v; renderLogin(); },
-    setMode(m) { L.mode = m; L.method = 'choose'; L.step = 'input'; L.phone = ''; L.pin = ''; L.otp = ''; renderLogin(); },
+    setMode(m) { L.mode = m; L.method = 'choose'; L.step = 'input'; L.phone = ''; L.pin = ''; L.otp = ''; SU.active = false; renderLogin(); },
     pickMethod(m) { L.method = m; L.step = 'input'; renderLogin(); },
     back() { if (L.step === 'otp') { L.step = 'input'; } else { L.method = 'choose'; } renderLogin(); },
     sendOtp() { const el = $('#lgPhone'); L.phone = el ? el.value : L.phone; if ((L.phone || '').replace(/\D/g, '').length < 10) { App.toast('Enter a 10-digit mobile number', 'alert'); return; } L.step = 'otp'; renderLogin(); },
@@ -359,8 +359,167 @@ window.App = (function () {
     }
   };
 
+  /* ============================================================
+     EMPLOYER SIGN-UP  (create credentials → KYB → trust tier → HRMS sync)
+     step: 'credentials' | 'business' | 'verifying' | 'result' | 'hrms'
+     ============================================================ */
+  const SU = {
+    active: false, step: 'credentials',
+    name: '', legalName: '', email: '', password: '', confirm: '',
+    pan: '', gstin: '', hasMca: '', cin: '', udyam: '',
+    address: '', city: '', state: '', pincode: '',
+    hrms: '', tier: null,
+  };
+  // Structural registry match (MCA or Udyam) × GST presence → onboarding trust tier.
+  // MCA applies only to companies/LLPs; most legitimate proprietorships will never have
+  // one, so Udyam (the MSME registry) is treated as an equally valid structural match —
+  // "no MCA" reflects business structure, not deficiency.
+  function kybTier(su) {
+    const structural = !!(su.cin || su.udyam);
+    const gst = !!su.gstin;
+    if (structural && gst) return { name: 'Gold Standard', color: 'green', confidence: 'High', tat: 'Minutes',
+      action: "Straight-through verification using your MCA/Udyam and GSTN records. You're ready to go." };
+    if (structural && !gst) return { name: 'Financials Reconciliation', color: 'blue', confidence: 'Medium–High', tat: '1–2 business days',
+      action: "We'll reconcile your filed financials (ITR/AOC-4) against your registration. You can continue in the meantime." };
+    if (!structural && gst) return { name: 'Field-Verified', color: 'amber', confidence: 'Medium', tat: 'Field visit',
+      action: "We'll schedule a Digital Address Verification (DAV) visit at your registered address." };
+    return { name: 'Full Verification', color: 'amber', confidence: 'Varies', tat: 'Field visit + docs',
+      action: "We'll schedule a site visit and request audited financials for full verification." };
+  }
+  const HRMS_PROVIDERS = ['Darwinbox', 'Keka', 'greytHR', 'Zoho People', 'SAP SuccessFactors', 'Other / Manual entry'];
+  App.signup = {
+    open() { SU.active = true; SU.step = 'credentials'; renderLogin(); },
+    cancel() { SU.active = false; renderLogin(); },
+    set(k, v) { SU[k] = v; },
+    setHasMca(v) { SU.hasMca = v; renderLogin(); },
+    submitCredentials() {
+      if (!SU.name || !SU.legalName || !SU.email) { App.toast('Fill in your name, organisation and email', 'alert'); return; }
+      if (SU.password.length < 8) { App.toast('Password must be at least 8 characters', 'alert'); return; }
+      if (SU.password !== SU.confirm) { App.toast('Passwords do not match', 'alert'); return; }
+      SU.step = 'business'; renderLogin();
+    },
+    backToCredentials() { SU.step = 'credentials'; renderLogin(); },
+    toVerifying() {
+      if (!SU.pan) { App.toast('Enter your business PAN to continue', 'alert'); return; }
+      if (!SU.hasMca) { App.toast('Let us know if you\'re registered with the MCA', 'alert'); return; }
+      if (SU.hasMca === 'yes' && !SU.cin) { App.toast('Enter your CIN / LLPIN', 'alert'); return; }
+      SU.step = 'verifying'; renderLogin();
+      setTimeout(() => { SU.tier = kybTier(SU); SU.step = 'result'; renderLogin(); }, 1800);
+    },
+    toHrms() { SU.step = 'hrms'; renderLogin(); },
+    pickHrms(name) { SU.hrms = name; renderLogin(); },
+    connectHrms() {
+      if (!SU.hrms) { App.toast('Select an HRMS to connect', 'alert'); return; }
+      App.toast(`Connected to ${SU.hrms}`, 'checkcircle');
+      App.signup.finish();
+    },
+    skipHrms() { App.signup.finish(); },
+    finish() {
+      App.startApp('employer', {
+        name: SU.name, subtitle: SU.legalName, org: SU.legalName,
+        role: 'Admin', sector: '—', email: SU.email,
+      });
+    },
+  };
+
   const UIDAI = `<svg viewBox="0 0 80 80" width="46" height="46"><circle cx="40" cy="40" r="38" fill="#E8372C"/><circle cx="40" cy="40" r="29" fill="#fff"/><circle cx="40" cy="40" r="21" fill="#E8372C"/><circle cx="40" cy="33" r="6" fill="#fff"/><path d="M28 51Q34 39 40 39Q46 39 52 51" fill="#fff"/><circle cx="30" cy="26" r="3" fill="#2E8B57"/><circle cx="50" cy="26" r="3" fill="#FF8C00"/></svg>`;
   const DIGILOCKER = `<svg viewBox="0 0 80 80" width="46" height="46"><rect x="4" y="4" width="72" height="72" rx="14" fill="#2B3990"/><rect x="20" y="26" width="40" height="30" rx="4" fill="#fff"/><path d="M31 26v-4a9 9 0 0 1 18 0v4" stroke="#fff" stroke-width="4" fill="none"/><circle cx="40" cy="39" r="4.5" fill="#2B3990"/><rect x="38" y="42" width="4" height="8" rx="2" fill="#2B3990"/></svg>`;
+
+  const SU_STYLE = `<style>
+    .su-kv{ display:flex; flex-direction:column; gap:10px; font-size:13.5px; background:var(--surface-2); border:1px solid var(--line); border-radius:var(--r); padding:14px 16px; }
+    .su-choice{ display:flex; align-items:center; gap:12px; width:100%; text-align:left; padding:12px 14px; margin-top:9px;
+      border:1px solid var(--line); border-radius:var(--r-sm); background:var(--surface); cursor:pointer; font-size:13.5px; transition:.12s; }
+    .su-choice:first-of-type{ margin-top:0; }
+    .su-choice:hover{ border-color:var(--accent); background:var(--accent-weak); }
+    .su-choice.is-active{ border-color:var(--accent); background:var(--accent-weak); box-shadow:0 0 0 1px var(--accent); }
+    .su-choice__ic{ width:30px; height:30px; border-radius:8px; display:grid; place-items:center; background:var(--accent-weak); color:var(--accent-strong); flex-shrink:0; }
+  </style>`;
+
+  function signupForm() {
+    if (SU.step === 'credentials') {
+      return `
+        <h2 class="auth__title">Create an employer account</h2>
+        <p class="muted" style="margin:6px 0 22px">Let's start with your account details.</p>
+        <div class="field"><label class="label">Your Full Name</label>
+          <input class="input" value="${App.esc(SU.name)}" placeholder="e.g. Priya Nair" oninput="App.signup.set('name',this.value)"></div>
+        <div class="field"><label class="label">Organisation Name</label>
+          <input class="input" value="${App.esc(SU.legalName)}" placeholder="e.g. Aditya Birla Construction Ltd." oninput="App.signup.set('legalName',this.value)"></div>
+        <div class="field"><label class="label">Work Email</label>
+          <div class="input--icon">${App.icon('mail')}<input class="input" value="${App.esc(SU.email)}" placeholder="you@company.com" oninput="App.signup.set('email',this.value)"></div></div>
+        <div class="grid grid-2">
+          <div class="field" style="margin-bottom:0"><label class="label">Password</label>
+            <div class="input--icon">${App.icon('lock')}<input class="input" type="password" placeholder="At least 8 characters" oninput="App.signup.set('password',this.value)"></div></div>
+          <div class="field" style="margin-bottom:0"><label class="label">Confirm Password</label>
+            <div class="input--icon">${App.icon('lock')}<input class="input" type="password" placeholder="Re-enter password" oninput="App.signup.set('confirm',this.value)"></div></div>
+        </div>
+        <button class="btn btn--primary btn--block btn--lg" style="margin-top:18px" onclick="App.signup.submitCredentials()">Continue ${App.icon('arrow')}</button>
+        <p class="muted" style="text-align:center;font-size:13px;margin-top:16px">Already have an account? <b style="color:var(--accent-strong);cursor:pointer" onclick="App.signup.cancel()">Sign in</b></p>`;
+    }
+    if (SU.step === 'business') {
+      return `
+        <button class="btn btn--ghost btn--sm" style="margin-bottom:14px" onclick="App.signup.backToCredentials()">${App.icon('arrowleft')} Back</button>
+        <h2 class="auth__title" style="font-size:19px">Business details</h2>
+        <p class="muted" style="margin:6px 0 18px;font-size:13px">We use these to verify your business (KYB) before activating your account.</p>
+        <div class="field"><label class="label">Business PAN</label>
+          <input class="input mono" value="${App.esc(SU.pan)}" placeholder="e.g. AAACB1234C" oninput="App.signup.set('pan',this.value)"></div>
+        <div class="field"><label class="label">GSTIN <span class="muted" style="font-weight:400">(optional)</span></label>
+          <input class="input mono" value="${App.esc(SU.gstin)}" placeholder="e.g. 07AAACB1234C1Z5" oninput="App.signup.set('gstin',this.value)"></div>
+        <div class="field"><label class="label">Registered as a Company/LLP with the MCA?</label>
+          <select class="select" onchange="App.signup.setHasMca(this.value)">
+            <option value="" ${!SU.hasMca ? 'selected' : ''} disabled>Select an option</option>
+            <option value="yes" ${SU.hasMca === 'yes' ? 'selected' : ''}>Yes</option>
+            <option value="no" ${SU.hasMca === 'no' ? 'selected' : ''}>No — proprietorship / partnership</option>
+          </select></div>
+        ${SU.hasMca === 'yes' ? `
+        <div class="field"><label class="label">CIN / LLPIN</label>
+          <input class="input mono" value="${App.esc(SU.cin)}" placeholder="e.g. U45201MH2010PTC123456" oninput="App.signup.set('cin',this.value)"></div>` : ''}
+        ${SU.hasMca === 'no' ? `
+        <div class="field"><label class="label">Udyam Registration Number <span class="muted" style="font-weight:400">(if registered)</span></label>
+          <input class="input mono" value="${App.esc(SU.udyam)}" placeholder="e.g. UDYAM-MH-01-0012345" oninput="App.signup.set('udyam',this.value)"></div>` : ''}
+        <div class="field"><label class="label">Registered / Operating Address</label>
+          <input class="input" value="${App.esc(SU.address)}" placeholder="Street / site address" oninput="App.signup.set('address',this.value)"></div>
+        <div class="grid grid-2">
+          <div class="field" style="margin-bottom:0"><label class="label">City</label>
+            <input class="input" value="${App.esc(SU.city)}" placeholder="e.g. Gurugram" oninput="App.signup.set('city',this.value)"></div>
+          <div class="field" style="margin-bottom:0"><label class="label">State</label>
+            <input class="input" value="${App.esc(SU.state)}" placeholder="e.g. Haryana" oninput="App.signup.set('state',this.value)"></div>
+        </div>
+        <div class="field" style="margin-top:16px"><label class="label">Pincode</label>
+          <input class="input mono" value="${App.esc(SU.pincode)}" placeholder="e.g. 122002" oninput="App.signup.set('pincode',this.value)"></div>
+        <button class="btn btn--primary btn--block btn--lg" style="margin-top:8px" onclick="App.signup.toVerifying()">${App.icon('shieldcheck')} Verify Business</button>`;
+    }
+    if (SU.step === 'verifying') {
+      return `<div style="text-align:center;padding:30px 0">
+        <div class="spin" style="width:46px;height:46px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;margin:0 auto 20px;animation:spin 1s linear infinite"></div>
+        <h2 class="auth__title" style="font-size:20px">Verifying your business</h2>
+        <p class="muted" style="font-size:13px;margin-top:6px">Checking MCA, Udyam and GSTN records…</p></div>
+        <style>@keyframes spin{to{transform:rotate(360deg)}}</style>`;
+    }
+    if (SU.step === 'result') {
+      const t = SU.tier;
+      return `
+        <div class="center" style="margin:4px 0 16px">${App.icon('shieldcheck')}</div>
+        <h2 class="auth__title" style="text-align:center;font-size:20px">Business verified</h2>
+        <div class="center" style="margin:10px 0"><span class="pill pill--${t.color} pill--dot" style="font-size:13px">${App.esc(t.name)}</span></div>
+        <p class="muted" style="text-align:center;font-size:13.5px;line-height:1.6;max-width:38ch;margin:0 auto 18px">${App.esc(t.action)}</p>
+        <div class="su-kv" style="margin-bottom:18px">
+          <div class="row between gap-12"><span class="muted">Confidence</span><b>${App.esc(t.confidence)}</b></div>
+          <div class="row between gap-12"><span class="muted">Turnaround</span><b>${App.esc(t.tat)}</b></div>
+        </div>
+        <button class="btn btn--primary btn--block btn--lg" onclick="App.signup.toHrms()">Continue ${App.icon('arrow')}</button>`;
+    }
+    // hrms
+    const rows = HRMS_PROVIDERS.map(p => `
+      <button class="su-choice ${SU.hrms === p ? 'is-active' : ''}" onclick="App.signup.pickHrms('${p.replace(/'/g, "\\'")}')">
+        <span class="su-choice__ic">${App.icon('plug')}</span><b>${App.esc(p)}</b>
+      </button>`).join('');
+    return `
+      <h2 class="auth__title" style="font-size:19px">Sync your HRMS</h2>
+      <p class="muted" style="margin:6px 0 16px;font-size:13px">Connect your HRMS so employee records can start populating verified worker profiles automatically.</p>
+      ${rows}
+      <button class="btn btn--primary btn--block btn--lg" style="margin-top:16px" onclick="App.signup.connectHrms()">${App.icon('plug')} Connect</button>
+      <p class="muted" style="text-align:center;font-size:13px;margin-top:14px"><b style="color:var(--accent-strong);cursor:pointer" onclick="App.signup.skipHrms()">Skip for now</b></p>`;
+  }
 
   function renderLogin() {
     const accent = L.mode === 'worker' ? 'worker' : L.mode === 'employer' ? 'employer' : 'gov';
@@ -415,8 +574,10 @@ window.App = (function () {
         <div class="field"><label class="label">Password</label>
           <div class="input--icon">${App.icon('lock')}<input class="input" type="password" placeholder="••••••••" value="demo-password"></div></div>
         <button class="btn btn--primary btn--block btn--lg" onclick="App.login.submit('${gov ? 'gov' : 'employer'}')">Sign in ${App.icon('arrow')}</button>
-        ${gov ? `<div class="banner banner--info" style="margin-top:16px">${App.icon('shield')}<div>Demo credentials are pre-filled. Any input signs you in.</div></div>` : `<p class="muted" style="text-align:center;font-size:12.5px;margin-top:16px">This is a demo build - any credentials sign you in.</p>`}`;
+        ${gov ? `<div class="banner banner--info" style="margin-top:16px">${App.icon('shield')}<div>Demo credentials are pre-filled. Any input signs you in.</div></div>` : `<p class="muted" style="text-align:center;font-size:12.5px;margin-top:16px">This is a demo build - any credentials sign you in.</p>
+        <p style="text-align:center;font-size:13px;margin-top:14px">New here? <b style="color:var(--accent-strong);cursor:pointer" onclick="App.signup.open()">Create an employer account</b></p>`}`;
     }
+    if (L.mode === 'employer' && SU.active) form = SU_STYLE + signupForm();
 
     $('#app').innerHTML = `
       <div class="auth" data-persona="${accent}">
