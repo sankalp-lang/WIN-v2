@@ -487,25 +487,21 @@
   ];
 
   // shown instead of the dashboard until the employer has synced an HRMS — there's no
-  // real employee data yet, but a faded preview hints at what this page will look like
-  // once connected, instead of leaving the tab blank.
+  // real employee data yet, but a faded preview using this page's own real KPIs/tabs
+  // hints at what it will look like once connected, instead of leaving the tab blank.
   function syncPromptPage() {
-    const previewKpis = [
-      { icon: 'shield', label: 'Total Employees' },
-      { icon: 'checkcircle', label: 'Verified' },
-      { icon: 'clock', label: 'In Progress' },
-      { icon: 'alert', label: 'Pending' },
-    ].map(k => `
+    const previewKpis = KPIS.map(k => `
       <div class="kpi">
         <div class="kpi__top"><div class="kpi__label">${App.esc(k.label)}</div>
           <div class="kpi__icon" style="background:var(--surface-2);color:var(--faint)">${App.icon(k.icon)}</div></div>
         <div class="kpi__val" style="color:var(--faint)">—</div>
         <div class="kpi__sub muted">Awaiting HRMS sync</div>
       </div>`).join('');
-    const previewRows = [
-      { icon: 'users', title: 'Employee Roster', desc: 'Every synced employee, with role, site and current status' },
-      { icon: 'shieldcheck', title: 'Verification Status by Source', desc: 'Aadhaar, PAN and EPFO match status per employee' },
-      { icon: 'briefcase', title: 'Hiring Pipeline', desc: 'Open roles, candidates in progress, and time-to-hire' },
+    const previewTabs = [
+      { icon: 'home', title: 'Overview', desc: 'Workforce KPIs, department breakdown and recent activity' },
+      { icon: 'briefcase', title: 'Job Management', desc: 'Open positions across sites, applicants and NCS sync' },
+      { icon: 'search', title: 'Candidate Discovery', desc: 'WIN-verified candidates matched to your open roles' },
+      { icon: 'trend', title: 'Hiring Pipeline', desc: 'Track candidates from application through to offer' },
     ].map(r => `
       <div class="row gap-10" style="padding:13px 8px;border-bottom:1px solid var(--line-2)">
         <span class="kpi__icon" style="width:34px;height:34px;background:var(--surface-2);color:var(--faint)">${App.icon(r.icon)}</span>
@@ -527,7 +523,7 @@
       <div class="grid grid-4 reveal" style="margin-bottom:22px;opacity:.6;pointer-events:none">${previewKpis}</div>
       <div class="card reveal" style="opacity:.6;pointer-events:none">
         <div class="card__head"><h3 class="grow">What you'll see here</h3></div>
-        <div class="card__body" style="padding-top:0">${previewRows}</div>
+        <div class="card__body" style="padding-top:0">${previewTabs}</div>
       </div>
     </div>`;
   }

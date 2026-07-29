@@ -142,6 +142,18 @@
   // shown instead of the roster until the employer has synced an HRMS — there are no
   // real employee records yet, but a faded table preview hints at the roster's shape.
   function syncPromptPage() {
+    const previewKpis = [
+      { icon: 'shield', label: 'Total Employees' },
+      { icon: 'checkcircle', label: 'Verified' },
+      { icon: 'clock', label: 'In Progress' },
+      { icon: 'alert', label: 'Pending' },
+    ].map(k => `
+      <div class="kpi">
+        <div class="kpi__top"><div class="kpi__label">${App.esc(k.label)}</div>
+          <div class="kpi__icon" style="background:var(--surface-2);color:var(--faint)">${App.icon(k.icon)}</div></div>
+        <div class="kpi__val" style="color:var(--faint)">—</div>
+        <div class="kpi__sub muted">Awaiting HRMS sync</div>
+      </div>`).join('');
     const previewRows = [1, 2, 3].map(() => `
       <tr>
         <td><div class="row gap-10"><span class="kpi__icon" style="width:30px;height:30px;background:var(--surface-2);color:var(--faint)">${App.icon('user')}</span>
@@ -164,6 +176,7 @@
           <button class="btn btn--accent" style="margin-top:16px" onclick="App.navigate('emp-hrms')">${App.icon('plug')} Go to HRMS Sync</button>
         </div>
       </div>
+      <div class="grid grid-4 reveal" style="margin-bottom:22px;opacity:.6;pointer-events:none">${previewKpis}</div>
       <div class="card reveal" style="overflow:hidden;opacity:.6;pointer-events:none">
         <div class="card__head"><div class="grow"><h3>Verification roster</h3><div class="muted" style="font-size:12.5px;margin-top:2px">This is what your roster will look like once synced</div></div></div>
         <div class="tablewrap tablewrap--scroll" style="border:none;border-radius:0;box-shadow:none">
