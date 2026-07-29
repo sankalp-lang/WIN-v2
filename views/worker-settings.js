@@ -23,6 +23,17 @@
 
   const SUGGESTED = ['Architecture Repair', 'Electrical Basics', 'Welding', 'Plumbing', 'Safety Management', 'AutoCAD Basics'];
 
+  // a representative pick-list for the Company field's dropdown — includes every employer
+  // already used in the seeded work history so those entries pre-select correctly, plus
+  // other well-known names; anything else falls through to "Others" (free text).
+  const KNOWN_COMPANIES = [
+    'NBCC (India) Ltd. — Govt. Housing Project', 'Hiranandani Group', 'Porter Logistics Platform',
+    'Self-Employed — Rajan Masonry Works', 'JMD Builders (via Sharma Manpower Agency)',
+    'L&T Construction (via local contractor)', 'Family farmland',
+    'DLF Ltd.', 'Godrej Properties', 'Tata Projects', 'Shapoorji Pallonji', 'Adani Realty',
+    'Omaxe Ltd.', 'Sobha Ltd.', 'Prestige Group', 'Lodha Group', 'Brigade Group',
+  ];
+
   const CONSENT = [
     { key: 'employers',  ic: 'shieldcheck', title: 'Profile visible to verified employers', desc: 'Allow verified employers and banks to view your WiN profile when they request a verification.' },
     { key: 'schemes',    ic: 'landmark',    title: 'Share data with government schemes',     desc: 'Let eligible government welfare schemes read your verified record to auto-enrol you.' },
@@ -119,7 +130,23 @@
   ];
   // step: 'consent' | 'verifyState' | 'addressType' | 'checklist' | 'location' | 'locating'
   //     | 'flow' | 'done'   —  flow-substep phase: 'ready' | 'shooting' | 'captured'
-  const DAV = { step: 'consent', i: null, queue: [], addressType: '', idType: '', idx: 0, phase: 'ready' };
+  const DAV = { step: 'consent', i: null, queue: [], addressType: '', idType: '', idx: 0, phase: 'ready', stream: null, camError: false };
+
+  // ---- real camera access for the photo-capture steps (falls back to the illustrated
+  // placeholder if the browser/device has no camera or permission is denied) ----
+  function stopDavCamera() {
+    if (DAV.stream) { DAV.stream.getTracks().forEach(t => t.stop()); DAV.stream = null; }
+  }
+  function startDavCamera() {
+    if (!(typeof navigator !== 'undefined' && navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) {
+      DAV.camError = true; davModal(); return;
+    }
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false }).then(stream => {
+      DAV.stream = stream; DAV.camError = false;
+      const video = document.getElementById('davVideo');
+      if (video) { video.srcObject = stream; video.play && video.play().catch(() => {}); } else { stopDavCamera(); }
+    }).catch(() => { DAV.camError = true; davModal(); });
+  }
 
   function davBuilding() { return App.icon('building', 'dav-illus'); }
 
@@ -130,7 +157,7 @@
     if (DAV.step === 'consent') {
       title = 'Verify Address'; icon = 'shieldcheck';
       body = `
-        <div class="center" style="margin:6px 0 16px">${App.icon('shieldcheck', 'dav-shield')}</div>
+        <div class="dav-center" style="margin:6px 0 16px">${App.icon('shieldcheck', 'dav-shield')}</div>
         <h3 style="text-align:center;margin:0 0 8px">Share your data</h3>
         <p class="muted" style="text-align:center;font-size:13.5px;line-height:1.6;max-width:38ch;margin:0 auto">
           I consent to sharing my address details with WiN for the purpose of verifying this work
@@ -141,7 +168,7 @@
     } else if (DAV.step === 'verifyState') {
       title = 'Verify Address'; icon = 'mappin';
       body = `
-        <div class="center" style="margin:4px 0 16px">${davBuilding()}</div>
+        <div class="dav-center" style="margin:4px 0 16px">${davBuilding()}</div>
         <h3 style="text-align:center;margin:0 0 4px">Verify your Address</h3>
         <p class="muted" style="text-align:center;font-size:13px;margin:0 0 16px">Select current state of your verification:</p>
         <button class="dav-choice is-active" onclick="WorkerSettings.davStart()"><span class="dav-choice__ic" style="background:var(--green-50);color:var(--green-600)">${App.icon('check')}</span><b>Start Verification</b></button>
@@ -152,7 +179,7 @@
     } else if (DAV.step === 'addressType') {
       title = 'Verify Address'; icon = 'mappin';
       body = `
-        <div class="center" style="margin:4px 0 16px">${davBuilding()}</div>
+        <div class="dav-center" style="margin:4px 0 16px">${davBuilding()}</div>
         <h3 style="text-align:center;margin:0 0 4px">Select Address Type</h3>
         <p class="muted" style="text-align:center;font-size:13px;margin:0 0 16px">Choose the type of address to verify:</p>
         <button class="dav-choice" disabled title="Not applicable for a work entry"><span class="dav-choice__ic">${App.icon('home')}</span><b>Residential Address</b></button>
@@ -175,7 +202,7 @@
       const locating = DAV.step === 'locating';
       title = 'Verifying Location'; icon = 'mappin';
       body = `
-        <div class="center" style="margin:4px 0 16px">${App.icon('mappin', 'dav-pin')}</div>
+        <div class="dav-center" style="margin:4px 0 16px">${App.icon('mappin', 'dav-pin')}</div>
         <h3 style="text-align:center;margin:0 0 4px">${locating ? 'Verifying Location' : 'Location Access'}</h3>
         <p class="muted" style="text-align:center;font-size:13px;margin:0 0 16px">${locating ? 'Please be within range of the target address' : "We need to verify your current location matches the address you're verifying"}</p>
         <div class="dav-kv">
@@ -194,7 +221,7 @@
       if (cs.kind === 'idselect') {
         body = `
           <div class="dav-progress">Step ${stepNum} of ${stepTotal}</div>
-          <div class="center" style="margin:4px 0 16px">${App.icon('idcard', 'dav-illus')}</div>
+          <div class="dav-center" style="margin:4px 0 16px">${App.icon('idcard', 'dav-illus')}</div>
           <h3 style="text-align:center;margin:0 0 4px">ID Verification</h3>
           <p class="muted" style="text-align:center;font-size:13px;margin:0 0 16px">Please capture a clear photo of your government-issued ID</p>
           <div class="field"><label class="label">ID Type</label>
@@ -213,7 +240,7 @@
         if (DAV.phase === 'ready') {
           body = `
             <div class="dav-progress">Step ${stepNum} of ${stepTotal}</div>
-            <div class="center" style="margin:4px 0 12px">${cs.kind === 'idphoto' ? App.icon('idcard', 'dav-illus') : davBuilding()}</div>
+            <div class="dav-center" style="margin:4px 0 12px">${cs.kind === 'idphoto' ? App.icon('idcard', 'dav-illus') : davBuilding()}</div>
             <h3 style="text-align:center;margin:0 0 2px">${App.esc(heading)}</h3>
             ${cs.context ? `<p style="text-align:center;font-size:13px;font-weight:600;color:var(--accent-strong);margin:0 0 2px">(${App.esc(cs.context)})</p>` : ''}
             <p class="muted" style="text-align:center;font-size:13px;margin:0 0 16px">${App.esc(subline)}</p>
@@ -224,22 +251,28 @@
                   <button class="btn btn--primary" onclick="WorkerSettings.davOpenCamera()">${App.icon('upload')} Capture Photo</button>`;
         } else if (DAV.phase === 'camera' || DAV.phase === 'capturing') {
           const capturing = DAV.phase === 'capturing';
+          const showVideo = !DAV.camError && !capturing;
           body = `
             <div class="dav-progress">Step ${stepNum} of ${stepTotal}</div>
             <div class="dav-cam dav-cam--live">
               <span class="dav-cam__rec">${App.icon('dot')} REC</span>
-              ${capturing ? `<span class="dav-spin-lg"></span>` : (cs.kind === 'idphoto' ? `<span class="dav-cam__guide"></span>` : App.icon('upload', 'dav-cam__ic'))}
+              ${showVideo
+                ? `<video id="davVideo" class="dav-cam__video" autoplay playsinline muted></video>`
+                : (capturing ? `<span class="dav-spin-lg"></span>` : (cs.kind === 'idphoto' ? `<span class="dav-cam__guide"></span>` : App.icon('upload', 'dav-cam__ic')))}
+              ${cs.kind === 'idphoto' && showVideo ? `<span class="dav-cam__guide dav-cam__guide--overlay"></span>` : ''}
+              ${showVideo ? `<button class="dav-shutter" onclick="WorkerSettings.davShootPhoto()" aria-label="Capture photo">${App.icon('camera')}</button>` : ''}
             </div>
+            ${DAV.camError ? `<div class="banner banner--amber" style="margin-top:12px">${App.icon('alert')}<div>Camera unavailable — using a simulated capture for this demo.</div></div>` : ''}
             ${cs.kind === 'idphoto' ? `<div class="row between" style="margin-top:12px"><span style="font-size:13px">Vertical ${App.esc(DAV.idType || 'ID')}</span><span class="toggle"></span></div>` : ''}
-            <p class="muted" style="text-align:center;font-size:12.5px;margin-top:10px">${capturing ? 'Capturing…' : `Line up ${cs.kind === 'idphoto' ? 'the document' : 'the shot'} and tap capture`}</p>`;
-          foot = `<button class="btn" ${capturing ? 'disabled' : ''} onclick="App.modal.close()">Cancel</button>
-                  <button class="btn btn--primary" ${capturing ? 'disabled' : ''} onclick="WorkerSettings.davShootPhoto()">${capturing ? spinner('Capturing…') : `${App.icon('upload')} Capture ${App.esc(label)}`}</button>`;
+            <p class="muted" style="text-align:center;font-size:12.5px;margin-top:10px">${capturing ? 'Capturing…' : `Line up ${cs.kind === 'idphoto' ? 'the document' : 'the shot'} and tap the shutter`}</p>`;
+          foot = `<button class="btn" ${capturing ? 'disabled' : ''} onclick="WorkerSettings.davCancelCamera()">Cancel</button>
+                  <button class="btn btn--primary" ${capturing ? 'disabled' : ''} onclick="WorkerSettings.davShootPhoto()">${capturing ? spinner('Capturing…') : `${App.icon('camera')} Capture ${App.esc(label)}`}</button>`;
         } else {
           body = `
             <div class="dav-progress">Step ${stepNum} of ${stepTotal}</div>
             <div class="dav-cam dav-cam--captured">${App.icon('checkcircle')}</div>
             <p style="text-align:center;font-size:13px;margin-top:12px"><b>${App.esc(label)} captured</b></p>
-            <div class="center"><button class="btn btn--ghost btn--sm" onclick="WorkerSettings.davRetake()">${App.icon('upload')} Retake</button></div>`;
+            <div class="dav-center"><button class="btn btn--ghost btn--sm" onclick="WorkerSettings.davRetake()">${App.icon('upload')} Retake</button></div>`;
           foot = `<button class="btn" onclick="App.modal.close()">Cancel</button>
                   <button class="btn btn--primary" onclick="WorkerSettings.davAdvanceFlow()">${App.icon('arrow')} Continue</button>`;
         }
@@ -302,6 +335,11 @@
       w.relation = v; w.source = ''; w.pan = ''; w.verifyStatus = 'unverified';
       App.reload(); repaintEntryModal(i);
     },
+    setOrgChoice(i, v) {
+      const w = S.work[i]; if (!w) return;
+      if (v === 'others') { w._orgCustom = true; w.org = ''; } else { w._orgCustom = false; w.org = v; }
+      App.reload(); repaintEntryModal(i);
+    },
 
     // ---- verification: explicit "Verify Details" click per entry — happy-path only, per the
     // segmentation flowchart (fallback identifiers like UAN/PPF/NPS are a documented concept,
@@ -343,7 +381,7 @@
       davModal();
     },
     davToast(msg) { App.toast(msg, 'clock'); },
-    davDecline() { App.modal.close(); App.toast('Address verification declined', 'x'); },
+    davDecline() { stopDavCamera(); App.modal.close(); App.toast('Address verification declined', 'x'); },
     davAgree() { DAV.step = 'verifyState'; davModal(); },
     davStart() { DAV.step = 'addressType'; davModal(); },
     davSetAddressType(t) { DAV.addressType = t; DAV.step = 'checklist'; davModal(); },
@@ -353,14 +391,17 @@
       setTimeout(() => { DAV.step = 'flow'; DAV.idx = 0; DAV.phase = 'ready'; davModal(); }, 1600);
     },
     davSetIdType(t) { DAV.idType = t; davModal(); },
-    davOpenCamera() { DAV.phase = 'camera'; davModal(); },
+    davOpenCamera() { DAV.phase = 'camera'; DAV.camError = false; davModal(); startDavCamera(); },
+    davCancelCamera() { stopDavCamera(); App.modal.close(); },
     davShootPhoto() {
+      stopDavCamera();
       DAV.phase = 'capturing'; davModal();
       setTimeout(() => { DAV.phase = 'captured'; davModal(); }, 900);
     },
-    davRetake() { DAV.phase = 'camera'; davModal(); },
-    davSkipFlow() { WorkerSettings.davAdvanceFlow(); },
+    davRetake() { DAV.phase = 'camera'; DAV.camError = false; davModal(); startDavCamera(); },
+    davSkipFlow() { stopDavCamera(); WorkerSettings.davAdvanceFlow(); },
     davAdvanceFlow() {
+      stopDavCamera();
       DAV.idx++; DAV.phase = 'ready';
       if (DAV.idx >= DAV_FLOW.length) {
         const w = S.work[DAV.i];
@@ -518,7 +559,13 @@
         </div>
         <div class="field" style="margin-bottom:0">
           <label class="label wset-flabel">Company</label>
-          <input class="input" value="${App.esc(w.org)}" placeholder="e.g. Omaxe Ltd." oninput="WorkerSettings.editWork(${i},'org',this.value)">
+          <select class="select" onchange="WorkerSettings.setOrgChoice(${i},this.value)">
+            <option value="" ${!w.org ? 'selected' : ''} disabled>Select company</option>
+            ${KNOWN_COMPANIES.map(c => `<option value="${App.esc(c)}" ${w.org === c && !w._orgCustom ? 'selected' : ''}>${App.esc(c)}</option>`).join('')}
+            <option value="others" ${w._orgCustom || (w.org && !KNOWN_COMPANIES.includes(w.org)) ? 'selected' : ''}>Others (type company name)</option>
+          </select>
+          ${w._orgCustom || (w.org && !KNOWN_COMPANIES.includes(w.org)) ? `
+          <input class="input mt-8" value="${App.esc(w.org)}" placeholder="Type your company name" oninput="WorkerSettings.editWork(${i},'org',this.value)">` : ''}
         </div>
       </div>
       <div class="grid grid-2" style="margin-top:12px">
@@ -820,6 +867,7 @@
           .wset-trash[disabled]{ opacity:.4; cursor:not-allowed; }
           .wset-trash[disabled]:hover{ background:transparent; color:var(--muted); }
           .wset-spin{ width:14px; height:14px; border:2px solid rgba(128,128,128,.35); border-top-color:currentColor; border-radius:50%; display:inline-block; vertical-align:-2px; animation:spin 1s linear infinite; }
+          .dav-center{ display:flex; justify-content:center; align-items:center; }
           .dav-kv{ display:flex; flex-direction:column; gap:10px; font-size:13.5px; }
           .dav-shield{ width:56px; height:56px; color:var(--accent); }
           .dav-pin{ width:44px; height:44px; color:var(--accent); }
@@ -845,6 +893,12 @@
           .dav-cam__rec .ico{ width:8px; height:8px; color:#ff3b3b; animation:dav-blink 1.2s ease-in-out infinite; }
           @keyframes dav-blink{ 50%{ opacity:.25; } }
           .dav-cam__guide{ width:62%; height:62%; border:2px solid #ffd54a; border-radius:6px; }
+          .dav-cam__guide--overlay{ position:absolute; pointer-events:none; }
+          .dav-cam__video{ width:100%; height:100%; object-fit:cover; border-radius:var(--r); background:#000; }
+          .dav-shutter{ position:absolute; bottom:12px; left:50%; transform:translateX(-50%); width:52px; height:52px; border-radius:50%;
+            background:#fff; color:#12151d; display:grid; place-items:center; border:3px solid rgba(255,255,255,.6); cursor:pointer; transition:.12s; }
+          .dav-shutter:hover{ transform:translateX(-50%) scale(1.06); }
+          .dav-shutter .ico{ width:22px; height:22px; }
           .dav-cam--captured{ background:var(--green-50); color:var(--green-600); }
           .dav-cam--captured .ico{ width:52px; height:52px; }
           .dav-spin-lg{ width:36px; height:36px; border:3px solid rgba(255,255,255,.35); border-top-color:#fff; border-radius:50%; display:inline-block; animation:spin 1s linear infinite; }

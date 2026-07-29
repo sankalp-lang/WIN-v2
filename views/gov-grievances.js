@@ -261,7 +261,7 @@
     // ---- bulk export ----
     bulkExport() {
       const rows = filtered();
-      const sample = rows.slice(0, 8);
+      const sample = rows.slice(0, 50);
       const thead = '<tr><th>Case ID</th><th>Worker</th><th>Category</th><th>State</th><th>Priority</th><th>Status</th></tr>';
       const tbody = sample.map(r => `<tr><td class="mono">${App.esc(r.id)}</td><td>${App.esc(r.worker)}</td><td>${App.esc(r.cat)}</td><td>${App.esc(r.state)}</td><td>${App.esc(r.priority)}</td><td>${App.esc(r.status)}</td></tr>`).join('');
       App.modal.open(`

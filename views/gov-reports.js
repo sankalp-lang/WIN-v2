@@ -250,7 +250,7 @@
       const data = REPORT_DATA[rep.id];
       const headers = data ? data.headers : ['Report', 'Category', 'Frequency', 'Last generated'];
       const allRows = data ? data.rows : REPORTS.map(r => [r.title, r.cat, r.freq, r.last]);
-      const sample = allRows.slice(0, 8);
+      const sample = allRows.slice(0, 50);
       const thead = '<tr>' + headers.map(h => `<th>${App.esc(h)}</th>`).join('') + '</tr>';
       const tbody = sample.map(r => '<tr>' + r.map(c => `<td>${App.esc(c)}</td>`).join('') + '</tr>').join('');
       App.modal.open(`
