@@ -369,6 +369,7 @@ window.App = (function () {
     open() { WU.active = true; WU.step = 'mobile'; WU.phone = ''; WU.otp = ''; renderLogin(); },
     cancel() { WU.active = false; renderLogin(); },
     onPhone(el) { WU.phone = el.value.replace(/\D/g, '').slice(0, 10); el.value = WU.phone; },
+    autofillMobile() { WU.phone = '9876543210'; renderLogin(); },
     sendOtp() {
       if (WU.phone.length !== 10) { App.toast('Enter a 10-digit Aadhaar-registered mobile number', 'alert'); return; }
       WU.step = 'otp'; renderLogin();
@@ -378,6 +379,7 @@ window.App = (function () {
       el.value = v; WU.otp = v;
       const b = document.getElementById('wuVerifyBtn'); if (b) b.disabled = v.length !== 6;
     },
+    autofillOtp() { WU.otp = '123456'; renderLogin(); },
     verify() {
       if (WU.otp.length !== 6) { App.toast('Enter the 6-digit OTP', 'alert'); return; }
       WU.step = 'verifying'; renderLogin();
@@ -425,6 +427,16 @@ window.App = (function () {
     set(k, v) { SU[k] = v; },
     setHasMca(v) { SU.hasMca = v; SU.cin = ''; renderLogin(); },
     setHasGst(v) { SU.hasGst = v; SU.gstUdyam = ''; renderLogin(); },
+    autofillCredentials() {
+      SU.legalName = 'Rampur Traders Pvt. Ltd.'; SU.email = 'admin@rampurtraders.in';
+      SU.password = 'Passw0rd!23'; SU.confirm = 'Passw0rd!23';
+      renderLogin();
+    },
+    autofillBusiness() {
+      SU.hasMca = 'yes'; SU.cin = 'U45201MH2010PTC123456';
+      SU.hasGst = 'yes'; SU.gstUdyam = '07AAACB1234C1Z5';
+      renderLogin();
+    },
     submitCredentials() {
       if (!SU.legalName || !SU.email) { App.toast('Fill in your organisation name and email', 'alert'); return; }
       if (SU.password.length < 8) { App.toast('Password must be at least 8 characters', 'alert'); return; }
@@ -458,7 +470,10 @@ window.App = (function () {
   function signupForm() {
     if (SU.step === 'credentials') {
       return `
-        <h2 class="auth__title">Create an employer account</h2>
+        <div class="row between" style="align-items:flex-start">
+          <h2 class="auth__title">Create an employer account</h2>
+          <button class="btn btn--ghost btn--sm" onclick="App.signup.autofillCredentials()">${App.icon('sparkles')} Autofill demo data</button>
+        </div>
         <p class="muted" style="margin:6px 0 22px">Let's start with your account details.</p>
         <div class="field"><label class="label">Organisation Name</label>
           <input class="input" value="${App.esc(SU.legalName)}" placeholder="e.g. Aditya Birla Construction Ltd." oninput="App.signup.set('legalName',this.value)"></div>
@@ -466,9 +481,9 @@ window.App = (function () {
           <div class="input--icon">${App.icon('mail')}<input class="input" value="${App.esc(SU.email)}" placeholder="you@company.com" oninput="App.signup.set('email',this.value)"></div></div>
         <div class="grid grid-2">
           <div class="field" style="margin-bottom:0"><label class="label">Password</label>
-            <div class="input--icon">${App.icon('lock')}<input class="input" type="password" placeholder="At least 8 characters" oninput="App.signup.set('password',this.value)"></div></div>
+            <div class="input--icon">${App.icon('lock')}<input class="input" type="password" value="${App.esc(SU.password)}" placeholder="At least 8 characters" oninput="App.signup.set('password',this.value)"></div></div>
           <div class="field" style="margin-bottom:0"><label class="label">Confirm Password</label>
-            <div class="input--icon">${App.icon('lock')}<input class="input" type="password" placeholder="Re-enter password" oninput="App.signup.set('confirm',this.value)"></div></div>
+            <div class="input--icon">${App.icon('lock')}<input class="input" type="password" value="${App.esc(SU.confirm)}" placeholder="Re-enter password" oninput="App.signup.set('confirm',this.value)"></div></div>
         </div>
         <button class="btn btn--primary btn--block btn--lg" style="margin-top:18px" onclick="App.signup.submitCredentials()">Continue ${App.icon('arrow')}</button>
         <p class="muted" style="text-align:center;font-size:13px;margin-top:16px">Already have an account? <b style="color:var(--accent-strong);cursor:pointer" onclick="App.signup.cancel()">Sign in</b></p>`;
@@ -476,8 +491,11 @@ window.App = (function () {
     if (SU.step === 'business') {
       const requiresDav = SU.hasMca === 'no';
       return `
-        <button class="btn btn--ghost btn--sm" style="margin-bottom:14px" onclick="App.signup.backToCredentials()">${App.icon('arrowleft')} Back</button>
-        <h2 class="auth__title" style="font-size:19px">Business verification</h2>
+        <div class="row between" style="align-items:flex-start">
+          <button class="btn btn--ghost btn--sm" onclick="App.signup.backToCredentials()">${App.icon('arrowleft')} Back</button>
+          <button class="btn btn--ghost btn--sm" onclick="App.signup.autofillBusiness()">${App.icon('sparkles')} Autofill demo data</button>
+        </div>
+        <h2 class="auth__title" style="font-size:19px;margin-top:14px">Business verification</h2>
         <p class="muted" style="margin:6px 0 18px;font-size:13px">Two quick questions to verify your business (KYB) before activating your account.</p>
         <div class="field"><label class="label">Registered with the MCA (Company/LLP)?</label>
           <select class="select" onchange="App.signup.setHasMca(this.value)">
@@ -523,7 +541,10 @@ window.App = (function () {
   function workerSignupForm() {
     if (WU.step === 'mobile') {
       return `
-        <button class="btn btn--ghost btn--sm" style="margin-bottom:14px" onclick="App.workerSignup.cancel()">${App.icon('arrowleft')} Back</button>
+        <div class="row between" style="align-items:flex-start;margin-bottom:14px">
+          <button class="btn btn--ghost btn--sm" onclick="App.workerSignup.cancel()">${App.icon('arrowleft')} Back</button>
+          <button class="btn btn--ghost btn--sm" onclick="App.workerSignup.autofillMobile()">${App.icon('sparkles')} Autofill demo data</button>
+        </div>
         <div class="row gap-12" style="margin-bottom:18px">${UIDAI}<div><h2 class="auth__title" style="font-size:19px">Create your account</h2><p class="muted" style="font-size:13px">Enter your Aadhaar-linked mobile number</p></div></div>
         <div class="field"><label class="label">Mobile number</label>
           <div class="input-group"><span class="prefix">+91</span><input class="input" id="wuPhone" inputmode="numeric" maxlength="10" placeholder="98••• •••••" value="${App.esc(WU.phone)}" oninput="App.workerSignup.onPhone(this)"></div>
@@ -532,12 +553,15 @@ window.App = (function () {
     }
     if (WU.step === 'otp') {
       return `
-        <button class="btn btn--ghost btn--sm" style="margin-bottom:14px" onclick="App.workerSignup.open()">${App.icon('arrowleft')} Back</button>
+        <div class="row between" style="align-items:flex-start;margin-bottom:14px">
+          <button class="btn btn--ghost btn--sm" onclick="App.workerSignup.open()">${App.icon('arrowleft')} Back</button>
+          <button class="btn btn--ghost btn--sm" onclick="App.workerSignup.autofillOtp()">${App.icon('sparkles')} Autofill demo data</button>
+        </div>
         <div style="text-align:center;margin-bottom:20px"><div class="kpi__icon" style="width:46px;height:46px;margin:0 auto 12px;background:var(--accent-weak);color:var(--accent)">${App.icon('lock')}</div>
           <h2 class="auth__title" style="font-size:20px">Enter OTP</h2><p class="muted" style="font-size:13px;margin-top:4px">Sent to mobile ending ${App.esc(WU.phone.slice(-4) || '••••')}</p></div>
         <div class="field"><label class="label">6-digit OTP</label>
-          <input class="input mono" id="wuOtp" inputmode="numeric" maxlength="6" placeholder="••••••" oninput="App.workerSignup.onOtp(this)"></div>
-        <button class="btn btn--primary btn--block btn--lg" id="wuVerifyBtn" disabled onclick="App.workerSignup.verify()">${App.icon('check')} Verify &amp; continue</button>`;
+          <input class="input mono" id="wuOtp" inputmode="numeric" maxlength="6" placeholder="••••••" value="${App.esc(WU.otp)}" oninput="App.workerSignup.onOtp(this)"></div>
+        <button class="btn btn--primary btn--block btn--lg" id="wuVerifyBtn" ${WU.otp.length === 6 ? '' : 'disabled'} onclick="App.workerSignup.verify()">${App.icon('check')} Verify &amp; continue</button>`;
     }
     // verifying
     return `<div style="text-align:center;padding:30px 0">
