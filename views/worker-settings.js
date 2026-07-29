@@ -59,7 +59,7 @@
         sector: 'nongovt', relation: 'gig', source: 'platform', verifyStatus: 'verified', pan: '', tier: 'verified', active: false },
       { role: 'Independent Masonry Contractor', org: 'Self-Employed — Rajan Masonry Works', period: 'Jan 2016 - Jan 2018', loc: 'Gurugram',
         address: 'Shop 14, Sohna Road', state: 'Haryana', pincode: '122018',
-        sector: 'nongovt', relation: 'self', source: 'pan-gst', verifyStatus: 'verified', pan: 'ABCPK4321F', tier: 'verified', active: false },
+        sector: 'nongovt', relation: 'self', source: 'pan-gst', verifyStatus: 'verified', pan: 'ABCPK4321F', hasPan: 'yes', tier: 'verified', active: false },
       { role: 'Senior Mason', org: 'JMD Builders (via Sharma Manpower Agency)', period: 'Jan 2013 - Dec 2015', loc: 'Gurugram',
         address: 'DLF Phase 2, Site Office', state: 'Haryana', pincode: '122002',
         sector: 'nongovt', relation: 'agency', source: 'agency-hrms', verifyStatus: 'verified', pan: '', tier: 'verified', active: false },
@@ -116,21 +116,33 @@
   // front/back) → done. This prototype simulates every capture (no real camera/location
   // access), but keeps the same screen-by-screen structure and framing.
   const ID_TYPES = ['Aadhaar Card', 'PAN Card', 'Passport', "Voter ID", 'Driving Licence'];
-  // the photo-capture sequence run once GPS location has matched
-  const DAV_FLOW = [
+  // the photo-capture sequence run once GPS location has matched — two variants:
+  // DAV_FLOW_SELF for self-employed workers verifying a business/office address (office
+  // ID card is optional — plenty of self-employed contractors won't have one), and
+  // DAV_FLOW_FARMER for farmers/other informal workers, who have no office at all —
+  // captures a farmland photo + boundary landmark instead of office name board/interior/ID.
+  const DAV_FLOW_SELF = [
     { kind: 'photo', title: 'Office Name Board Visibility', sub: "Take a photo of your Office Name Board" },
     { kind: 'photo', title: 'Office Interior', context: 'Reception', sub: 'Take a photo of your office interior to verify' },
     { kind: 'photo', title: 'Office Interior', context: 'Lobby', sub: 'Take a photo of your office interior to verify', skippable: true },
     { kind: 'photo', title: 'Office Interior', context: 'Workstation', sub: 'Take a photo of your office interior to verify', skippable: true },
-    { kind: 'photo', title: 'Office ID Verification', sub: 'Take a photo of your office ID card', side: 'Front' },
-    { kind: 'photo', title: 'Office ID Verification', sub: 'Take a photo of your office ID card', side: 'Back' },
+    { kind: 'photo', title: 'Office ID Verification', sub: 'Take a photo of your office ID card, if you have one', side: 'Front', skippable: true },
+    { kind: 'photo', title: 'Office ID Verification', sub: 'Take a photo of your office ID card, if you have one', side: 'Back', skippable: true },
+    { kind: 'idselect' },
+    { kind: 'idphoto', side: 'Front' },
+    { kind: 'idphoto', side: 'Back' },
+  ];
+  const DAV_FLOW_FARMER = [
+    { kind: 'photo', title: 'Farmland / Work Area Photo', sub: 'Take a photo of your farmland or work area', ic: 'leaf' },
+    { kind: 'photo', title: 'Boundary Marker / Landmark', context: 'Landmark', sub: 'Take a photo of a boundary marker or nearby landmark', skippable: true, ic: 'leaf' },
     { kind: 'idselect' },
     { kind: 'idphoto', side: 'Front' },
     { kind: 'idphoto', side: 'Back' },
   ];
   // step: 'consent' | 'verifyState' | 'addressType' | 'checklist' | 'location' | 'locating'
   //     | 'flow' | 'done'   —  flow-substep phase: 'ready' | 'shooting' | 'captured'
-  const DAV = { step: 'consent', i: null, queue: [], addressType: '', idType: '', idx: 0, phase: 'ready', stream: null, camError: false };
+  // flowKind: 'self' (office/business address) | 'farmer' (farmland — no office at all)
+  const DAV = { step: 'consent', i: null, queue: [], flowKind: 'self', addressType: '', idType: '', idx: 0, phase: 'ready', stream: null, camError: false };
 
   // ---- real camera access for the photo-capture steps (falls back to the illustrated
   // placeholder if the browser/device has no camera or permission is denied) ----
@@ -148,10 +160,12 @@
     }).catch(() => { DAV.camError = true; davModal(); });
   }
 
-  function davBuilding() { return App.icon('building', 'dav-illus'); }
+  function davBuilding() { return App.icon(DAV.flowKind === 'farmer' ? 'leaf' : 'building', 'dav-illus'); }
+  function davFlow() { return DAV.flowKind === 'farmer' ? DAV_FLOW_FARMER : DAV_FLOW_SELF; }
 
   function davModal() {
     const w = S.work[DAV.i]; if (!w) return;
+    const isFarmer = DAV.flowKind === 'farmer';
     let title, icon, body, foot;
 
     if (DAV.step === 'consent') {
@@ -183,7 +197,9 @@
         <h3 style="text-align:center;margin:0 0 4px">Select Address Type</h3>
         <p class="muted" style="text-align:center;font-size:13px;margin:0 0 16px">Choose the type of address to verify:</p>
         <button class="dav-choice" disabled title="Not applicable for a work entry"><span class="dav-choice__ic">${App.icon('home')}</span><b>Residential Address</b></button>
-        <button class="dav-choice" onclick="WorkerSettings.davSetAddressType('office')"><span class="dav-choice__ic">${App.icon('building')}</span><b>Office Address</b></button>
+        ${isFarmer
+          ? `<button class="dav-choice" onclick="WorkerSettings.davSetAddressType('farmland')"><span class="dav-choice__ic">${App.icon('leaf')}</span><b>Farmland Address</b></button>`
+          : `<button class="dav-choice" onclick="WorkerSettings.davSetAddressType('office')"><span class="dav-choice__ic">${App.icon('building')}</span><b>Office Address</b></button>`}
         <div class="banner banner--amber" style="margin-top:14px">${App.icon('alert')}<div>Kindly be physically available at the selected address.</div></div>`;
       foot = `<button class="btn" onclick="App.modal.close()">Cancel</button>`;
 
@@ -193,7 +209,9 @@
         <h3 style="margin:0 0 14px">What you need for verification</h3>
         <div class="dav-check"><span class="dav-check__ic">${App.icon('idcard')}</span><div><b>Valid ID</b><div class="muted" style="font-size:12.5px">Aadhaar, PAN, Passport, or Voter ID</div></div></div>
         <div class="dav-check"><span class="dav-check__ic">${App.icon('upload')}</span><div><b>Camera &amp; Light</b><div class="muted" style="font-size:12.5px">Good lighting and a stable connection for photo capture</div></div></div>
-        <div class="dav-check"><span class="dav-check__ic">${App.icon('idcard')}</span><div><b>Office ID Card</b><div class="muted" style="font-size:12.5px">Keep your company ID card ready, if available</div></div></div>
+        ${isFarmer
+          ? `<div class="dav-check"><span class="dav-check__ic">${App.icon('leaf')}</span><div><b>Farmland Access</b><div class="muted" style="font-size:12.5px">Be at the farmland/work area to capture its photo</div></div></div>`
+          : `<div class="dav-check"><span class="dav-check__ic">${App.icon('idcard')}</span><div><b>Office ID Card (optional)</b><div class="muted" style="font-size:12.5px">Keep your company ID card ready, if available</div></div></div>`}
         <div class="banner banner--info" style="margin-top:14px">${App.icon('mappin')}<div>Upload clear photos of original documents. Blurry or edited photos will delay verification.</div></div>`;
       foot = `<button class="btn" onclick="App.modal.close()">Cancel</button>
               <button class="btn btn--primary" onclick="WorkerSettings.davReady()">${App.icon('arrow')} Ready to Proceed</button>`;
@@ -213,10 +231,11 @@
               <button class="btn btn--primary" ${locating ? 'disabled' : ''} onclick="WorkerSettings.davEnableLocation()">${locating ? spinner('Matching your location…') : `${App.icon('mappin')} Enable Location`}</button>`;
 
     } else if (DAV.step === 'flow') {
-      const cs = DAV_FLOW[DAV.idx];
-      const stepNum = DAV.idx + 1, stepTotal = DAV_FLOW.length;
+      const FLOW = davFlow();
+      const cs = FLOW[DAV.idx];
+      const stepNum = DAV.idx + 1, stepTotal = FLOW.length;
       title = cs.kind === 'idselect' ? 'ID Verification' : (cs.kind === 'idphoto' ? 'Government ID' : cs.title);
-      icon = cs.kind === 'idselect' || cs.kind === 'idphoto' ? 'idcard' : 'building';
+      icon = cs.kind === 'idselect' || cs.kind === 'idphoto' ? 'idcard' : (cs.ic || 'building');
 
       if (cs.kind === 'idselect') {
         body = `
@@ -316,7 +335,7 @@
     addWork() {
       S.work.unshift({
         role: '', org: '', period: '', loc: '', address: '', state: '', pincode: '',
-        sector: 'nongovt', relation: 'direct', source: '', pan: '',
+        sector: 'nongovt', relation: 'direct', source: '', pan: '', hasPan: '',
         verifyStatus: 'unverified', tier: 'self', active: false,
       });
       entryModal(0);
@@ -332,7 +351,12 @@
     setSector(i, v) { const w = S.work[i]; if (!w) return; w.sector = v; w.source = ''; w.verifyStatus = 'unverified'; App.reload(); repaintEntryModal(i); },
     setRelation(i, v) {
       const w = S.work[i]; if (!w) return;
-      w.relation = v; w.source = ''; w.pan = ''; w.verifyStatus = 'unverified';
+      w.relation = v; w.source = ''; w.pan = ''; w.hasPan = ''; w.verifyStatus = 'unverified';
+      App.reload(); repaintEntryModal(i);
+    },
+    setHasPan(i, v) {
+      const w = S.work[i]; if (!w) return;
+      w.hasPan = v; w.pan = ''; w.source = ''; w.verifyStatus = 'unverified';
       App.reload(); repaintEntryModal(i);
     },
     setOrgChoice(i, v) {
@@ -353,10 +377,16 @@
       }
 
       if (w.relation === 'self') {
-        if (!w.pan) { App.toast('Enter your PAN number to look up GST/Udyam details', 'alert'); return; }
-        w.verifyStatus = 'pending'; App.reload(); repaintEntryModal(i);
-        setTimeout(() => { w.source = 'pan-gst'; w.verifyStatus = 'verified'; w.tier = 'verified'; App.reload(); repaintEntryModal(i); App.toast('Details verified and saved'); }, 1400);
-        return;
+        if (!w.hasPan) { App.toast('Let us know whether you have a PAN', 'alert'); return; }
+        if (w.hasPan === 'yes') {
+          if (!w.pan) { App.toast('Enter your PAN number to look up GST/Udyam details', 'alert'); return; }
+          w.verifyStatus = 'pending'; App.reload(); repaintEntryModal(i);
+          setTimeout(() => { w.source = 'pan-gst'; w.verifyStatus = 'verified'; w.tier = 'verified'; App.reload(); repaintEntryModal(i); App.toast('Details verified and saved'); }, 1400);
+          return;
+        }
+        // no PAN — fall back to Digital Address Verification of the business address
+        if (!w.address || !w.state || !w.pincode) { App.toast('Fill in the address details to verify', 'alert'); return; }
+        WorkerSettings.openDAV(i); return;
       }
 
       if (w.relation === 'gig') {
@@ -377,7 +407,9 @@
       }, 1400);
     },
     openDAV(i) {
-      ENTRY_MODAL_I = null; DAV.step = 'consent'; DAV.i = i; DAV.addressType = ''; DAV.idType = ''; DAV.idx = 0; DAV.phase = 'ready';
+      const w = S.work[i];
+      ENTRY_MODAL_I = null; DAV.step = 'consent'; DAV.i = i; DAV.flowKind = (w && w.relation === 'informal') ? 'farmer' : 'self';
+      DAV.addressType = ''; DAV.idType = ''; DAV.idx = 0; DAV.phase = 'ready';
       davModal();
     },
     davToast(msg) { App.toast(msg, 'clock'); },
@@ -403,7 +435,7 @@
     davAdvanceFlow() {
       stopDavCamera();
       DAV.idx++; DAV.phase = 'ready';
-      if (DAV.idx >= DAV_FLOW.length) {
+      if (DAV.idx >= davFlow().length) {
         const w = S.work[DAV.i];
         if (w) { w.source = 'dav'; w.verifyStatus = 'verified'; w.tier = 'verified'; }
         DAV.step = 'done'; davModal(); App.reload();
@@ -479,7 +511,7 @@
   // Address/State/Pincode — City is already collected as a general field above, so DAV
   // only needs these three. Shown when the entry's path requires (or has fallen back to) DAV.
   function addressBlock(w, i) {
-    const needsDav = w.relation === 'informal' || w.source === 'dav';
+    const needsDav = w.relation === 'informal' || (w.relation === 'self' && w.hasPan === 'no') || w.source === 'dav';
     if (!needsDav) return '';
     return `
       <div class="label" style="margin-top:14px;margin-bottom:2px">Work Address</div>
@@ -548,38 +580,16 @@
       </div>`;
   }
 
-  // full editable form for one work entry — used inside the Add/Edit Entry modal
+  // full editable form for one work entry — used inside the Add/Edit Entry modal.
+  // Sector + Employment Relationship come first since they determine which other
+  // fields are relevant (e.g. Company is optional for a farmer/other informal worker).
   function entryFormBody(w, i) {
     const single = S.work.length <= 1;
+    const isInformal = w.relation === 'informal';
+    const companyLabel = isInformal ? 'Company / Landowner (optional)' : 'Company';
+    const companyPlaceholder = isInformal ? 'Type company/landowner name (optional)' : 'Type your company name';
     return `
       <div class="grid grid-2">
-        <div class="field" style="margin-bottom:0">
-          <label class="label wset-flabel">Role / Title</label>
-          <input class="input" value="${App.esc(w.role)}" placeholder="e.g. Construction Supervisor" oninput="WorkerSettings.editWork(${i},'role',this.value)">
-        </div>
-        <div class="field" style="margin-bottom:0">
-          <label class="label wset-flabel">Company</label>
-          <select class="select" onchange="WorkerSettings.setOrgChoice(${i},this.value)">
-            <option value="" ${!w.org ? 'selected' : ''} disabled>Select company</option>
-            ${KNOWN_COMPANIES.map(c => `<option value="${App.esc(c)}" ${w.org === c && !w._orgCustom ? 'selected' : ''}>${App.esc(c)}</option>`).join('')}
-            <option value="others" ${w._orgCustom || (w.org && !KNOWN_COMPANIES.includes(w.org)) ? 'selected' : ''}>Others (type company name)</option>
-          </select>
-          ${w._orgCustom || (w.org && !KNOWN_COMPANIES.includes(w.org)) ? `
-          <input class="input mt-8" value="${App.esc(w.org)}" placeholder="Type your company name" oninput="WorkerSettings.editWork(${i},'org',this.value)">` : ''}
-        </div>
-      </div>
-      <div class="grid grid-2" style="margin-top:12px">
-        <div class="field" style="margin-bottom:0">
-          <label class="label wset-flabel">Period</label>
-          <input class="input" value="${App.esc(w.period)}" placeholder="e.g. Mar 2023 - Present" oninput="WorkerSettings.editWork(${i},'period',this.value)">
-        </div>
-        <div class="field" style="margin-bottom:0">
-          <label class="label wset-flabel">City</label>
-          <input class="input" value="${App.esc(w.loc)}" placeholder="e.g. Delhi" oninput="WorkerSettings.editWork(${i},'loc',this.value)">
-        </div>
-      </div>
-
-      <div class="grid grid-2" style="margin-top:12px">
         <div class="field" style="margin-bottom:0">
           <label class="label wset-flabel">Sector</label>
           <select class="select" onchange="WorkerSettings.setSector(${i},this.value)">
@@ -595,12 +605,49 @@
         </div>
       </div>
 
+      <div class="grid grid-2" style="margin-top:12px">
+        <div class="field" style="margin-bottom:0">
+          <label class="label wset-flabel">Role / Title</label>
+          <input class="input" value="${App.esc(w.role)}" placeholder="e.g. Construction Supervisor" oninput="WorkerSettings.editWork(${i},'role',this.value)">
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label class="label wset-flabel">Period</label>
+          <input class="input" value="${App.esc(w.period)}" placeholder="e.g. Mar 2023 - Present" oninput="WorkerSettings.editWork(${i},'period',this.value)">
+        </div>
+      </div>
+
+      <div class="grid grid-2" style="margin-top:12px">
+        <div class="field" style="margin-bottom:0">
+          <label class="label wset-flabel">${companyLabel}</label>
+          <select class="select" onchange="WorkerSettings.setOrgChoice(${i},this.value)">
+            <option value="" ${!w.org ? 'selected' : ''} ${isInformal ? '' : 'disabled'}>${isInformal ? 'None / not applicable' : 'Select company'}</option>
+            ${KNOWN_COMPANIES.map(c => `<option value="${App.esc(c)}" ${w.org === c && !w._orgCustom ? 'selected' : ''}>${App.esc(c)}</option>`).join('')}
+            <option value="others" ${w._orgCustom || (w.org && !KNOWN_COMPANIES.includes(w.org)) ? 'selected' : ''}>Others (type company name)</option>
+          </select>
+          ${w._orgCustom || (w.org && !KNOWN_COMPANIES.includes(w.org)) ? `
+          <input class="input mt-8" value="${App.esc(w.org)}" placeholder="${companyPlaceholder}" oninput="WorkerSettings.editWork(${i},'org',this.value)">` : ''}
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label class="label wset-flabel">City</label>
+          <input class="input" value="${App.esc(w.loc)}" placeholder="e.g. Delhi" oninput="WorkerSettings.editWork(${i},'loc',this.value)">
+        </div>
+      </div>
+
       ${w.relation === 'self' ? `
       <div class="field" style="margin-top:14px;margin-bottom:0">
+        <label class="label wset-flabel">Do you have a PAN?</label>
+        <div class="row gap-8">
+          <button class="btn btn--sm ${w.hasPan === 'yes' ? 'btn--primary' : ''}" onclick="WorkerSettings.setHasPan(${i},'yes')">Yes</button>
+          <button class="btn btn--sm ${w.hasPan === 'no' ? 'btn--primary' : ''}" onclick="WorkerSettings.setHasPan(${i},'no')">No</button>
+        </div>
+      </div>
+      ${w.hasPan === 'yes' ? `
+      <div class="field" style="margin-top:12px;margin-bottom:0">
         <label class="label wset-flabel">PAN Number</label>
         <input class="input mono" value="${App.esc(w.pan)}" placeholder="e.g. ABCPK1234F" oninput="WorkerSettings.editWork(${i},'pan',this.value)">
         <div class="hint" style="margin-top:5px">We'll look up any GST/Udyam registration linked to this PAN.</div>
       </div>` : ''}
+      ${w.hasPan === 'no' ? `<div class="hint" style="margin-top:8px">No PAN — we'll verify this entry via Digital Address Verification instead.</div>` : ''}` : ''}
 
       ${addressBlock(w, i)}
 
@@ -610,7 +657,7 @@
       </div>
       <div class="row between" style="margin-top:11px">
         ${verifyChip(w)}
-        ${w.verifyStatus !== 'verified' ? `<button class="btn btn--primary btn--sm" ${w.verifyStatus === 'pending' ? 'disabled' : ''} onclick="WorkerSettings.verifyEntry(${i})">${w.verifyStatus === 'pending' ? spinner('Verifying…') : (w.relation === 'informal' ? `${App.icon('mappin')} Verify via Address` : `${App.icon('shieldcheck')} Verify Details`)}</button>` : ''}
+        ${w.verifyStatus !== 'verified' ? `<button class="btn btn--primary btn--sm" ${w.verifyStatus === 'pending' ? 'disabled' : ''} onclick="WorkerSettings.verifyEntry(${i})">${w.verifyStatus === 'pending' ? spinner('Verifying…') : ((w.relation === 'informal' || (w.relation === 'self' && w.hasPan === 'no')) ? `${App.icon('mappin')} Verify via Address` : `${App.icon('shieldcheck')} Verify Details`)}</button>` : ''}
       </div>`;
   }
 
