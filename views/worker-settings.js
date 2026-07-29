@@ -67,6 +67,12 @@
     ],
   };
 
+  // pristine copy of the demo persona's seeded work history — taken before any render can
+  // mutate S.work — so switching back to the demo persona after a fresh-worker session
+  // blanked it out restores Rajan's entries instead of leaving Work Info empty.
+  const DEMO_WORK_SNAPSHOT = JSON.parse(JSON.stringify(S.work));
+  const DEMO_WORK_INFO_SNAPSHOT = JSON.parse(JSON.stringify(S.workInfo));
+
   const val = id => { const e = document.getElementById(id); return e ? e.value.trim() : ''; };
 
   // ---- segmentation: sector/relationship -> verification source ----
@@ -628,7 +634,7 @@
         </div>
         <div class="card__body">
           <div class="banner banner--info" style="margin-bottom:16px">${App.icon('idcard')}<div>Changes here will be reflected on your portfolio. Click <b>Save Changes</b> to apply.</div></div>
-          ${expCards}
+          ${S.work.length ? expCards : App.ui.empty('briefcase', 'No work experience yet', 'Click Add Entry to add your first role — it will be reflected on your portfolio once verified.')}
           <div class="row" style="justify-content:flex-end;margin-top:20px">${saveBtn('work')}</div>
         </div>
       </div>`;
@@ -743,6 +749,23 @@
       if (p && p !== S._lastParam && TABS.some(t => t.id === p)) { S.tab = p; S._lastParam = p; }
 
       const u = ctx.user || {};
+      // keyed on winId (or 'demo') rather than a one-shot boolean, so switching between a
+      // fresh worker and the demo persona within the same session re-initializes instead of
+      // leaking one identity's work history into the other (same pattern as worker-cv.js).
+      const initKey = (u && u.winId) || 'demo';
+      if (S._initFor !== initKey) {
+        S._initFor = initKey;
+        if (u._fresh) {
+          // a freshly signed-up worker has no work history yet — nothing here should be
+          // auto-filled with the Rajan demo persona's entries.
+          S.work = [];
+          S.workInfo = { role: '', exp: '' };
+        } else {
+          S.work = JSON.parse(JSON.stringify(DEMO_WORK_SNAPSHOT));
+          S.workInfo = JSON.parse(JSON.stringify(DEMO_WORK_INFO_SNAPSHOT));
+        }
+      }
+
       const fn = (u.name || S.profile.name || 'there').split(' ')[0];
       const winId = u.winId || WIN;
       const grants = S.access.filter(a => !a.revoked).length;
