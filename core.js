@@ -370,7 +370,7 @@ window.App = (function () {
   const SU = {
     active: false, step: 'credentials',
     legalName: '', email: '', password: '', confirm: '',
-    hasMca: '', hasGst: '',
+    hasMca: '', cin: '', hasGst: '', gstUdyam: '',
     address: '', city: '', state: '', pincode: '',
     tier: null,
   };
@@ -389,8 +389,8 @@ window.App = (function () {
     open() { SU.active = true; SU.step = 'credentials'; renderLogin(); },
     cancel() { SU.active = false; renderLogin(); },
     set(k, v) { SU[k] = v; },
-    setHasMca(v) { SU.hasMca = v; renderLogin(); },
-    setHasGst(v) { SU.hasGst = v; renderLogin(); },
+    setHasMca(v) { SU.hasMca = v; SU.cin = ''; renderLogin(); },
+    setHasGst(v) { SU.hasGst = v; SU.gstUdyam = ''; renderLogin(); },
     submitCredentials() {
       if (!SU.legalName || !SU.email) { App.toast('Fill in your organisation name and email', 'alert'); return; }
       if (SU.password.length < 8) { App.toast('Password must be at least 8 characters', 'alert'); return; }
@@ -400,7 +400,9 @@ window.App = (function () {
     backToCredentials() { SU.step = 'credentials'; renderLogin(); },
     toVerifying() {
       if (!SU.hasMca) { App.toast('Let us know if you\'re registered with the MCA', 'alert'); return; }
+      if (SU.hasMca === 'yes' && !SU.cin) { App.toast('Enter your CIN / LLPIN', 'alert'); return; }
       if (!SU.hasGst) { App.toast('Let us know if you have GST/Udyam registration', 'alert'); return; }
+      if (SU.hasGst === 'yes' && !SU.gstUdyam) { App.toast('Enter your GSTIN / Udyam number', 'alert'); return; }
       const requiresDav = SU.hasMca === 'no';
       if (requiresDav && (!SU.address || !SU.city || !SU.state || !SU.pincode)) { App.toast('Fill in the address details to verify', 'alert'); return; }
       SU.step = 'verifying'; renderLogin();
@@ -449,12 +451,18 @@ window.App = (function () {
             <option value="yes" ${SU.hasMca === 'yes' ? 'selected' : ''}>Yes</option>
             <option value="no" ${SU.hasMca === 'no' ? 'selected' : ''}>No</option>
           </select></div>
+        ${SU.hasMca === 'yes' ? `
+        <div class="field"><label class="label">CIN / LLPIN</label>
+          <input class="input mono" value="${App.esc(SU.cin)}" placeholder="e.g. U45201MH2010PTC123456" oninput="App.signup.set('cin',this.value)"></div>` : ''}
         <div class="field"><label class="label">Have GST/Udyam Registration?</label>
           <select class="select" onchange="App.signup.setHasGst(this.value)">
             <option value="" ${!SU.hasGst ? 'selected' : ''} disabled>Select an option</option>
             <option value="yes" ${SU.hasGst === 'yes' ? 'selected' : ''}>Yes</option>
             <option value="no" ${SU.hasGst === 'no' ? 'selected' : ''}>No</option>
           </select></div>
+        ${SU.hasGst === 'yes' ? `
+        <div class="field"><label class="label">GSTIN / Udyam Number</label>
+          <input class="input mono" value="${App.esc(SU.gstUdyam)}" placeholder="e.g. 07AAACB1234C1Z5" oninput="App.signup.set('gstUdyam',this.value)"></div>` : ''}
         ${requiresDav ? `
         <div class="banner banner--info" style="margin:16px 0">${App.icon('mappin')}<div>Since you're not MCA-registered, we'll verify your business address instead.</div></div>
         <div class="field"><label class="label">Registered / Operating Address</label>

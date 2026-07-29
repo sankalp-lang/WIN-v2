@@ -486,10 +486,28 @@
     ['pipeline', 'Hiring Pipeline'],
   ];
 
+  // shown instead of the dashboard until the employer has synced an HRMS —
+  // there's no real employee data to show here otherwise.
+  function syncPromptPage() {
+    return `<div class="page fade-in">
+      <div class="hero reveal">
+        <div class="hero__wash"></div>
+        <div class="hero__in">
+          <div class="eyebrow">${App.icon('plug')} Setup required</div>
+          <h1 class="h-grad" style="margin-top:12px">Sync your HRMS to see your dashboard.</h1>
+          <p class="lead">Connect your HR system first — your workforce stats, hiring pipeline and worker profiles will populate here once employee records start syncing.</p>
+          <button class="btn btn--accent" style="margin-top:16px" onclick="App.navigate('emp-hrms')">${App.icon('plug')} Go to HRMS Sync</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
   App.registerView('emp-dashboard', {
     title: 'Dashboard',
     subtitle: 'Hiring & workforce command center',
-    render() {
+    render(ctx) {
+      const org = (ctx && ctx.user && ctx.user.org) || (DB.profiles.employer && DB.profiles.employer.org);
+      if (window.EmpHrms && !EmpHrms.hasActiveConnection(org)) return syncPromptPage();
       const body = S.tab === 'overview' ? overviewTab()
         : S.tab === 'jobs' ? jobsTab()
         : S.tab === 'discovery' ? discoveryTab()

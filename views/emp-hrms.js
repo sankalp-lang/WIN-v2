@@ -91,9 +91,10 @@
 
   window.EmpHrms = {
     setTab(t) { HS.tab = t; App.reload(); },
+    hasActiveConnection(vendor) { return HS.connections.some(c => c.status === 'active' && (!vendor || c.vendor === vendor)); },
     openConnect(requestId) {
-      const r = HS.requests.find(x => x.id === requestId);
-      HS.modal = freshModal(requestId, r ? r.vendor : '');
+      const r = requestId ? HS.requests.find(x => x.id === requestId) : null;
+      HS.modal = freshModal(requestId || null, r ? r.vendor : HS.currentOrg);
       paintModal();
     },
     closeConnect() { HS.modal = null; App.modal.close(); },
@@ -145,8 +146,9 @@
     render(ctx) {
       // a freshly signed-up business shows up here as its own pending connection
       // request — mirrors HyperSync's model where a vendor requests to connect.
-      const org = ctx.user && ctx.user.org;
-      if (org && !HS._seeded) {
+      const org = (ctx.user && ctx.user.org) || (DB.profiles.employer && DB.profiles.employer.org) || 'Your Organisation';
+      HS.currentOrg = org;
+      if (ctx.user && ctx.user.org && !HS._seeded) {
         const already = HS.requests.some(r => r.vendor === org) || HS.connections.some(c => c.vendor === org);
         if (!already) HS.requests.unshift({ id: 'r' + (HS.requests.length + 1), vendor: org, date: new Date().toDateString().slice(4) });
         HS._seeded = true;
@@ -191,9 +193,14 @@
         <div class="hero reveal">
           <div class="hero__wash"></div>
           <div class="hero__in">
-            <div class="eyebrow">${App.icon('plug')} HRMS Sync Console</div>
-            <h1 class="h-grad" style="margin-top:12px">Sync your HRMS, verify at the source.</h1>
-            <p class="lead">Connect your HR system so employee records flow straight into verified WiN worker profiles — no manual entry, no spreadsheets.</p>
+            <div class="row between wrap gap-16" style="align-items:flex-start">
+              <div>
+                <div class="eyebrow">${App.icon('plug')} HRMS Sync Console</div>
+                <h1 class="h-grad" style="margin-top:12px">Sync your HRMS, verify at the source.</h1>
+                <p class="lead">Connect your HR system so employee records flow straight into verified WiN worker profiles — no manual entry, no spreadsheets.</p>
+              </div>
+              <button class="btn btn--accent" onclick="EmpHrms.openConnect()">${App.icon('plus')} Connect HRMS</button>
+            </div>
           </div>
         </div>
 

@@ -139,10 +139,28 @@
     return `<span class="pill pill--${k} pill--dot">${App.esc(s)}</span>`;
   }
 
+  // shown instead of the roster until the employer has synced an HRMS —
+  // there are no real employee records to verify here otherwise.
+  function syncPromptPage() {
+    return `<div class="page fade-in">
+      <div class="hero reveal">
+        <div class="hero__wash"></div>
+        <div class="hero__in">
+          <div class="eyebrow">${App.icon('plug')} Setup required</div>
+          <h1 class="h-grad" style="margin-top:12px">Sync your HRMS to see your employees.</h1>
+          <p class="lead">Connect your HR system first — employee records and verification status will populate here automatically once synced.</p>
+          <button class="btn btn--accent" style="margin-top:16px" onclick="App.navigate('emp-hrms')">${App.icon('plug')} Go to HRMS Sync</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
   App.registerView('emp-verifications', {
     title: 'Employee Verifications',
     subtitle: 'Manage and track employee verification status',
-    render() {
+    render(ctx) {
+      const org = (ctx && ctx.user && ctx.user.org) || (DB.profiles.employer && DB.profiles.employer.org);
+      if (window.EmpHrms && !EmpHrms.hasActiveConnection(org)) return syncPromptPage();
       const rows = EV.filtered();
       const total = EV.all().length;
       const filtering = !!(EV.query.trim() || EV.type !== 'all' || EV.status !== 'all');
