@@ -346,7 +346,7 @@ window.App = (function () {
   const L = { mode: 'worker', method: 'choose', step: 'input', otp: '', phone: '', pin: '' };
   App.login = {
     set(k, v) { L[k] = v; renderLogin(); },
-    setMode(m) { L.mode = m; L.method = 'choose'; L.step = 'input'; L.phone = ''; L.pin = ''; L.otp = ''; SU.active = false; renderLogin(); },
+    setMode(m) { L.mode = m; L.method = 'choose'; L.step = 'input'; L.phone = ''; L.pin = ''; L.otp = ''; SU.active = false; WU.active = false; renderLogin(); },
     pickMethod(m) { L.method = m; L.step = 'input'; renderLogin(); },
     back() { if (L.step === 'otp') { L.step = 'input'; } else { L.method = 'choose'; } renderLogin(); },
     sendOtp() { const el = $('#lgPhone'); L.phone = el ? el.value : L.phone; if ((L.phone || '').replace(/\D/g, '').length < 10) { App.toast('Enter a 10-digit mobile number', 'alert'); return; } L.step = 'otp'; renderLogin(); },
@@ -358,6 +358,40 @@ window.App = (function () {
       // employer / gov email+password — demo accepts anything
       App.startApp(persona);
     }
+  };
+
+  /* ============================================================
+     WORKER SIGN-UP  (Aadhaar-registered mobile → OTP → fresh worker profile)
+     step: 'mobile' | 'otp' | 'verifying'
+     ============================================================ */
+  const WU = { active: false, step: 'mobile', phone: '', otp: '' };
+  App.workerSignup = {
+    open() { WU.active = true; WU.step = 'mobile'; WU.phone = ''; WU.otp = ''; renderLogin(); },
+    cancel() { WU.active = false; renderLogin(); },
+    onPhone(el) { WU.phone = el.value.replace(/\D/g, '').slice(0, 10); el.value = WU.phone; },
+    sendOtp() {
+      if (WU.phone.length !== 10) { App.toast('Enter a 10-digit Aadhaar-registered mobile number', 'alert'); return; }
+      WU.step = 'otp'; renderLogin();
+    },
+    onOtp(el) {
+      const v = el.value.replace(/\D/g, '').slice(0, 6);
+      el.value = v; WU.otp = v;
+      const b = document.getElementById('wuVerifyBtn'); if (b) b.disabled = v.length !== 6;
+    },
+    verify() {
+      if (WU.otp.length !== 6) { App.toast('Enter the 6-digit OTP', 'alert'); return; }
+      WU.step = 'verifying'; renderLogin();
+      setTimeout(() => {
+        // a fresh worker profile with just the verified mobile number — everything
+        // else (name, work history, skills) is filled in by the worker afterwards via
+        // Profile & Settings, so the rest of the app shouldn't show Rajan's demo data.
+        App.startApp('worker', {
+          name: '', subtitle: '', winId: 'WIN-NEW-' + WU.phone.slice(-4),
+          role: '', location: '', verificationScore: 0, phone: '+91 ' + WU.phone,
+          _fresh: true,
+        });
+      }, 1400);
+    },
   };
 
   /* ============================================================
@@ -486,6 +520,33 @@ window.App = (function () {
     }
   }
 
+  function workerSignupForm() {
+    if (WU.step === 'mobile') {
+      return `
+        <button class="btn btn--ghost btn--sm" style="margin-bottom:14px" onclick="App.workerSignup.cancel()">${App.icon('arrowleft')} Back</button>
+        <div class="row gap-12" style="margin-bottom:18px">${UIDAI}<div><h2 class="auth__title" style="font-size:19px">Create your account</h2><p class="muted" style="font-size:13px">Enter your Aadhaar-linked mobile number</p></div></div>
+        <div class="field"><label class="label">Mobile number</label>
+          <div class="input-group"><span class="prefix">+91</span><input class="input" id="wuPhone" inputmode="numeric" maxlength="10" placeholder="98••• •••••" value="${App.esc(WU.phone)}" oninput="App.workerSignup.onPhone(this)"></div>
+        </div>
+        <button class="btn btn--primary btn--block btn--lg" onclick="App.workerSignup.sendOtp()">${App.icon('send')} Send OTP</button>`;
+    }
+    if (WU.step === 'otp') {
+      return `
+        <button class="btn btn--ghost btn--sm" style="margin-bottom:14px" onclick="App.workerSignup.open()">${App.icon('arrowleft')} Back</button>
+        <div style="text-align:center;margin-bottom:20px"><div class="kpi__icon" style="width:46px;height:46px;margin:0 auto 12px;background:var(--accent-weak);color:var(--accent)">${App.icon('lock')}</div>
+          <h2 class="auth__title" style="font-size:20px">Enter OTP</h2><p class="muted" style="font-size:13px;margin-top:4px">Sent to mobile ending ${App.esc(WU.phone.slice(-4) || '••••')}</p></div>
+        <div class="field"><label class="label">6-digit OTP</label>
+          <input class="input mono" id="wuOtp" inputmode="numeric" maxlength="6" placeholder="••••••" oninput="App.workerSignup.onOtp(this)"></div>
+        <button class="btn btn--primary btn--block btn--lg" id="wuVerifyBtn" disabled onclick="App.workerSignup.verify()">${App.icon('check')} Verify &amp; continue</button>`;
+    }
+    // verifying
+    return `<div style="text-align:center;padding:30px 0">
+      <div class="spin" style="width:46px;height:46px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;margin:0 auto 20px;animation:spin 1s linear infinite"></div>
+      <h2 class="auth__title" style="font-size:20px">Verifying identity</h2>
+      <p class="muted" style="font-size:13px;margin-top:6px">Authenticating with UIDAI…</p></div>
+      <style>@keyframes spin{to{transform:rotate(360deg)}}</style>`;
+  }
+
   function renderLogin() {
     const accent = L.mode === 'worker' ? 'worker' : L.mode === 'employer' ? 'employer' : 'gov';
     let form = '';
@@ -502,7 +563,8 @@ window.App = (function () {
             <div class="method-card__logo">${DIGILOCKER}</div>
             <div class="grow"><b>DigiLocker</b><span>Mobile + security PIN + OTP</span></div>${App.icon('arrow')}
           </button>
-          <div class="banner banner--green" style="margin-top:16px">${App.icon('lock')}<div>Your data is encrypted and never stored. Authentication is powered by Government of India services.</div></div>`;
+          <div class="banner banner--green" style="margin-top:16px">${App.icon('lock')}<div>Your data is encrypted and never stored. Authentication is powered by Government of India services.</div></div>
+          <p class="muted" style="text-align:center;font-size:13px;margin-top:16px">New here? <b style="color:var(--accent-strong);cursor:pointer" onclick="App.workerSignup.open()">Create an account</b></p>`;
       } else if (L.step === 'input') {
         const isAad = L.method === 'aadhaar';
         form = `
@@ -543,6 +605,7 @@ window.App = (function () {
         <p style="text-align:center;font-size:13px;margin-top:14px">New here? <b style="color:var(--accent-strong);cursor:pointer" onclick="App.signup.open()">Create an employer account</b></p>`}`;
     }
     if (L.mode === 'employer' && SU.active) form = signupForm();
+    if (L.mode === 'worker' && WU.active) form = workerSignupForm();
 
     $('#app').innerHTML = `
       <div class="auth" data-persona="${accent}">
@@ -575,7 +638,7 @@ window.App = (function () {
           </div>
         </div>
       </div>`;
-    setTimeout(() => { const f = $('#lgPhone') || $('#lgEmail') || $('#otpWrap input'); if (f) f.focus(); }, 60);
+    setTimeout(() => { const f = $('#lgPhone') || $('#lgEmail') || $('#otpWrap input') || $('#wuPhone') || $('#wuOtp'); if (f) f.focus(); }, 60);
   }
   App._otpAdvance = (e, i) => {
     const wrap = $('#otpWrap'); if (!wrap) return;

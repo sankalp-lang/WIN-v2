@@ -148,11 +148,28 @@
     },
   };
 
+  // shown to a freshly signed-up worker instead of Rajan's demo portfolio — there's
+  // no work history, skills or schemes to show yet.
+  function freshPortfolio() {
+    return `<div class="page fade-in">
+      <div class="hero reveal">
+        <div class="hero__wash"></div>
+        <div class="hero__in">
+          <div class="eyebrow">${App.icon('idcard')} My Portfolio</div>
+          <h1 class="h-grad" style="margin-top:12px">Your portfolio is empty.</h1>
+          <p class="lead">Add your work history and skills in Profile &amp; Settings — once verified, they'll show up here as your golden record.</p>
+          <button class="btn btn--accent" style="margin-top:16px" onclick="App.navigate('worker-settings')">${App.icon('edit')} Add Work History</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
   App.registerView('worker-portfolio', {
     title: 'My Portfolio',
     subtitle: 'Your verified professional identity',
     render(ctx) {
       const u = ctx.user;
+      if (u && u._fresh) return freshPortfolio();
 
       const work = [
         { role: 'Construction Supervisor', org: 'NBCC (India) Ltd. — Govt. Housing Project', period: 'Mar 2023 – Present', loc: 'Delhi',

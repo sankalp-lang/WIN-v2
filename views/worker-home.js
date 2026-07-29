@@ -8,11 +8,28 @@
     askInput() { const el = document.getElementById('whAsk'); const v = el ? el.value.trim() : ''; App.assistant.toggle(true); if (v) { App.assistant.ask(v); el.value = ''; } },
   };
 
+  // shown to a freshly signed-up worker instead of Rajan's demo home — there's no
+  // work history or verified identity yet, so nudge them to fill in their profile.
+  function freshHome() {
+    return `<div class="page fade-in">
+      <div class="hero reveal">
+        <div class="hero__wash"></div>
+        <div class="hero__in">
+          <div class="eyebrow">${App.icon('fingerprint')} Welcome to WiN</div>
+          <h1 class="h-grad" style="margin-top:12px">Let's build your verified profile.</h1>
+          <p class="lead">Your mobile number is verified. Add your work history and skills next, so employers, banks and government schemes can see your verified record.</p>
+          <button class="btn btn--accent" style="margin-top:16px" onclick="App.navigate('worker-settings')">${App.icon('edit')} Complete My Profile</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
   App.registerView('worker-home', {
     title: 'Home',
     subtitle: 'Your verified worker identity',
     render(ctx) {
       const u = ctx.user;
+      if (u && u._fresh) return freshHome();
       const fn = (u.name || 'there').split(' ')[0];
 
       const chips = [
