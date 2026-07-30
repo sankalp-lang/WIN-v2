@@ -63,13 +63,15 @@
   // sector distinction reads as consistent across all five relation types)
   const REL_META = {
     direct:   { label: 'Full-Time',     ic: 'briefcase', govtIc: 'landmark', c: '#2f5fd0' },
-    agency:   { label: 'Contract',      ic: 'users',     govtIc: 'building', c: '#6b4fc7' },
+    agency:   { label: 'Contract',      ic: 'users',     govtIc: 'users',    c: '#6b4fc7' },
     gig:      { label: 'Gig',           ic: 'bolt',      govtIc: 'bolt',     c: '#c07d10' },
-    self:     { label: 'Self-Employed', ic: 'star',      govtIc: 'star',     c: '#0d9488' },
+    self:     { label: 'Self-Employed', ic: 'user',      govtIc: 'user',     c: '#0d9488' },
     informal: { label: 'Informal',      ic: 'leaf',      govtIc: 'leaf',     c: '#475569' },
   };
-  // a plain icon badge (no text) — the icon itself differs by relation type, and again by
-  // sector for Full-Time/Contract (landmark/building for govt vs briefcase/users otherwise)
+  // a plain icon badge (no text) — the icon differs by relation type: briefcase/landmark for
+  // Full-Time (private vs. government employer), users for Contract Worker (an agency places
+  // them — sector-agnostic by design, see worker-settings.js), a single "user" for
+  // Self-Employed (their own boss, vs. Contract's "users"), bolt for Gig, leaf for Informal.
   function relTag(w) {
     const m = REL_META[w.relation] || REL_META.direct;
     const isGovt = w.sector === 'govt';
