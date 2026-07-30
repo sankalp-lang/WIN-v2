@@ -116,6 +116,9 @@
   // front/back) → done. This prototype simulates every capture (no real camera/location
   // access), but keeps the same screen-by-screen structure and framing.
   const ID_TYPES = ['Aadhaar Card', 'PAN Card', 'Passport', "Voter ID", 'Driving Licence'];
+  // only ID types that actually carry information on the reverse side need a back capture —
+  // a PAN card is single-sided, and a passport's data lives entirely on the front bio page.
+  const ID_BACK_REQUIRED = { 'Aadhaar Card': true, 'PAN Card': false, 'Passport': false, 'Voter ID': true, 'Driving Licence': true };
   // the photo-capture sequence run once GPS location has matched — two variants:
   // DAV_FLOW_SELF for self-employed workers verifying a business/office address: name
   // board → office interior (reception → lobby → workstation) → office ID card (a single
@@ -233,7 +236,8 @@
     } else if (DAV.step === 'flow') {
       const FLOW = davFlow();
       const cs = FLOW[DAV.idx];
-      const stepNum = DAV.idx + 1, stepTotal = FLOW.length;
+      const stepNum = DAV.idx + 1;
+      const stepTotal = (DAV.idType && ID_BACK_REQUIRED[DAV.idType] === false) ? FLOW.length - 1 : FLOW.length;
       // include the context (Reception/Lobby/Workstation) in the header itself — otherwise
       // three consecutive "Office Interior" steps look identical and read like a glitch.
       title = cs.kind === 'idphoto' ? 'Government ID' : (cs.context ? `${cs.title} — ${cs.context}` : cs.title);
@@ -243,7 +247,10 @@
         // photo (office name board / interior / office ID / farmer work area) or idphoto (govt ID front/back)
         const label = cs.kind === 'idphoto' ? `${DAV.idType || 'ID'} (${cs.side})` : (cs.context ? `${cs.title} (${cs.context})` : cs.title);
         const heading = cs.kind === 'idphoto' ? `Capture ${DAV.idType || 'ID'}` : cs.title;
-        const subline = cs.kind === 'idphoto' ? `Take a clear photo of the ${cs.side.toLowerCase()} of your ${DAV.idType || 'ID'}` : cs.sub;
+        const backNotNeeded = cs.kind === 'idphoto' && cs.side === 'Front' && DAV.idType && ID_BACK_REQUIRED[DAV.idType] === false;
+        const subline = cs.kind === 'idphoto'
+          ? `Take a clear photo of the ${cs.side.toLowerCase()} of your ${DAV.idType || 'ID'}${backNotNeeded ? ' (front only — no back side needed)' : ''}`
+          : cs.sub;
         // the ID-type picker lives on the Front capture screen so choosing it isn't its
         // own separate numbered step — it just gates the Capture action until answered.
         const needsIdType = cs.kind === 'idphoto' && cs.side === 'Front';
@@ -438,8 +445,14 @@
     davSkipFlow() { stopDavCamera(); WorkerSettings.davAdvanceFlow(); },
     davAdvanceFlow() {
       stopDavCamera();
-      DAV.idx++; DAV.phase = 'ready';
-      if (DAV.idx >= davFlow().length) {
+      const FLOW = davFlow();
+      const cs = FLOW[DAV.idx];
+      DAV.idx++;
+      // the Back capture right after Front is skipped entirely when the chosen ID type has
+      // no meaningful reverse side (e.g. a PAN card, or a passport's bio page).
+      if (cs && cs.kind === 'idphoto' && cs.side === 'Front' && ID_BACK_REQUIRED[DAV.idType] === false) DAV.idx++;
+      DAV.phase = 'ready';
+      if (DAV.idx >= FLOW.length) {
         const w = S.work[DAV.i];
         if (w) { w.source = 'dav'; w.verifyStatus = 'verified'; w.tier = 'verified'; }
         DAV.step = 'done'; davModal(); App.reload();

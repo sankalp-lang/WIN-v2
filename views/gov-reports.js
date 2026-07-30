@@ -1,28 +1,88 @@
 /* Government · Reports — editorial hero, live quick-stats strip, a
-   category-filtered library of analytical reports (download + preview),
+   section-structured library of analytical reports (download + preview),
    a scheduled-reports queue you can run, and a working "Generate report"
-   flow (type + period + format → simulated compile → toast). All figures
-   are from the WiN registry demo. Gold-standard v2 look. */
+   flow (type + period + format → simulated compile → toast). Reports are
+   organised against the Maharashtra LMIS Indicator Framework (World
+   Bank Labor Market Observatory model): each report states what WIN ID
+   data verifies it and which external survey/administrative source it
+   triangulates against, mirroring the framework's indicator checklist. */
 (function () {
-  // ---- category tints (not in base tokens) ----
-  const CAT_C = {
-    Employment:  'var(--accent)',
-    Grievances:  '#c07d10',
-    Demographics:'#2f5fd0',
-    Compliance:  '#6b4fc7',
-    Economics:   '#0e9f6e',
-    Migration:   '#0891a7',
-  };
+  // ---- section tints (not in base tokens) ----
+  const SECTIONS = [
+    { key: 'ops',       title: 'Operational Registry Reports', desc: 'Day-to-day registry health — enrollment, demographics, grievances, employer compliance and economic impact.', c: '#64748b', ic: 'database' },
+    { key: 'workforce', title: '1. Workforce Composition',                    desc: 'LFPR, WPR, unemployment and sectoral concentration of the enrolled workforce.', c: 'var(--accent)', ic: 'users' },
+    { key: 'formal',    title: '2. Formal–Informal Segmentation',             desc: 'Formal vs. informal employment, organised vs. unorganised units, and social security coverage.', c: '#6b4fc7', ic: 'shieldcheck' },
+    { key: 'skilling',  title: '3. Education-to-Employment / Skilling Mapping', desc: 'Graduate outcomes, ITI/NSDC placement rates and skill-mismatch tracking.', c: '#2f5fd0', ic: 'graduation' },
+    { key: 'income',    title: '4. Income & Wage',                           desc: 'Verified, consent-based income and wage distribution — not a survey estimate.', c: '#0e9f6e', ic: 'trend' },
+    { key: 'migration', title: '5. Migration & Interstate Mobility',          desc: 'Interstate worker stock, migrant sector concentration, and benefit-portability eligibility.', c: '#0891a7', ic: 'mappin' },
+    { key: 'demand',    title: '6. Demand-Side Signals',                     desc: 'Employer-side vacancy postings captured via HRMS-integrated employers.', c: '#c07d10', ic: 'briefcase' },
+  ];
+  const CAT_C = SECTIONS.reduce((m, s) => { m[s.key] = s.c; return m; }, {});
 
-  // ---- report library (from the GovReports spec) ----
+  // ---- report library, organised against the LMIS Indicator Framework ----
   const REPORTS = [
-    { id: 'emp-monthly',  title: 'Monthly Employment Summary', cat: 'Employment',   ic: 'users',    size: '2.4 MB', last: 'Nov 1, 2024',  freq: 'Monthly',   desc: 'Comprehensive overview of enrollment, verification, and sector distribution.' },
-    { id: 'grievance',    title: 'Grievance Analysis Report',  cat: 'Grievances',   ic: 'alert',    size: '1.1 MB', last: 'Nov 15, 2024', freq: 'Bi-weekly', desc: 'Category-wise breakdown of grievances, resolution times, and escalation rates.' },
-    { id: 'demographics', title: 'State-wise Demographics',    cat: 'Demographics', ic: 'mappin',   size: '3.8 MB', last: 'Oct 31, 2024', freq: 'Monthly',   desc: 'Detailed demographic data per state including gender, age, and urban/rural split.' },
-    { id: 'compliance',   title: 'Employer Compliance Report', cat: 'Compliance',   ic: 'building',  size: '980 KB', last: 'Nov 10, 2024', freq: 'Weekly',    desc: 'Verification compliance rates and outstanding employer obligations.' },
-    { id: 'economic',     title: 'Quarterly Economic Impact',  cat: 'Economics',    ic: 'trend',    size: '5.2 MB', last: 'Sep 30, 2024', freq: 'Quarterly', desc: 'Assessment of WiN platform impact on formalization of the informal workforce.' },
-    { id: 'sector',       title: 'Sector Growth Analysis',     cat: 'Employment',   ic: 'chart',    size: '2.0 MB', last: 'Nov 5, 2024',  freq: 'Monthly',   desc: 'Sector-wise employment growth trends and forward projections.' },
-    { id: 'migration',    title: 'Interstate Worker Migration Report', cat: 'Migration', ic: 'mappin', size: '3.1 MB', last: 'Nov 12, 2024', freq: 'Quarterly', desc: 'Origin-destination migration corridors, seasonal labour flow, and top sending/receiving states for informal workers.' },
+    // ---- Operational registry reports (existing registry health, outside the indicator framework) ----
+    { id: 'emp-monthly',  title: 'Monthly Employment Summary', section: 'ops', ic: 'users',    size: '2.4 MB', last: 'Nov 1, 2024',  freq: 'Monthly',   desc: 'Comprehensive overview of enrollment, verification, and sector distribution.' },
+    { id: 'demographics', title: 'State-wise Demographics',    section: 'ops', ic: 'mappin',   size: '3.8 MB', last: 'Oct 31, 2024', freq: 'Monthly',   desc: 'Detailed demographic data per state including gender, age, and urban/rural split.' },
+    { id: 'grievance',    title: 'Grievance Analysis Report',  section: 'ops', ic: 'alert',    size: '1.1 MB', last: 'Nov 15, 2024', freq: 'Bi-weekly', desc: 'Category-wise breakdown of grievances, resolution times, and escalation rates.' },
+    { id: 'compliance',   title: 'Employer Compliance Report', section: 'ops', ic: 'building', size: '980 KB', last: 'Nov 10, 2024', freq: 'Weekly',    desc: 'Verification compliance rates and outstanding employer obligations.' },
+    { id: 'economic',     title: 'Quarterly Economic Impact',  section: 'ops', ic: 'trend',    size: '5.2 MB', last: 'Sep 30, 2024', freq: 'Quarterly', desc: 'Assessment of WiN platform impact on formalization of the informal workforce.' },
+
+    // ---- 1. Workforce Composition ----
+    { id: 'sector', title: 'Sectoral Workforce Concentration & Growth', section: 'workforce', ic: 'chart', size: '2.0 MB', last: 'Nov 5, 2024', freq: 'Monthly',
+      desc: 'Headcount and share of the workforce by sector — agriculture, gig/platform, construction, manufacturing, services.',
+      verifiedVia: 'Sector field on the WIN ID profile (HRMS/aggregator-linked or self-declared), aggregated across all enrolled workers.',
+      triangulate: ['PLFS (NSO)', 'DES Maharashtra', 'NSDC sector reports'] },
+    { id: 'lfpr-wpr', title: 'LFPR, WPR & Unemployment Rate by District', section: 'workforce', ic: 'users', size: '2.6 MB', last: 'Nov 8, 2024', freq: 'Monthly',
+      desc: 'Labour Force Participation Rate, Worker Population Ratio and unemployment rate, split by district and gender.',
+      verifiedVia: "Active/inactive status of enrolled workers from live WIN ID employment records (HRMS feeds, gig declarations, self-declaration re-verified every 14 days).",
+      triangulate: ['PLFS (NSO)', 'Maharashtra Economic Survey', 'DES Maharashtra'] },
+
+    // ---- 2. Formal–Informal Segmentation ----
+    { id: 'formal-informal', title: 'Formal vs. Informal Employment Share', section: 'formal', ic: 'shieldcheck', size: '1.8 MB', last: 'Nov 3, 2024', freq: 'Monthly',
+      desc: 'Share of workers with a written contract and social security coverage vs. without, and organised vs. unorganised establishments.',
+      verifiedVia: 'Employment-type field captured at WIN ID enrolment (HRMS-linked formal job vs. gig/aggregator vs. self-declared informal), verified each 14-day cycle.',
+      triangulate: ['EPFO / ESIC enrolment data', 'PLFS', 'Annual Survey of Industries'] },
+    { id: 'informal-subsector', title: 'Informal Sector Segmentation & Social Security Coverage', section: 'formal', ic: 'file', size: '1.6 MB', last: 'Nov 6, 2024', freq: 'Monthly',
+      desc: 'Within the informal segment: headcount by sub-sector (construction, farm labour, gig, domestic, other) and PF/ESIC coverage rate.',
+      verifiedVia: 'Sector/employment-type fields on informal WIN ID profiles (no HRMS link), plus PF/ESIC contribution status pulled via the HRMS-to-WIN ID integration.',
+      triangulate: ['BOCW Board registrations', 'e-Shram', 'PLFS', 'EPFO', 'ESIC'] },
+
+    // ---- 3. Education-to-Employment / Skilling Mapping ----
+    { id: 'grad-outcome', title: 'Graduate Outcome Mapping', section: 'skilling', ic: 'graduation', size: '1.4 MB', last: 'Oct 28, 2024', freq: 'Quarterly',
+      desc: 'Stream of graduation cross-tabulated against sector of first employment.',
+      verifiedVia: 'Education field at WIN ID enrolment matched against the first verified employer/sector recorded post-enrolment.',
+      triangulate: ['University / board records', 'NCS', 'MahaSwayam placement data'] },
+    { id: 'iti-placement', title: 'ITI/NSDC Training-to-Placement & Skill Mismatch', section: 'skilling', ic: 'award', size: '1.5 MB', last: 'Nov 2, 2024', freq: 'Quarterly',
+      desc: 'Share of vocationally trained candidates placed within 6 months, and the extent of over/under-qualification vs. job role held.',
+      verifiedVia: 'Training-completion flag matched against the first verified employment record within 6 months; declared qualification compared to verified job role.',
+      triangulate: ['MSSDS', 'NSDC', 'MahaSwayam', 'periodic employer surveys'] },
+
+    // ---- 4. Income & Wage ----
+    { id: 'wage-distribution', title: 'Wage Distribution by Sector, Gender & Skill', section: 'income', ic: 'trend', size: '2.2 MB', last: 'Nov 9, 2024', freq: 'Monthly',
+      desc: 'Median/mean wages disaggregated by sector, gender and skill level.',
+      verifiedVia: 'Aggregated, verified income data across enrolled WIN ID holders, disaggregated by sector, gender and skill level.',
+      triangulate: ['PLFS', 'Labour Bureau wage rate reports'] },
+    { id: 'verified-income', title: 'Verified Income Record Summary', section: 'income', ic: 'file', size: '1.9 MB', last: 'Nov 11, 2024', freq: 'Monthly',
+      desc: "The actual, consent-based income figure per worker — distinct from a self-declared survey estimate — with 14-day re-verification compliance.",
+      verifiedVia: "WIN ID's core function: an individual-level income figure declared and re-confirmed every 14 days from HRMS payroll, gig payout data, or direct declaration.",
+      triangulate: ['EPFO contribution records (cross-check for HRMS-linked cases)'] },
+
+    // ---- 5. Migration & Interstate Mobility ----
+    { id: 'migration', title: 'In-Migrant Worker Stock & Sector Concentration', section: 'migration', ic: 'mappin', size: '3.1 MB', last: 'Nov 12, 2024', freq: 'Quarterly',
+      desc: 'Interstate worker inflow by source state and destination district, and migrant share of the workforce by sector.',
+      verifiedVia: 'Home-state and current work-location fields on the WIN ID profile, updated at each re-verification cycle.',
+      triangulate: ['Census', 'Migrant Tracking System (MTS)', 'e-Shram registrations'] },
+    { id: 'migrant-gap', title: 'Migrant Registration Gap & Benefit Portability', section: 'migration', ic: 'shieldcheck', size: '1.7 MB', last: 'Nov 7, 2024', freq: 'Quarterly',
+      desc: 'Share of migrant workers unregistered under BOCW/e-Shram (a proxy for informality), and benefit-portability eligibility uptake.',
+      verifiedVia: "Enrolled-but-unregistered WIN ID holders give a direct count of the registration gap; verified days-worked establishes portable-benefit eligibility.",
+      triangulate: ['BOCW vs. Census/PLFS migrant estimates', 'ONORC dashboard', 'PDS records', 'MahaDBT'] },
+
+    // ---- 6. Demand-Side Signals ----
+    { id: 'vacancy-index', title: 'Vacancy Index by Sector & District', section: 'demand', ic: 'briefcase', size: '1.3 MB', last: 'Nov 4, 2024', freq: 'Monthly',
+      desc: 'Registered and online job vacancies by sector and district, from HRMS-integrated employers.',
+      verifiedVia: 'Employer-side postings captured where the employer is itself HRMS-integrated with the WIN system.',
+      triangulate: ['NCS', 'Employment Exchanges', 'MahaSwayam', 'private job portals'] },
   ];
 
   // ---- shared seed lists for generating extensive (100+ row), realistic report data ----
@@ -135,6 +195,120 @@
     return { headers: ['Origin State', 'Destination State', 'Workers (est.)', 'Dominant Sector', 'Peak Season'], rows: rows.slice(0, 100) };
   }
 
+  // ---- LMIS indicator-framework generators (Maharashtra LMIS Indicator Checklist) ----
+  function genLfprWpr() {
+    const rows = [];
+    ALL_STATES.forEach((st, si) => DISTRICT_SEED.forEach((d, di) => {
+      const lfpr = Math.round((52 + seeded(si, di) * 22) * 10) / 10;
+      const wpr = Math.round((lfpr * (0.82 + seeded(di, si) * 0.14)) * 10) / 10;
+      const unemp = Math.round(((lfpr - wpr) / lfpr * 100) * 10) / 10;
+      const maleLfpr = Math.round((lfpr * (1.15 + seeded(si + di, 3) * 0.1)) * 10) / 10;
+      const femaleLfpr = Math.round(Math.max(18, lfpr * 2 - maleLfpr) * 10) / 10;
+      rows.push([st, st + ' ' + d, lfpr, wpr, unemp, maleLfpr, femaleLfpr]);
+    }));
+    return { headers: ['State', 'District', 'LFPR %', 'WPR %', 'Unemployment Rate %', 'Male LFPR %', 'Female LFPR %'], rows };
+  }
+
+  function genFormalInformal() {
+    const rows = [];
+    ALL_STATES.forEach((st, si) => DISTRICT_SEED.forEach((d, di) => {
+      const formal = Math.round((22 + seeded(si, di) * 45) * 10) / 10;
+      const organised = Math.round((formal * (0.85 + seeded(di, si) * 0.2)) * 10) / 10;
+      rows.push([st, st + ' ' + d, formal, Math.round((100 - formal) * 10) / 10, Math.min(99.9, organised), Math.round((100 - Math.min(99.9, organised)) * 10) / 10]);
+    }));
+    return { headers: ['State', 'District', 'Formal Employment %', 'Informal Employment %', 'Organised Sector %', 'Unorganised Sector %'], rows };
+  }
+
+  function genInformalSubsector() {
+    const SUB = ['Construction', 'Farm Labour', 'Gig & Platform Work', 'Domestic Work', 'Other Informal'];
+    const rows = [];
+    SUB.forEach((sub, subi) => ALL_STATES.forEach((st, si) => {
+      const headcount = Math.round((40000 + si * 8200 + subi * 6100) * (0.7 + seeded(subi, si) * 0.6));
+      const pf = Math.round(8 + seeded(si, subi) * 30);
+      const esic = Math.round(6 + seeded(subi, si) * 28);
+      rows.push([sub, st, headcount, pf, esic]);
+    }));
+    return { headers: ['Informal Sub-sector', 'State', 'Headcount', 'PF Coverage %', 'ESIC Coverage %'], rows };
+  }
+
+  function genGradOutcome() {
+    const STREAMS = ['Economics', 'Engineering', 'Commerce', 'Arts', 'Science', 'Agriculture', 'Law', 'Management'];
+    const rows = [];
+    STREAMS.forEach((stream, sti) => SECTOR_LIST.forEach((sec, sci) => {
+      const placed = Math.round((800 + sti * 220 + sci * 140) * (0.6 + seeded(sti, sci) * 0.7));
+      const pct = Math.round((6 + seeded(sci, sti) * 34) * 10) / 10;
+      rows.push([stream, sec, placed, pct]);
+    }));
+    // pad to 100+ rows with an additional state cut for the top 3 streams
+    STREAMS.slice(0, 5).forEach((stream, sti) => ALL_STATES.slice(0, 15).forEach((st, si) => {
+      const placed = Math.round((300 + sti * 90 + si * 40) * (0.6 + seeded(sti, si) * 0.7));
+      rows.push([stream, st, placed, Math.round((5 + seeded(si, sti) * 20) * 10) / 10]);
+    }));
+    return { headers: ['Graduation Stream', 'First-Employment Sector/State', 'Placed (count)', 'Share of Stream %'], rows };
+  }
+
+  function genItiPlacement() {
+    const COURSES = ['Electrician', 'Fitter', 'Welder', 'Plumber', 'CNC Machinist', 'Mechanic (Diesel)', 'COPA', 'Draughtsman (Civil)'];
+    const rows = [];
+    COURSES.forEach((course, ci) => ALL_STATES.forEach((st, si) => {
+      const placementRate = Math.round((38 + seeded(ci, si) * 48) * 10) / 10;
+      const mismatch = Math.round((6 + seeded(si, ci) * 26) * 10) / 10;
+      const trained = Math.round((600 + ci * 140 + si * 60) * (0.7 + seeded(ci, si) * 0.5));
+      rows.push([course, st, trained, placementRate, mismatch]);
+    }));
+    return { headers: ['ITI/NSDC Course', 'State', 'Candidates Trained', 'Placement Rate % (within 6mo)', 'Skill-Mismatch Rate %'], rows };
+  }
+
+  function genWageDistribution() {
+    const GENDERS = ['Male', 'Female'];
+    const SKILLS = ['Unskilled', 'Semi-skilled', 'Skilled'];
+    const rows = [];
+    SECTOR_LIST.forEach((sec, sci) => GENDERS.forEach((g, gi) => SKILLS.forEach((sk, ski) => {
+      const base = 9000 + sci * 2600 + ski * 5200 - gi * 1400;
+      const median = Math.round(base * (0.9 + seeded(sci + ski, gi) * 0.25));
+      const mean = Math.round(median * (1.04 + seeded(gi, ski) * 0.1));
+      rows.push([sec, g, sk, median, mean]);
+    })));
+    // extend with a state cut of the overall skilled-worker median for 100+ rows
+    ALL_STATES.forEach((st, si) => SECTOR_LIST.forEach((sec, sci) => {
+      const median = Math.round((12000 + si * 900 + sci * 2400) * (0.85 + seeded(si, sci) * 0.3));
+      rows.push([sec, st, 'All', median, Math.round(median * 1.05)]);
+    }));
+    return { headers: ['Sector', 'Gender / State', 'Skill Level', 'Median Wage (₹/mo)', 'Mean Wage (₹/mo)'], rows };
+  }
+
+  function genVerifiedIncome() {
+    const rows = [];
+    ALL_STATES.forEach((st, si) => SECTOR_LIST.forEach((sec, sci) => {
+      const avgIncome = Math.round((11000 + si * 850 + sci * 2100) * (0.85 + seeded(si, sci) * 0.3));
+      const reverifyPct = Math.round((72 + seeded(sci, si) * 25) * 10) / 10;
+      const holders = Math.round((18000 + si * 4200 + sci * 3100) * (0.7 + seeded(si + sci, 4) * 0.5));
+      rows.push([st, sec, holders, avgIncome, reverifyPct]);
+    }));
+    return { headers: ['State', 'Sector', 'Verified WIN ID Holders', 'Avg. Verified Income (₹/mo)', '14-Day Re-verification Compliance %'], rows };
+  }
+
+  function genMigrantGap() {
+    const rows = [];
+    ALL_STATES.forEach((st, si) => SECTOR_LIST.forEach((sec, sci) => {
+      const enrolled = Math.round((20000 + si * 3800 + sci * 2600) * (0.7 + seeded(si, sci) * 0.5));
+      const unregisteredPct = Math.round((14 + seeded(sci, si) * 38) * 10) / 10;
+      const portabilityPct = Math.round((100 - unregisteredPct) * (0.55 + seeded(si, sci) * 0.3) * 10) / 10;
+      rows.push([st, sec, enrolled, unregisteredPct, portabilityPct]);
+    }));
+    return { headers: ['Source State', 'Sector', 'Enrolled Migrant WIN ID Holders', 'BOCW/e-Shram Unregistered %', 'Benefit-Portability Eligible %'], rows };
+  }
+
+  function genVacancyIndex() {
+    const rows = [];
+    ALL_STATES.forEach((st, si) => DISTRICT_SEED.forEach((d, di) => SECTOR_LIST.slice(0, 3).forEach((sec, sci) => {
+      const vacancies = Math.round((80 + si * 22 + di * 14 + sci * 30) * (0.6 + seeded(si + di, sci) * 0.8));
+      const change = Math.round((seeded(di, sci) * 24 - 8) * 10) / 10;
+      rows.push([st, st + ' ' + d, sec, vacancies, change]);
+    })));
+    return { headers: ['State', 'District', 'Sector', 'Open Vacancies', 'YoY Change %'], rows };
+  }
+
   // ---- realistic, extensive (100+ row) CSV/Excel/PDF payloads keyed by report id ----
   const REPORT_DATA = {
     'emp-monthly': genEmpMonthly(),
@@ -144,6 +318,15 @@
     economic: genEconomic(),
     sector: genSector(),
     migration: genMigration(),
+    'lfpr-wpr': genLfprWpr(),
+    'formal-informal': genFormalInformal(),
+    'informal-subsector': genInformalSubsector(),
+    'grad-outcome': genGradOutcome(),
+    'iti-placement': genItiPlacement(),
+    'wage-distribution': genWageDistribution(),
+    'verified-income': genVerifiedIncome(),
+    'migrant-gap': genMigrantGap(),
+    'vacancy-index': genVacancyIndex(),
   };
 
   // ---- scheduled queue (mutable so "Run now" changes state) ----
@@ -156,7 +339,7 @@
   // ---- live quick-stats (mutable so generate/download move the numbers) ----
   const STATS = { generated: 24, downloads: 1247, avg: '2.4 min' };
 
-  const CATS = ['All', 'Employment', 'Grievances', 'Demographics', 'Compliance', 'Economics', 'Migration'];
+  const SECTION_FILTERS = [{ key: 'All', title: 'All' }].concat(SECTIONS.map(s => ({ key: s.key, title: s.title.replace(/^\d+\.\s*/, '') })));
   const PERIODS = ['This month (Nov 2024)', 'Last month (Oct 2024)', 'Q3 FY 2024–25', 'FY 2024–25 (YTD)', 'Custom range…'];
 
   // ---- view state ----
@@ -205,7 +388,7 @@
     } else {
       App.downloadReport('win-custom-extract', 'Custom extract',
         ['Report', 'Category', 'Frequency', 'Last generated'],
-        REPORTS.map(r => [r.title, r.cat, r.freq, r.last]), fmt || 'CSV');
+        REPORTS.map(r => [r.title, r.section, r.freq, r.last]), fmt || 'CSV');
     }
   }
 
@@ -258,7 +441,7 @@
       if (!rep) return;
       const data = REPORT_DATA[rep.id];
       const headers = data ? data.headers : ['Report', 'Category', 'Frequency', 'Last generated'];
-      const allRows = stateFilteredRows(headers, data ? data.rows : REPORTS.map(r => [r.title, r.cat, r.freq, r.last]));
+      const allRows = stateFilteredRows(headers, data ? data.rows : REPORTS.map(r => [r.title, r.section, r.freq, r.last]));
       const sample = allRows.slice(0, 50);
       const thead = '<tr>' + headers.map(h => `<th>${App.esc(h)}</th>`).join('') + '</tr>';
       const tbody = sample.map(r => '<tr>' + r.map(c => `<td>${App.esc(c)}</td>`).join('') + '</tr>').join('');
@@ -294,13 +477,14 @@
     preview(id) {
       const rep = REPORTS.find(r => r.id === id);
       if (!rep) return;
-      const c = CAT_C[rep.cat] || 'var(--accent)';
+      const c = CAT_C[rep.section] || 'var(--accent)';
+      const sectionMeta = SECTIONS.find(s => s.key === rep.section);
       const includes = ['Executive summary', 'Registry aggregates', 'State-level breakdown', 'Trend charts & YoY deltas', 'Source-verification audit trail'];
       App.modal.open(`
         <div class="row gap-12" style="align-items:flex-start;margin-bottom:16px">
           <div class="gr-tile" style="background:${c}1a;color:${c};width:44px;height:44px">${App.icon(rep.ic)}</div>
           <div class="grow">
-            <div class="row gap-8 wrap" style="align-items:center"><span class="tag" style="background:${c}1a;color:${c}">${App.esc(rep.cat)}</span>${App.ui.pill(rep.freq, 'gray')}</div>
+            <div class="row gap-8 wrap" style="align-items:center"><span class="tag" style="background:${c}1a;color:${c}">${App.esc(sectionMeta ? sectionMeta.title.replace(/^\d+\.\s*/, '') : 'Report')}</span>${App.ui.pill(rep.freq, 'gray')}</div>
             <p class="muted" style="font-size:13px;margin-top:9px;line-height:1.55">${App.esc(rep.desc)}</p>
           </div>
         </div>
@@ -411,39 +595,56 @@
               <select class="select gr-sel" onchange="GovReports.setState(this.value)" aria-label="Filter report data by state">${stateOptions}</select>
             </div>
             <div class="seg gr-seg">
-              ${CATS.map(c => `<button class="${S.cat === c ? 'is-active' : ''}" onclick="GovReports.setCat('${c}')">${c}</button>`).join('')}
+              ${SECTION_FILTERS.map(f => `<button class="${S.cat === f.key ? 'is-active' : ''}" onclick="GovReports.setCat('${f.key}')">${App.esc(f.title)}</button>`).join('')}
             </div>
           </div>
         </div>`;
 
-      const shown = REPORTS.filter(r => S.cat === 'All' || r.cat === S.cat);
-      const cards = shown.length ? `
-        <div class="grid grid-3 gr-lib mb-20">
-          ${shown.map(r => {
-            const c = CAT_C[r.cat] || 'var(--accent)';
-            return `
-            <div class="card card--hover gr-card reveal" onclick="GovReports.preview('${r.id}')" role="button" tabindex="0"
-                 onkeydown="if(event.key==='Enter'){GovReports.preview('${r.id}')}">
-              <div class="card__body">
-                <div class="row between" style="align-items:flex-start;margin-bottom:14px">
-                  <div class="gr-tile" style="background:${c}1a;color:${c}">${App.icon(r.ic)}</div>
-                  <span class="tag" style="background:${c}1a;color:${c}">${App.esc(r.cat)}</span>
-                </div>
-                <b style="font-size:15.5px;display:block;line-height:1.25">${App.esc(r.title)}</b>
-                <p class="muted" style="font-size:12.8px;margin-top:6px;line-height:1.5">${App.esc(r.desc)}</p>
-                <div class="row gap-16 wrap gr-meta">
-                  <span class="row gap-6">${App.icon('clock')}<span>Last · <b class="num" style="color:var(--ink-2)">${App.esc(r.last)}</b></span></span>
-                  <span class="row gap-6">${App.icon('calendar')}<span>${App.esc(r.freq)}</span></span>
-                  <span class="row gap-6">${App.icon('file')}<span class="num">${App.esc(r.size)}</span></span>
-                </div>
+      // ---- report library, grouped by LMIS section (each with its own header + description) ----
+      function reportCard(r) {
+        const c = CAT_C[r.section] || 'var(--accent)';
+        const provenance = r.verifiedVia ? `
+          <div class="gr-prov">
+            <div class="gr-prov__row"><b>${App.icon('shieldcheck')} Verified via WIN ID</b><span>${App.esc(r.verifiedVia)}</span></div>
+            <div class="gr-prov__row"><b>${App.icon('layers')} Triangulated with</b><span class="row gap-6 wrap">${r.triangulate.map(t => `<span class="src-chip">${App.esc(t)}</span>`).join('')}</span></div>
+          </div>` : '';
+        return `
+          <div class="card card--hover gr-card reveal" onclick="GovReports.preview('${r.id}')" role="button" tabindex="0"
+               onkeydown="if(event.key==='Enter'){GovReports.preview('${r.id}')}">
+            <div class="card__body">
+              <div class="row between" style="align-items:flex-start;margin-bottom:14px">
+                <div class="gr-tile" style="background:${c}1a;color:${c}">${App.icon(r.ic)}</div>
+                ${App.ui.pill(r.freq, 'gray')}
               </div>
-              <div class="gr-foot">
-                <button class="btn btn--soft btn--sm gr-dl" onclick="event.stopPropagation();GovReports.download('${r.id}')">${App.icon('download')} Download</button>
-                <span class="gr-open">Open ${App.icon('arrow')}</span>
+              <b style="font-size:15.5px;display:block;line-height:1.25">${App.esc(r.title)}</b>
+              <p class="muted" style="font-size:12.8px;margin-top:6px;line-height:1.5">${App.esc(r.desc)}</p>
+              ${provenance}
+              <div class="row gap-16 wrap gr-meta">
+                <span class="row gap-6">${App.icon('clock')}<span>Last · <b class="num" style="color:var(--ink-2)">${App.esc(r.last)}</b></span></span>
+                <span class="row gap-6">${App.icon('file')}<span class="num">${App.esc(r.size)}</span></span>
               </div>
-            </div>`;
-          }).join('')}
-        </div>` : `<div class="card reveal mb-20">${App.ui.empty('file', 'No reports in this category', 'Try another filter or generate a custom report.')}</div>`;
+            </div>
+            <div class="gr-foot">
+              <button class="btn btn--soft btn--sm gr-dl" onclick="event.stopPropagation();GovReports.download('${r.id}')">${App.icon('download')} Download</button>
+              <span class="gr-open">Open ${App.icon('arrow')}</span>
+            </div>
+          </div>`;
+      }
+
+      const visibleSections = SECTIONS.filter(s => S.cat === 'All' || S.cat === s.key);
+      const cards = visibleSections.map(s => {
+        const reps = REPORTS.filter(r => r.section === s.key);
+        if (!reps.length) return '';
+        return `
+          <div class="gr-section reveal">
+            <div class="gr-section__head">
+              <div class="gr-tile" style="background:${s.c}1a;color:${s.c}">${App.icon(s.ic)}</div>
+              <div class="grow"><h3 style="margin:0">${App.esc(s.title)}</h3><p class="muted" style="font-size:12.5px;margin:2px 0 0">${App.esc(s.desc)}</p></div>
+              <span class="faint" style="font-size:12px">${reps.length} report${reps.length === 1 ? '' : 's'}</span>
+            </div>
+            <div class="grid grid-3 gr-lib">${reps.map(reportCard).join('')}</div>
+          </div>`;
+      }).join('') || `<div class="card reveal mb-20">${App.ui.empty('file', 'No reports in this section', 'Try another filter or generate a custom report.')}</div>`;
 
       // ---- scheduled queue ----
       const schedRows = SCHED.map(s => {
@@ -479,6 +680,7 @@
               ${['EPFO', 'Income Tax', 'ESIC', 'GSTN', 'e-Shram'].map(s => `<span class="src-chip">${App.icon('database')} ${App.esc(s)}</span>`).join('')}
             </div>
             <div class="banner banner--accent" style="margin-top:16px;align-items:center">${App.icon('lock')}<div>Aggregated exports only — no individual worker record leaves the registry.</div></div>
+            <div class="banner banner--info" style="margin-top:10px;align-items:flex-start">${App.icon('help')}<div><b>Note on scope</b> — Employer hiring intent (forward-looking recruitment plans) is intentionally not reported here: WIN ID verifies realised, consent-based employment, not forward-looking intent. That indicator is better sourced from periodic employer surveys.</div></div>
           </div>
         </div>`;
 
@@ -504,6 +706,13 @@
         .gr-gen__ic{ width:52px; height:52px; margin:0 auto 12px; border-radius:var(--r); display:grid; place-items:center; background:var(--accent-weak); color:var(--accent-strong); }
         .gr-gen__ic .ico{ width:24px; height:24px; }
         .gr-btm{ display:grid; grid-template-columns:1.15fr .85fr; gap:20px; align-items:start; }
+        .gr-section{ margin-bottom:22px; }
+        .gr-section__head{ display:flex; align-items:center; gap:12px; margin-bottom:14px; }
+        .gr-prov{ margin-top:12px; padding-top:11px; border-top:1px solid var(--line-2); display:flex; flex-direction:column; gap:8px; }
+        .gr-prov__row{ font-size:11.5px; line-height:1.5; }
+        .gr-prov__row b{ display:flex; align-items:center; gap:5px; font-size:10.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--muted); margin-bottom:3px; }
+        .gr-prov__row b .ico{ width:12px; height:12px; }
+        .gr-prov__row span{ color:var(--ink-2); }
         @media (max-width:960px){ .gr-lib{ grid-template-columns:repeat(2,1fr); } .gr-btm{ grid-template-columns:1fr; } }
         @media (max-width:600px){ .gr-lib{ grid-template-columns:1fr; } .gr-seg{ overflow-x:auto; max-width:100%; } }
       </style>`;
