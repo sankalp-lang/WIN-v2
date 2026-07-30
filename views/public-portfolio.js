@@ -21,18 +21,23 @@
 
   const RELATION_LABEL = { direct: 'Direct, Full-Time Employee', agency: 'Contract Worker', gig: 'Gig Worker', self: 'Self-Employed Worker', informal: 'Farmer / Other Worker' };
 
-  // per-employment-type icon + tint, so Full-Time/Contract/Gig/Self-Employed/Informal
-  // entries are visually distinguishable at a glance, not just by text.
+  // per-employment-type tint (govt is a fixed navy shade regardless of relation, so the
+  // sector distinction reads as consistent across all five relation types)
   const REL_META = {
-    direct:   { label: 'Full-Time',    ic: 'briefcase',  c: '#2f5fd0' },
-    agency:   { label: 'Contract',     ic: 'users',      c: '#6b4fc7' },
-    gig:      { label: 'Gig',          ic: 'bolt',       c: '#c07d10' },
-    self:     { label: 'Self-Employed', ic: 'star',      c: '#0d9488' },
-    informal: { label: 'Informal',     ic: 'leaf',       c: '#475569' },
+    direct:   { label: 'Full-Time',     ic: 'briefcase', govtIc: 'landmark', c: '#2f5fd0' },
+    agency:   { label: 'Contract',      ic: 'users',     govtIc: 'building', c: '#6b4fc7' },
+    gig:      { label: 'Gig',           ic: 'bolt',      govtIc: 'bolt',     c: '#c07d10' },
+    self:     { label: 'Self-Employed', ic: 'star',      govtIc: 'star',     c: '#0d9488' },
+    informal: { label: 'Informal',      ic: 'leaf',      govtIc: 'leaf',     c: '#475569' },
   };
+  // a plain icon badge (no text) — the icon itself differs by relation type, and again by
+  // sector for Full-Time/Contract (landmark/building for govt vs briefcase/users otherwise)
   function relTag(w) {
     const m = REL_META[w.relation] || REL_META.direct;
-    return `<span class="wp-reltag" style="background:${m.c}1a;color:${m.c}">${App.icon(m.ic)}${App.esc(m.label)}</span>`;
+    const isGovt = w.sector === 'govt';
+    const ic = isGovt ? m.govtIc : m.ic;
+    const label = (isGovt ? 'Government' : 'Non-Government') + ' · ' + m.label;
+    return `<span class="wp-relic" style="background:${m.c}1a;color:${m.c}" title="${App.esc(label)}" aria-label="${App.esc(label)}">${App.icon(ic)}</span>`;
   }
 
   // plain-text segment label appended to the period · location line
@@ -168,8 +173,8 @@
           @media (max-width:1040px){ .pp-grid{ grid-template-columns:1fr; } }
           .pp-strip{ display:flex; align-items:center; gap:9px; justify-content:space-between; padding:11px 16px;
             font-weight:600; font-size:12.5px; letter-spacing:.02em; }
-          .wp-reltag{ display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:var(--r-full); font-size:11.5px; font-weight:700; letter-spacing:.02em; }
-          .wp-reltag .ico{ width:12px; height:12px; }
+          .wp-relic{ display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; border-radius:50%; flex-shrink:0; }
+          .wp-relic .ico{ width:14px; height:14px; }
           .pp-idavatar{ width:76px; height:76px; border-radius:50%; display:grid; place-items:center; flex-shrink:0;
             background:linear-gradient(140deg,var(--accent),var(--accent-strong)); color:#fff; box-shadow:0 0 0 4px var(--accent-ring); }
           .pp-idavatar .ico{ width:38px; height:38px; }

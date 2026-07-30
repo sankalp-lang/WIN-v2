@@ -145,7 +145,22 @@
   // step: 'consent' | 'verifyState' | 'addressType' | 'checklist' | 'location' | 'locating'
   //     | 'flow' | 'done'   —  flow-substep phase: 'ready' | 'shooting' | 'captured'
   // flowKind: 'self' (office/business address) | 'farmer' (farmland — no office at all)
-  const DAV = { step: 'consent', i: null, queue: [], flowKind: 'self', addressType: '', idType: '', idx: 0, phase: 'ready', stream: null, camError: false, schedDate: '', schedSlot: '' };
+  const DAV = { step: 'consent', i: null, queue: [], flowKind: 'self', addressType: '', idType: '', idx: 0, phase: 'ready', stream: null, camError: false, schedDate: '', schedSlot: '', customDate: '', customTime: '' };
+
+  // "14:30" -> "2:30 PM", for the custom time input
+  function fmtTime12(hhmm) {
+    const [h, m] = hhmm.split(':').map(Number);
+    const period = h >= 12 ? 'PM' : 'AM';
+    const h12 = ((h + 11) % 12) + 1;
+    return `${h12}:${String(m).padStart(2, '0')} ${period}`;
+  }
+  // format any ISO date (preset or custom) as "Mon, 22 Jul" without relying on the 3-day preset list
+  function fmtDavDate(iso) {
+    const d = new Date(iso + 'T00:00:00');
+    const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${DOW[d.getDay()]}, ${d.getDate()} ${MON[d.getMonth()]}`;
+  }
 
   // next N calendar days for the reschedule date-picker (no Date.now() dependency issues
   // here since this only runs on user interaction, not at module-load time)
@@ -221,10 +236,17 @@
             </button>`).join('')}
           </div>
         </div>
-        <div class="field" style="margin-bottom:0"><label class="label">Time slot</label>
+        <div class="field"><label class="label">Time slot</label>
           <div class="dav-slotgrid">
             ${slots.map(s => `<button class="dav-slot ${DAV.schedSlot === s ? 'is-active' : ''}" onclick="WorkerSettings.davSetSchedSlot('${s}')">${s}</button>`).join('')}
           </div>
+        </div>
+        <div class="dav-divider"><span>or pick a custom date &amp; time</span></div>
+        <div class="grid grid-2" style="margin-bottom:0">
+          <div class="field" style="margin-bottom:0"><label class="label wset-flabel">Custom date</label>
+            <input class="input" type="date" value="${DAV.customDate ? App.esc(DAV.customDate) : ''}" onchange="WorkerSettings.davSetCustomDate(this.value)"></div>
+          <div class="field" style="margin-bottom:0"><label class="label wset-flabel">Custom time</label>
+            <input class="input" type="time" value="${DAV.customTime ? App.esc(DAV.customTime) : ''}" onchange="WorkerSettings.davSetCustomTime(this.value)"></div>
         </div>`;
       foot = `<button class="btn" onclick="App.modal.close()">Cancel</button>
               <button class="btn btn--primary" ${!DAV.schedDate || !DAV.schedSlot ? 'disabled' : ''} onclick="WorkerSettings.davConfirmReschedule()">${App.icon('calendar')} Confirm slot</button>`;
@@ -475,14 +497,23 @@
     davToast(msg) { App.toast(msg, 'clock'); },
     davDecline() { stopDavCamera(); App.modal.close(); App.toast('Address verification declined', 'x'); },
     davAgree() { DAV.step = 'verifyState'; davModal(); },
-    davOpenReschedule() { DAV.schedDate = ''; DAV.schedSlot = ''; DAV.step = 'reschedule'; davModal(); },
+    davOpenReschedule() { DAV.schedDate = ''; DAV.schedSlot = ''; DAV.customDate = ''; DAV.customTime = ''; DAV.step = 'reschedule'; davModal(); },
     davSetSchedDate(iso) { DAV.schedDate = iso; davModal(); },
     davSetSchedSlot(slot) { DAV.schedSlot = slot; davModal(); },
+    davSetCustomDate(iso) {
+      if (!iso) return;
+      DAV.customDate = iso; DAV.schedDate = iso;
+      // a custom date deselects whichever preset day-chip was active, if any
+      davModal();
+    },
+    davSetCustomTime(hhmm) {
+      if (!hhmm) return;
+      DAV.customTime = hhmm; DAV.schedSlot = fmtTime12(hhmm);
+      davModal();
+    },
     davConfirmReschedule() {
       const w = S.work[DAV.i]; if (!w || !DAV.schedDate || !DAV.schedSlot) return;
-      const days = davNextDays(3);
-      const d = days.find(x => x.iso === DAV.schedDate);
-      w.scheduledFor = (d ? `${d.dow}, ${d.num} ${d.mon}` : DAV.schedDate) + ' · ' + DAV.schedSlot;
+      w.scheduledFor = fmtDavDate(DAV.schedDate) + ' · ' + DAV.schedSlot;
       w.verifyStatus = 'scheduled';
       DAV.step = 'rescheduled'; davModal(); App.reload();
     },
@@ -1009,6 +1040,8 @@
           .dav-slot{ padding:9px 10px; border:1px solid var(--line); border-radius:var(--r-sm); background:var(--surface); font-size:12.5px; font-weight:600; cursor:pointer; transition:.12s; }
           .dav-slot:hover{ border-color:var(--accent); }
           .dav-slot.is-active{ border-color:var(--accent); background:var(--accent-weak); color:var(--accent-strong); }
+          .dav-divider{ display:flex; align-items:center; gap:10px; margin:14px 0; color:var(--faint); font-size:11.5px; text-transform:uppercase; letter-spacing:.04em; }
+          .dav-divider::before, .dav-divider::after{ content:""; flex:1; height:1px; background:var(--line-2); }
           .dav-kv{ display:flex; flex-direction:column; gap:10px; font-size:13.5px; }
           .dav-shield{ width:56px; height:56px; color:var(--accent); }
           .dav-pin{ width:44px; height:44px; color:var(--accent); }
