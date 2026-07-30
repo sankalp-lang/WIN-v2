@@ -117,25 +117,25 @@
   // access), but keeps the same screen-by-screen structure and framing.
   const ID_TYPES = ['Aadhaar Card', 'PAN Card', 'Passport', "Voter ID", 'Driving Licence'];
   // the photo-capture sequence run once GPS location has matched — two variants:
-  // DAV_FLOW_SELF for self-employed workers verifying a business/office address (office
-  // ID card is optional — plenty of self-employed contractors won't have one), and
-  // DAV_FLOW_FARMER for farmers/other informal workers, who have no office at all —
-  // captures a farmland photo + boundary landmark instead of office name board/interior/ID.
+  // DAV_FLOW_SELF for self-employed workers verifying a business/office address: name
+  // board → office interior (reception → lobby → workstation) → office ID card (a single
+  // skippable step — plenty of self-employed contractors won't have one) → government ID
+  // (front + back; the ID-type picker lives on the Front screen so it isn't a separate
+  // numbered step). DAV_FLOW_FARMER for farmers/other informal workers, who have no
+  // office at all: work-area photo → boundary marker/landmark → government ID front/back
+  // — exactly 4 steps.
   const DAV_FLOW_SELF = [
     { kind: 'photo', title: 'Office Name Board Visibility', sub: "Take a photo of your Office Name Board" },
     { kind: 'photo', title: 'Office Interior', context: 'Reception', sub: 'Take a photo of your office interior to verify' },
     { kind: 'photo', title: 'Office Interior', context: 'Lobby', sub: 'Take a photo of your office interior to verify', skippable: true },
     { kind: 'photo', title: 'Office Interior', context: 'Workstation', sub: 'Take a photo of your office interior to verify', skippable: true },
-    { kind: 'photo', title: 'Office ID Verification', sub: 'Take a photo of your office ID card, if you have one', side: 'Front', skippable: true },
-    { kind: 'photo', title: 'Office ID Verification', sub: 'Take a photo of your office ID card, if you have one', side: 'Back', skippable: true },
-    { kind: 'idselect' },
+    { kind: 'photo', title: 'Office ID Verification', sub: 'Take a photo of your office ID card, if you have one', skippable: true },
     { kind: 'idphoto', side: 'Front' },
     { kind: 'idphoto', side: 'Back' },
   ];
   const DAV_FLOW_FARMER = [
-    { kind: 'photo', title: 'Farmland / Work Area Photo', sub: 'Take a photo of your farmland or work area', ic: 'leaf' },
-    { kind: 'photo', title: 'Boundary Marker / Landmark', context: 'Landmark', sub: 'Take a photo of a boundary marker or nearby landmark', skippable: true, ic: 'leaf' },
-    { kind: 'idselect' },
+    { kind: 'photo', title: 'Work Area Photo', sub: 'Take a photo of your farmland or work area', ic: 'leaf' },
+    { kind: 'photo', title: 'Boundary Marker / Landmark', sub: 'Take a photo of a boundary marker or nearby landmark', skippable: true, ic: 'leaf' },
     { kind: 'idphoto', side: 'Front' },
     { kind: 'idphoto', side: 'Back' },
   ];
@@ -198,7 +198,7 @@
         <p class="muted" style="text-align:center;font-size:13px;margin:0 0 16px">Choose the type of address to verify:</p>
         <button class="dav-choice" disabled title="Not applicable for a work entry"><span class="dav-choice__ic">${App.icon('home')}</span><b>Residential Address</b></button>
         ${isFarmer
-          ? `<button class="dav-choice" onclick="WorkerSettings.davSetAddressType('farmland')"><span class="dav-choice__ic">${App.icon('leaf')}</span><b>Farmland Address</b></button>`
+          ? `<button class="dav-choice" onclick="WorkerSettings.davSetAddressType('workarea')"><span class="dav-choice__ic">${App.icon('leaf')}</span><b>Work Area Address</b></button>`
           : `<button class="dav-choice" onclick="WorkerSettings.davSetAddressType('office')"><span class="dav-choice__ic">${App.icon('building')}</span><b>Office Address</b></button>`}
         <div class="banner banner--amber" style="margin-top:14px">${App.icon('alert')}<div>Kindly be physically available at the selected address.</div></div>`;
       foot = `<button class="btn" onclick="App.modal.close()">Cancel</button>`;
@@ -210,7 +210,7 @@
         <div class="dav-check"><span class="dav-check__ic">${App.icon('idcard')}</span><div><b>Valid ID</b><div class="muted" style="font-size:12.5px">Aadhaar, PAN, Passport, or Voter ID</div></div></div>
         <div class="dav-check"><span class="dav-check__ic">${App.icon('upload')}</span><div><b>Camera &amp; Light</b><div class="muted" style="font-size:12.5px">Good lighting and a stable connection for photo capture</div></div></div>
         ${isFarmer
-          ? `<div class="dav-check"><span class="dav-check__ic">${App.icon('leaf')}</span><div><b>Farmland Access</b><div class="muted" style="font-size:12.5px">Be at the farmland/work area to capture its photo</div></div></div>`
+          ? `<div class="dav-check"><span class="dav-check__ic">${App.icon('leaf')}</span><div><b>Work Area Access</b><div class="muted" style="font-size:12.5px">Be at the work area to capture its photo</div></div></div>`
           : `<div class="dav-check"><span class="dav-check__ic">${App.icon('idcard')}</span><div><b>Office ID Card (optional)</b><div class="muted" style="font-size:12.5px">Keep your company ID card ready, if available</div></div></div>`}
         <div class="banner banner--info" style="margin-top:14px">${App.icon('mappin')}<div>Upload clear photos of original documents. Blurry or edited photos will delay verification.</div></div>`;
       foot = `<button class="btn" onclick="App.modal.close()">Cancel</button>
@@ -234,27 +234,25 @@
       const FLOW = davFlow();
       const cs = FLOW[DAV.idx];
       const stepNum = DAV.idx + 1, stepTotal = FLOW.length;
-      title = cs.kind === 'idselect' ? 'ID Verification' : (cs.kind === 'idphoto' ? 'Government ID' : cs.title);
-      icon = cs.kind === 'idselect' || cs.kind === 'idphoto' ? 'idcard' : (cs.ic || 'building');
+      // include the context (Reception/Lobby/Workstation) in the header itself — otherwise
+      // three consecutive "Office Interior" steps look identical and read like a glitch.
+      title = cs.kind === 'idphoto' ? 'Government ID' : (cs.context ? `${cs.title} — ${cs.context}` : cs.title);
+      icon = cs.kind === 'idphoto' ? 'idcard' : (cs.ic || 'building');
 
-      if (cs.kind === 'idselect') {
-        body = `
-          <div class="dav-progress">Step ${stepNum} of ${stepTotal}</div>
-          <div class="dav-center" style="margin:4px 0 16px">${App.icon('idcard', 'dav-illus')}</div>
-          <h3 style="text-align:center;margin:0 0 4px">ID Verification</h3>
-          <p class="muted" style="text-align:center;font-size:13px;margin:0 0 16px">Please capture a clear photo of your government-issued ID</p>
-          <div class="field"><label class="label">ID Type</label>
-            <select class="select" onchange="WorkerSettings.davSetIdType(this.value)">
-              <option value="" ${!DAV.idType ? 'selected' : ''} disabled>Select ID type</option>
-              ${ID_TYPES.map(t => `<option value="${t}" ${DAV.idType === t ? 'selected' : ''}>${t}</option>`).join('')}
-            </select></div>`;
-        foot = `<button class="btn" onclick="App.modal.close()">Cancel</button>
-                <button class="btn btn--primary" ${!DAV.idType ? 'disabled' : ''} onclick="WorkerSettings.davAdvanceFlow()">${App.icon('arrow')} Continue</button>`;
-      } else {
-        // photo (office name board / interior / office ID) or idphoto (govt ID front/back)
-        const label = cs.kind === 'idphoto' ? `${DAV.idType || 'ID'} (${cs.side})` : (cs.side ? `Office ID Card (${cs.side})` : (cs.context || 'Name Board'));
+      {
+        // photo (office name board / interior / office ID / farmer work area) or idphoto (govt ID front/back)
+        const label = cs.kind === 'idphoto' ? `${DAV.idType || 'ID'} (${cs.side})` : (cs.context ? `${cs.title} (${cs.context})` : cs.title);
         const heading = cs.kind === 'idphoto' ? `Capture ${DAV.idType || 'ID'}` : cs.title;
         const subline = cs.kind === 'idphoto' ? `Take a clear photo of the ${cs.side.toLowerCase()} of your ${DAV.idType || 'ID'}` : cs.sub;
+        // the ID-type picker lives on the Front capture screen so choosing it isn't its
+        // own separate numbered step — it just gates the Capture action until answered.
+        const needsIdType = cs.kind === 'idphoto' && cs.side === 'Front';
+        const idTypePicker = needsIdType ? `
+            <div class="field" style="margin-top:2px"><label class="label">ID Type</label>
+              <select class="select" onchange="WorkerSettings.davSetIdType(this.value)">
+                <option value="" ${!DAV.idType ? 'selected' : ''} disabled>Select ID type</option>
+                ${ID_TYPES.map(t => `<option value="${t}" ${DAV.idType === t ? 'selected' : ''}>${t}</option>`).join('')}
+              </select></div>` : '';
 
         if (DAV.phase === 'ready') {
           body = `
@@ -263,11 +261,12 @@
             <h3 style="text-align:center;margin:0 0 2px">${App.esc(heading)}</h3>
             ${cs.context ? `<p style="text-align:center;font-size:13px;font-weight:600;color:var(--accent-strong);margin:0 0 2px">(${App.esc(cs.context)})</p>` : ''}
             <p class="muted" style="text-align:center;font-size:13px;margin:0 0 16px">${App.esc(subline)}</p>
+            ${idTypePicker}
             <div class="dav-check"><span class="dav-check__ic">${App.icon('upload')}</span><div><b>Photo Guidelines</b>
               <div class="muted" style="font-size:12.5px">Ensure good lighting &middot; keep the camera steady &middot; make sure ${cs.kind === 'idphoto' ? 'the ID is fully visible' : 'text/signage is readable'}</div></div></div>`;
           foot = `<button class="btn" onclick="App.modal.close()">Cancel</button>
                   ${cs.skippable ? `<button class="btn btn--ghost" onclick="WorkerSettings.davSkipFlow()">Skip</button>` : ''}
-                  <button class="btn btn--primary" onclick="WorkerSettings.davOpenCamera()">${App.icon('upload')} Capture Photo</button>`;
+                  <button class="btn btn--primary" ${needsIdType && !DAV.idType ? 'disabled' : ''} onclick="WorkerSettings.davOpenCamera()">${App.icon('upload')} Capture Photo</button>`;
         } else if (DAV.phase === 'camera' || DAV.phase === 'capturing') {
           const capturing = DAV.phase === 'capturing';
           const showVideo = !DAV.camError && !capturing;
@@ -381,6 +380,7 @@
       }
 
       if (w.relation === 'self') {
+        if (!w.org) { App.toast('Enter your business name to continue', 'alert'); return; }
         if (!w.hasPan) { App.toast('Let us know whether you have a PAN', 'alert'); return; }
         if (w.hasPan === 'yes') {
           if (!w.pan) { App.toast('Enter your PAN number to look up GST/Udyam details', 'alert'); return; }
@@ -593,8 +593,8 @@
     const isSelf = w.relation === 'self';
     // farmers and self-employed workers have no formal employer to pick from a list —
     // free text only, no company dropdown.
-    const companyLabel = isInformal ? 'Company / Landowner (optional)' : isSelf ? 'Business Name (optional)' : 'Company';
-    const companyPlaceholder = isInformal ? 'e.g. Family farmland (optional)' : isSelf ? 'e.g. Rajan Masonry Works (optional)' : 'e.g. Omaxe Ltd.';
+    const companyLabel = isInformal ? 'Company / Landowner (optional)' : isSelf ? 'Business Name' : 'Company';
+    const companyPlaceholder = isInformal ? 'e.g. Family farmland (optional)' : isSelf ? 'e.g. Rajan Masonry Works' : 'e.g. Omaxe Ltd.';
     return `
       <div class="grid grid-2">
         <div class="field" style="margin-bottom:0">

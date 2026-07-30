@@ -160,7 +160,7 @@
   const PERIODS = ['This month (Nov 2024)', 'Last month (Oct 2024)', 'Q3 FY 2024–25', 'FY 2024–25 (YTD)', 'Custom range…'];
 
   // ---- view state ----
-  const S = { cat: 'All' };
+  const S = { cat: 'All', state: 'All' };
   const val = id => { const el = document.getElementById(id); return el ? el.value : ''; };
 
   // ---- generate-report modal body (reused by header CTA + per-card generate) ----
@@ -187,13 +187,21 @@
       </div>`;
   }
 
+  // narrow a report's rows to the header page's selected state, when that report has a
+  // State column and a state is selected — otherwise every row is kept unchanged.
+  function stateFilteredRows(headers, rows) {
+    const idx = headers.indexOf('State');
+    if (idx === -1 || S.state === 'All') return rows;
+    return rows.filter(r => r[idx] === S.state);
+  }
+
   // actually trigger a real file download for a report (falls back to a registry-overview
   // extract for the ad-hoc "custom" type, which has no fixed dataset). fmt is one of the
   // format labels used across the console ("PDF summary" / "Excel (.xlsx)" / "CSV data extract").
   function downloadReportCSV(rep, fmt) {
     const data = REPORT_DATA[rep.id];
     if (data) {
-      App.downloadReport('win-' + rep.id + '-report', rep.title || rep.id, data.headers, data.rows, fmt || 'CSV');
+      App.downloadReport('win-' + rep.id + '-report', rep.title || rep.id, data.headers, stateFilteredRows(data.headers, data.rows), fmt || 'CSV');
     } else {
       App.downloadReport('win-custom-extract', 'Custom extract',
         ['Report', 'Category', 'Frequency', 'Last generated'],
@@ -203,6 +211,7 @@
 
   window.GovReports = {
     setCat(c) { S.cat = c; App.reload(); },
+    setState(v) { S.state = v; App.reload(); },
 
     // open the generate flow (optionally pre-selecting a report type)
     generate(preType) {
@@ -249,12 +258,13 @@
       if (!rep) return;
       const data = REPORT_DATA[rep.id];
       const headers = data ? data.headers : ['Report', 'Category', 'Frequency', 'Last generated'];
-      const allRows = data ? data.rows : REPORTS.map(r => [r.title, r.cat, r.freq, r.last]);
+      const allRows = stateFilteredRows(headers, data ? data.rows : REPORTS.map(r => [r.title, r.cat, r.freq, r.last]));
       const sample = allRows.slice(0, 50);
       const thead = '<tr>' + headers.map(h => `<th>${App.esc(h)}</th>`).join('') + '</tr>';
       const tbody = sample.map(r => '<tr>' + r.map(c => `<td>${App.esc(c)}</td>`).join('') + '</tr>').join('');
+      const stateNote = (headers.indexOf('State') !== -1 && S.state !== 'All') ? ` filtered to <b>${App.esc(S.state)}</b>` : '';
       App.modal.open(`
-        <p class="muted" style="font-size:13px;margin-bottom:12px">Preview of <b>${App.esc(rep.title)}</b> — <span class="num">${App.num(allRows.length)}</span> total rows. Showing the first ${sample.length}:</p>
+        <p class="muted" style="font-size:13px;margin-bottom:12px">Preview of <b>${App.esc(rep.title)}</b>${stateNote} — <span class="num">${App.num(allRows.length)}</span> total rows. Showing the first ${sample.length}:</p>
         <div class="tablewrap tablewrap--scroll" style="max-height:280px;overflow:auto">
           <table class="tbl"><thead>${thead}</thead><tbody>${tbody}</tbody></table>
         </div>
@@ -387,12 +397,22 @@
           <div class="statstrip__cell"><div class="statstrip__label">Avg. generation time</div><div class="statstrip__val num">${App.esc(STATS.avg)}</div></div>
         </div>`;
 
-      // ---- library: category segmented filter ----
+      // ---- library: category segmented filter + state filter (narrows the data behind
+      // Download for any report with a State column — see stateFilteredRows()) ----
+      const govStates = (window.DB && DB.govStates) || [];
+      const stateOptions = ['<option value="All">All States</option>'].concat(
+        govStates.map(n => `<option value="${App.esc(n)}" ${S.state === n ? 'selected' : ''}>${App.esc(n)}</option>`)
+      ).join('');
       const seg = `
         <div class="row between wrap gap-12" style="align-items:center;margin-bottom:14px">
           <div class="section-title" style="margin-bottom:0">Available reports</div>
-          <div class="seg gr-seg">
-            ${CATS.map(c => `<button class="${S.cat === c ? 'is-active' : ''}" onclick="GovReports.setCat('${c}')">${c}</button>`).join('')}
+          <div class="row gap-10 wrap" style="align-items:center">
+            <div class="gr-selwrap">${App.icon('filter')}
+              <select class="select gr-sel" onchange="GovReports.setState(this.value)" aria-label="Filter report data by state">${stateOptions}</select>
+            </div>
+            <div class="seg gr-seg">
+              ${CATS.map(c => `<button class="${S.cat === c ? 'is-active' : ''}" onclick="GovReports.setCat('${c}')">${c}</button>`).join('')}
+            </div>
           </div>
         </div>`;
 
@@ -464,6 +484,9 @@
 
       // ---- scoped styles ----
       const style = `<style>
+        .gr-selwrap{ position:relative; display:inline-flex; align-items:center; }
+        .gr-selwrap .ico{ position:absolute; left:11px; color:var(--muted); pointer-events:none; }
+        .gr-sel{ padding-left:34px; min-width:160px; font-weight:600; }
         .gr-seg button{ white-space:nowrap; }
         .gr-tile{ width:40px; height:40px; border-radius:var(--r-sm); display:grid; place-items:center; flex-shrink:0; }
         .gr-tile--sm{ width:34px; height:34px; background:var(--accent-weak); color:var(--accent-strong); }
