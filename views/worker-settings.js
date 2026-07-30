@@ -145,7 +145,21 @@
   // step: 'consent' | 'verifyState' | 'addressType' | 'checklist' | 'location' | 'locating'
   //     | 'flow' | 'done'   —  flow-substep phase: 'ready' | 'shooting' | 'captured'
   // flowKind: 'self' (office/business address) | 'farmer' (farmland — no office at all)
-  const DAV = { step: 'consent', i: null, queue: [], flowKind: 'self', addressType: '', idType: '', idx: 0, phase: 'ready', stream: null, camError: false };
+  const DAV = { step: 'consent', i: null, queue: [], flowKind: 'self', addressType: '', idType: '', idx: 0, phase: 'ready', stream: null, camError: false, schedDate: '', schedSlot: '' };
+
+  // next N calendar days for the reschedule date-picker (no Date.now() dependency issues
+  // here since this only runs on user interaction, not at module-load time)
+  function davNextDays(n) {
+    const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const out = [];
+    const today = new Date();
+    for (let i = 1; i <= n; i++) {
+      const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i);
+      out.push({ iso: d.toISOString().slice(0, 10), dow: DOW[d.getDay()], num: d.getDate(), mon: MON[d.getMonth()] });
+    }
+    return out;
+  }
 
   // ---- real camera access for the photo-capture steps (falls back to the illustrated
   // placeholder if the browser/device has no camera or permission is denied) ----
@@ -189,9 +203,37 @@
         <h3 style="text-align:center;margin:0 0 4px">Verify your Address</h3>
         <p class="muted" style="text-align:center;font-size:13px;margin:0 0 16px">Select current state of your verification:</p>
         <button class="dav-choice is-active" onclick="WorkerSettings.davStart()"><span class="dav-choice__ic" style="background:var(--green-50);color:var(--green-600)">${App.icon('check')}</span><b>Start Verification</b></button>
-        <button class="dav-choice" onclick="WorkerSettings.davToast('Rescheduling isn\\'t available in this demo')"><span class="dav-choice__ic" style="background:var(--blue-50);color:var(--blue-600)">${App.icon('clock')}</span><b>Reschedule Verification</b></button>
-        <button class="dav-choice" onclick="WorkerSettings.davDecline()"><span class="dav-choice__ic" style="background:var(--red-50);color:var(--red-600)">${App.icon('x')}</span><b>Decline Verification</b></button>`;
+        <button class="dav-choice" onclick="WorkerSettings.davOpenReschedule()"><span class="dav-choice__ic" style="background:var(--blue-50);color:var(--blue-600)">${App.icon('clock')}</span><b>Reschedule Verification</b></button>`;
       foot = `<button class="btn" onclick="App.modal.close()">Cancel</button>`;
+
+    } else if (DAV.step === 'reschedule') {
+      title = 'Reschedule Verification'; icon = 'clock';
+      const days = davNextDays(3);
+      const slots = ['9:00 – 10:00 AM', '11:00 AM – 12:00 PM', '2:00 – 3:00 PM', '4:00 – 5:00 PM'];
+      body = `
+        <div class="dav-center" style="margin:4px 0 16px">${App.icon('clock', 'dav-pin')}</div>
+        <h3 style="text-align:center;margin:0 0 4px">Pick a new date &amp; time</h3>
+        <p class="muted" style="text-align:center;font-size:13px;margin:0 0 16px">We'll hold your verification slot — you can resume from where you left off.</p>
+        <div class="field"><label class="label">Date</label>
+          <div class="dav-daypick">
+            ${days.map(d => `<button class="dav-day ${DAV.schedDate === d.iso ? 'is-active' : ''}" onclick="WorkerSettings.davSetSchedDate('${d.iso}')">
+              <span class="dav-day__dow">${d.dow}</span><span class="dav-day__num">${d.num}</span><span class="dav-day__mon">${d.mon}</span>
+            </button>`).join('')}
+          </div>
+        </div>
+        <div class="field" style="margin-bottom:0"><label class="label">Time slot</label>
+          <div class="dav-slotgrid">
+            ${slots.map(s => `<button class="dav-slot ${DAV.schedSlot === s ? 'is-active' : ''}" onclick="WorkerSettings.davSetSchedSlot('${s}')">${s}</button>`).join('')}
+          </div>
+        </div>`;
+      foot = `<button class="btn" onclick="App.modal.close()">Cancel</button>
+              <button class="btn btn--primary" ${!DAV.schedDate || !DAV.schedSlot ? 'disabled' : ''} onclick="WorkerSettings.davConfirmReschedule()">${App.icon('calendar')} Confirm slot</button>`;
+
+    } else if (DAV.step === 'rescheduled') {
+      title = 'Verification Scheduled'; icon = 'checkcircle';
+      body = `<div class="banner banner--green" style="margin-bottom:4px">${App.icon('checkcircle')}<div><b>Verification scheduled</b><div style="font-size:12px;opacity:.85;margin-top:3px">We've held <b>${App.esc(w.scheduledFor)}</b> for this entry. Come back to Work Info anytime before then to start, or start right away below.</div></div></div>`;
+      foot = `<button class="btn" onclick="App.modal.close()">Done, I'll come back later</button>
+              <button class="btn btn--primary" onclick="WorkerSettings.davStart()">${App.icon('arrow')} Start now instead</button>`;
 
     } else if (DAV.step === 'addressType') {
       title = 'Verify Address'; icon = 'mappin';
@@ -422,9 +464,28 @@
       DAV.addressType = ''; DAV.idType = ''; DAV.idx = 0; DAV.phase = 'ready';
       davModal();
     },
+    // resume a previously scheduled verification — consent and the Start/Reschedule
+    // choice were already made, so jump straight to picking the address type.
+    resumeScheduledDAV(i) {
+      const w = S.work[i]; if (!w) return;
+      ENTRY_MODAL_I = null; DAV.i = i; DAV.flowKind = (w.relation === 'informal') ? 'farmer' : 'self';
+      DAV.addressType = ''; DAV.idType = ''; DAV.idx = 0; DAV.phase = 'ready';
+      DAV.step = 'addressType'; davModal();
+    },
     davToast(msg) { App.toast(msg, 'clock'); },
     davDecline() { stopDavCamera(); App.modal.close(); App.toast('Address verification declined', 'x'); },
     davAgree() { DAV.step = 'verifyState'; davModal(); },
+    davOpenReschedule() { DAV.schedDate = ''; DAV.schedSlot = ''; DAV.step = 'reschedule'; davModal(); },
+    davSetSchedDate(iso) { DAV.schedDate = iso; davModal(); },
+    davSetSchedSlot(slot) { DAV.schedSlot = slot; davModal(); },
+    davConfirmReschedule() {
+      const w = S.work[DAV.i]; if (!w || !DAV.schedDate || !DAV.schedSlot) return;
+      const days = davNextDays(3);
+      const d = days.find(x => x.iso === DAV.schedDate);
+      w.scheduledFor = (d ? `${d.dow}, ${d.num} ${d.mon}` : DAV.schedDate) + ' · ' + DAV.schedSlot;
+      w.verifyStatus = 'scheduled';
+      DAV.step = 'rescheduled'; davModal(); App.reload();
+    },
     davStart() { DAV.step = 'addressType'; davModal(); },
     davSetAddressType(t) { DAV.addressType = t; DAV.step = 'checklist'; davModal(); },
     davReady() { DAV.step = 'location'; davModal(); },
@@ -521,6 +582,7 @@
       return `<span class="verified" style="font-size:11.5px">${App.icon('shieldcheck')} Verified via ${App.esc(src.label)}</span>`;
     }
     if (w.verifyStatus === 'pending') return `<span class="pill pill--blue pill--dot">${spinner('Verifying…')}</span>`;
+    if (w.verifyStatus === 'scheduled') return `<span class="pill pill--amber pill--dot">${App.icon('clock')} Scheduled for ${App.esc(w.scheduledFor)}</span>`;
     return App.ui.pill('Not yet verified', 'gray', true);
   }
 
@@ -678,7 +740,7 @@
       </div>
       <div class="row between" style="margin-top:11px">
         ${verifyChip(w)}
-        ${w.verifyStatus !== 'verified' ? `<button class="btn btn--primary btn--sm" ${w.verifyStatus === 'pending' ? 'disabled' : ''} onclick="WorkerSettings.verifyEntry(${i})">${w.verifyStatus === 'pending' ? spinner('Verifying…') : ((w.relation === 'informal' || (w.relation === 'self' && w.hasPan === 'no')) ? `${App.icon('mappin')} Verify via Address` : `${App.icon('shieldcheck')} Verify Details`)}</button>` : ''}
+        ${w.verifyStatus !== 'verified' ? `<button class="btn btn--primary btn--sm" ${w.verifyStatus === 'pending' ? 'disabled' : ''} onclick="${w.verifyStatus === 'scheduled' ? `WorkerSettings.resumeScheduledDAV(${i})` : `WorkerSettings.verifyEntry(${i})`}">${w.verifyStatus === 'pending' ? spinner('Verifying…') : w.verifyStatus === 'scheduled' ? `${App.icon('arrow')} Start Now` : ((w.relation === 'informal' || (w.relation === 'self' && w.hasPan === 'no')) ? `${App.icon('mappin')} Verify via Address` : `${App.icon('shieldcheck')} Verify Details`)}</button>` : ''}
       </div>`;
   }
 
@@ -936,6 +998,17 @@
           .wset-trash[disabled]:hover{ background:transparent; color:var(--muted); }
           .wset-spin{ width:14px; height:14px; border:2px solid rgba(128,128,128,.35); border-top-color:currentColor; border-radius:50%; display:inline-block; vertical-align:-2px; animation:spin 1s linear infinite; }
           .dav-center{ display:flex; justify-content:center; align-items:center; }
+          .dav-daypick{ display:flex; gap:8px; }
+          .dav-day{ flex:1; display:flex; flex-direction:column; align-items:center; gap:2px; padding:10px 6px; border:1px solid var(--line); border-radius:var(--r); background:var(--surface); cursor:pointer; transition:.12s; }
+          .dav-day:hover{ border-color:var(--accent); }
+          .dav-day.is-active{ border-color:var(--accent); background:var(--accent-weak); box-shadow:0 0 0 2px var(--accent-ring); }
+          .dav-day__dow{ font-size:10.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+          .dav-day__num{ font-size:17px; font-weight:700; color:var(--ink); }
+          .dav-day__mon{ font-size:10.5px; color:var(--muted); }
+          .dav-slotgrid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+          .dav-slot{ padding:9px 10px; border:1px solid var(--line); border-radius:var(--r-sm); background:var(--surface); font-size:12.5px; font-weight:600; cursor:pointer; transition:.12s; }
+          .dav-slot:hover{ border-color:var(--accent); }
+          .dav-slot.is-active{ border-color:var(--accent); background:var(--accent-weak); color:var(--accent-strong); }
           .dav-kv{ display:flex; flex-direction:column; gap:10px; font-size:13.5px; }
           .dav-shield{ width:56px; height:56px; color:var(--accent); }
           .dav-pin{ width:44px; height:44px; color:var(--accent); }
