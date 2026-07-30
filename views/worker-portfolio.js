@@ -59,6 +59,20 @@
 
   const RELATION_LABEL = { direct: 'Direct, Full-Time Employee', agency: 'Contract Worker', gig: 'Gig Worker', self: 'Self-Employed Worker', informal: 'Farmer / Other Worker' };
 
+  // per-employment-type icon + tint, so Full-Time/Contract/Gig/Self-Employed/Informal
+  // entries are visually distinguishable at a glance in the timeline, not just by text.
+  const REL_META = {
+    direct:   { label: 'Full-Time',    ic: 'briefcase',  c: '#2f5fd0' },
+    agency:   { label: 'Contract',     ic: 'users',      c: '#6b4fc7' },
+    gig:      { label: 'Gig',          ic: 'bolt',       c: '#c07d10' },
+    self:     { label: 'Self-Employed', ic: 'star',      c: '#0d9488' },
+    informal: { label: 'Informal',     ic: 'leaf',       c: '#475569' },
+  };
+  function relTag(w) {
+    const m = REL_META[w.relation] || REL_META.direct;
+    return `<span class="wp-reltag" style="background:${m.c}1a;color:${m.c}">${App.icon(m.ic)}${App.esc(m.label)}</span>`;
+  }
+
   // plain-text segment label appended to the period · location line
   function segLabel(w) {
     return `${w.sector === 'govt' ? 'Government' : 'Non-Government'} · ${RELATION_LABEL[w.relation] || ''}`;
@@ -271,6 +285,8 @@
             background:var(--blue-50); border:1px solid var(--blue-100); color:var(--blue-700); font-size:12.5px; font-weight:600; }
           .wp-skill .ico{ color:var(--blue-600); width:15px; height:15px; }
           .wp-strip{ display:flex; align-items:center; gap:9px; padding:11px 16px; font-weight:600; font-size:12.5px; letter-spacing:.02em; }
+          .wp-reltag{ display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:var(--r-full); font-size:11.5px; font-weight:700; letter-spacing:.02em; }
+          .wp-reltag .ico{ width:12px; height:12px; }
           .wp-gstat{ text-align:left; }
           .wp-gstat .wp-gval{ font-size:24px; font-weight:600; letter-spacing:-.02em; color:var(--ink); }
           .wp-sharelink{ display:flex; align-items:center; gap:8px; padding:9px 10px 9px 13px; border:1px solid var(--line);
@@ -351,12 +367,12 @@
                 <div class="timeline">
                   ${visWork.map(w => `
                     <div class="timeline__item">
-                      <div class="timeline__dot ${w.active ? 'done' : ''}" ${w.active ? '' : 'style="border-color:var(--faint)"'}></div>
+                      <div class="timeline__dot ${w.active ? 'done' : ''}" ${w.active ? '' : `style="border-color:${(REL_META[w.relation] || REL_META.direct).c}"`}></div>
                       <div class="row between wrap gap-8">
                         <div><b>${App.esc(w.role)} · ${App.esc(w.org)}</b><div class="when">${App.esc(w.period)} · ${App.esc(w.loc)} · ${App.esc(segLabel(w))}</div></div>
                         ${w.active ? App.ui.pill('Currently Active', 'green', true) : ''}
                       </div>
-                      <div class="mt-8">${wbadge(w.badge)}</div>
+                      <div class="row gap-8 wrap mt-8" style="align-items:center">${relTag(w)}${wbadge(w.badge)}</div>
                     </div>`).join('')}
                 </div>
                 ${work.length > 3 ? `<button class="btn btn--ghost btn--sm" style="margin-top:14px" onclick="WorkerPortfolio.toggleWork()">${workOpen ? 'Show Less' : 'View Complete History'} ${App.icon(workOpen ? 'chevron' : 'chevrondown')}</button>` : ''}

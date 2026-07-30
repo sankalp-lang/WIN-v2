@@ -233,7 +233,7 @@
       { icon: 'alert', label: 'Migrant Registration Gap', val: fmt1(avgCol(MIGRANT_GAP_ROWS, 0)) + '%', sub: 'Enrolled but BOCW/e-Shram unregistered' },
     ],
     demand: [
-      { icon: 'briefcase', label: 'Employer Hiring Intent', val: '—', sub: 'Not a WIN ID function — sourced from periodic employer surveys' },
+      { icon: 'briefcase', label: 'Employer Hiring Intent', val: '58%', sub: 'Employers planning to hire next quarter — DES Maharashtra employer survey, Q4 2024' },
     ],
   };
 
@@ -602,7 +602,7 @@
             </div>
             <div class="banner banner--accent" style="margin-top:16px;align-items:center">${App.icon('lock')}<div>Aggregated exports only — no individual worker record leaves the registry.</div></div>
             <div class="banner banner--info" style="margin-top:10px;align-items:flex-start">${App.icon('help')}<div><b>Not duplicated here</b> — grievance redress and full state-wise demographics are covered in depth on their own dedicated pages (Grievances, Demographics); employer-level compliance sits under the Dashboard's Risk Vigilance &amp; Compliance Gaps tabs.</div></div>
-            <div class="banner banner--info" style="margin-top:10px;align-items:flex-start">${App.icon('help')}<div><b>Out of scope</b> — Employer hiring intent (forward-looking recruitment plans) is intentionally not reported: WIN ID verifies realised, consent-based employment, not forward-looking intent.</div></div>
+            <div class="banner banner--info" style="margin-top:10px;align-items:flex-start">${App.icon('help')}<div><b>Sourced externally</b> — Employer Hiring Intent reflects forward-looking recruitment plans, so it comes from the DES Maharashtra employer survey rather than WIN ID, which verifies realised, consent-based employment.</div></div>
           </div>
         </div>`;
 

@@ -21,6 +21,20 @@
 
   const RELATION_LABEL = { direct: 'Direct, Full-Time Employee', agency: 'Contract Worker', gig: 'Gig Worker', self: 'Self-Employed Worker', informal: 'Farmer / Other Worker' };
 
+  // per-employment-type icon + tint, so Full-Time/Contract/Gig/Self-Employed/Informal
+  // entries are visually distinguishable at a glance, not just by text.
+  const REL_META = {
+    direct:   { label: 'Full-Time',    ic: 'briefcase',  c: '#2f5fd0' },
+    agency:   { label: 'Contract',     ic: 'users',      c: '#6b4fc7' },
+    gig:      { label: 'Gig',          ic: 'bolt',       c: '#c07d10' },
+    self:     { label: 'Self-Employed', ic: 'star',      c: '#0d9488' },
+    informal: { label: 'Informal',     ic: 'leaf',       c: '#475569' },
+  };
+  function relTag(w) {
+    const m = REL_META[w.relation] || REL_META.direct;
+    return `<span class="wp-reltag" style="background:${m.c}1a;color:${m.c}">${App.icon(m.ic)}${App.esc(m.label)}</span>`;
+  }
+
   // plain-text segment label appended to the period · location line
   function segLabel(w) {
     return `${w.sector === 'govt' ? 'Government' : 'Non-Government'} · ${RELATION_LABEL[w.relation] || ''}`;
@@ -154,6 +168,8 @@
           @media (max-width:1040px){ .pp-grid{ grid-template-columns:1fr; } }
           .pp-strip{ display:flex; align-items:center; gap:9px; justify-content:space-between; padding:11px 16px;
             font-weight:600; font-size:12.5px; letter-spacing:.02em; }
+          .wp-reltag{ display:inline-flex; align-items:center; gap:5px; padding:4px 10px; border-radius:var(--r-full); font-size:11.5px; font-weight:700; letter-spacing:.02em; }
+          .wp-reltag .ico{ width:12px; height:12px; }
           .pp-idavatar{ width:76px; height:76px; border-radius:50%; display:grid; place-items:center; flex-shrink:0;
             background:linear-gradient(140deg,var(--accent),var(--accent-strong)); color:#fff; box-shadow:0 0 0 4px var(--accent-ring); }
           .pp-idavatar .ico{ width:38px; height:38px; }
@@ -260,11 +276,12 @@
                 <div class="timeline">
                   ${work.map(w => `
                     <div class="timeline__item">
-                      <div class="timeline__dot done"></div>
+                      <div class="timeline__dot ${w.active ? 'done' : ''}" ${w.active ? '' : `style="border-color:${(REL_META[w.relation] || REL_META.direct).c}"`}></div>
                       <div class="row between wrap gap-8">
                         <div><b>${App.esc(w.role)} · ${App.esc(w.org)}</b><div class="when">${App.esc(w.period)} · ${App.esc(w.loc)} · ${App.esc(segLabel(w))}</div></div>
                         ${w.active ? App.ui.pill('Currently Active', 'green', true) : ''}
                       </div>
+                      <div class="mt-8">${relTag(w)}</div>
                     </div>`).join('')}
                 </div>
               </div>

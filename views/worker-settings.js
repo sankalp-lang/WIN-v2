@@ -138,7 +138,7 @@
   ];
   const DAV_FLOW_FARMER = [
     { kind: 'photo', title: 'Work Area Photo', sub: 'Take a photo of your farmland or work area', ic: 'leaf' },
-    { kind: 'photo', title: 'Boundary Marker / Landmark', sub: 'Take a photo of a boundary marker or nearby landmark', skippable: true, ic: 'leaf' },
+    { kind: 'photo', title: 'Boundary Marker / Landmark', sub: 'Take a photo of a boundary marker or nearby landmark', ic: 'leaf' },
     { kind: 'idphoto', side: 'Front' },
     { kind: 'idphoto', side: 'Back' },
   ];
@@ -199,7 +199,6 @@
         <div class="dav-center" style="margin:4px 0 16px">${davBuilding()}</div>
         <h3 style="text-align:center;margin:0 0 4px">Select Address Type</h3>
         <p class="muted" style="text-align:center;font-size:13px;margin:0 0 16px">Choose the type of address to verify:</p>
-        <button class="dav-choice" disabled title="Not applicable for a work entry"><span class="dav-choice__ic">${App.icon('home')}</span><b>Residential Address</b></button>
         ${isFarmer
           ? `<button class="dav-choice" onclick="WorkerSettings.davSetAddressType('workarea')"><span class="dav-choice__ic">${App.icon('leaf')}</span><b>Work Area Address</b></button>`
           : `<button class="dav-choice" onclick="WorkerSettings.davSetAddressType('office')"><span class="dav-choice__ic">${App.icon('building')}</span><b>Office Address</b></button>`}
