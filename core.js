@@ -219,7 +219,10 @@ window.App = (function () {
       key: 'employer', label: 'Employer', tag: 'Employer Console', brand: 'WiN', sub: 'Employer Console', home: 'emp-dashboard',
       nav: [
         { section: 'Workspace', items: [
-          { id: 'emp-dashboard', label: 'Dashboard', icon: 'home' },
+          { id: 'emp-dashboard', label: 'Dashboard', icon: 'home', children: [
+            { id: 'overview', label: 'Overview' },
+            { id: 'hiring', label: 'Recruitment' },
+          ] },
           { id: 'emp-verifications', label: 'Employees', icon: 'shieldcheck' },
           { id: 'emp-hrms', label: 'HRMS Sync', icon: 'plug' },
         ]},
@@ -276,17 +279,42 @@ window.App = (function () {
   };
   App.navT = () => NAV_I18N[App.state.lang] || null;
 
+  // change the app language from inside a Settings page (not just the login screen) —
+  // updates the sidebar/topbar chrome immediately, same as the landing-page switcher.
+  App.setLang = (l) => { App.state.lang = LANG_LABELS[l] ? l : 'en'; App.reload(); };
+  // a reusable "Language" settings card any persona's Settings page can drop in —
+  // keeps the sidebar-nav translation (see navT()/navHtml() above) reachable post-login.
+  App.langCard = () => `
+    <div class="card reveal">
+      <div class="card__head">${App.icon('globe')}<h3 class="grow">Language</h3></div>
+      <div class="card__body">
+        <p class="muted" style="font-size:12.5px;margin:-2px 0 12px">Changes the sidebar navigation and a few shared labels. Individual page content stays in English for now.</p>
+        <div class="row gap-8 wrap">
+          ${Object.keys(LANG_LABELS).map(l => `<button class="btn btn--sm ${App.state.lang === l || (!App.state.lang && l === 'en') ? 'btn--primary' : 'btn--soft'}" onclick="App.setLang('${l}')">${LANG_LABELS[l]}</button>`).join('')}
+        </div>
+      </div>
+    </div>`;
+
   /* ---------------- shell ---------------- */
   function navHtml() {
     const p = App.persona(); const route = App.state.route;
     const fresh = !!(App.state.user && App.state.user._fresh);
     const nt = App.navT();
+    // a nav item can carry `children` (in-page sections, not separate routes) — shown
+    // nested underneath it in the sidebar itself while that item's route is active,
+    // e.g. Dashboard -> Overview / Recruitment.
+    const activeChild = (App.state.params && App.state.params.tab) || 'overview';
     return p.nav.map(group => `
       <div class="nav__section">${nt ? (nt.sections[group.section] || group.section) : group.section}</div>
       ${group.items.map(it => `
         <div class="nav__item ${it.id === route ? 'is-active' : ''}" onclick="App.navigate('${it.id}')">
           ${App.icon(it.icon)}<span>${nt ? (nt.items[it.id] || it.label) : it.label}</span>${it.tag && !fresh ? `<span class="nav__tag">${it.tag}</span>` : ''}
-        </div>`).join('')}
+        </div>
+        ${it.children && it.id === route ? `
+        <div class="nav__children">
+          ${it.children.map(c => `
+            <div class="nav__child ${c.id === activeChild ? 'is-active' : ''}" onclick="App.navigate('${it.id}', {tab:'${c.id}'})">${App.esc(c.label)}</div>`).join('')}
+        </div>` : ''}`).join('')}
     `).join('');
   }
 

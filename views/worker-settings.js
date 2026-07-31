@@ -94,6 +94,17 @@
     platform: { label: 'Platform Records', ic: 'briefcase' },
     'pan-gst': { label: 'GST Details', ic: 'file' },
     dav: { label: 'Digital Address Verification', ic: 'mappin' },
+    // fallback identifiers when the employer/agency isn't in our HRMS lookup (Company =
+    // "Others") — a direct/contract worker can still verify via one of their own
+    // government-linked accounts instead of falling straight back to DAV.
+    uan: { label: 'UAN / EPFO', ic: 'idcard' },
+    ppf: { label: 'PPF Account', ic: 'file' },
+    nps: { label: 'NPS Account', ic: 'shieldcheck' },
+  };
+  const ALT_ID_META = {
+    uan: { label: 'UAN Number', placeholder: 'e.g. 100123456789' },
+    ppf: { label: 'PPF Account Number', placeholder: 'e.g. PPF1234567890' },
+    nps: { label: 'PRAN (NPS) Number', placeholder: 'e.g. 110012345678' },
   };
   const RELATIONS = [
     { v: 'direct', label: 'Direct, Full-Time Employee' },
@@ -409,6 +420,7 @@
       S.work.unshift({
         role: '', org: '', period: '', loc: '', address: '', state: '', pincode: '',
         sector: 'nongovt', relation: 'direct', source: '', pan: '', hasPan: '',
+        altPath: '', altId: '',
         verifyStatus: 'unverified', tier: 'self', active: false,
       });
       entryModal(0);
@@ -424,7 +436,7 @@
     setSector(i, v) { const w = S.work[i]; if (!w) return; w.sector = v; w.source = ''; w.verifyStatus = 'unverified'; App.reload(); repaintEntryModal(i); },
     setRelation(i, v) {
       const w = S.work[i]; if (!w) return;
-      w.relation = v; w.source = ''; w.pan = ''; w.hasPan = ''; w.verifyStatus = 'unverified';
+      w.relation = v; w.source = ''; w.pan = ''; w.hasPan = ''; w.altPath = ''; w.altId = ''; w.verifyStatus = 'unverified';
       App.reload(); repaintEntryModal(i);
     },
     setHasPan(i, v) {
@@ -434,13 +446,21 @@
     },
     setOrgChoice(i, v) {
       const w = S.work[i]; if (!w) return;
-      if (v === 'others') { w._orgCustom = true; w.org = ''; } else { w._orgCustom = false; w.org = v; }
+      if (v === 'others') { w._orgCustom = true; w.org = ''; } else { w._orgCustom = false; w.org = v; w.altPath = ''; w.altId = ''; w.source = ''; w.verifyStatus = 'unverified'; }
+      App.reload(); repaintEntryModal(i);
+    },
+    // fallback path when Company = "Others": UAN/PPF/NPS number, or DAV (direct/agency get
+    // the choice; gig has only DAV, no picker — see entryFormBody()).
+    setAltPath(i, v) {
+      const w = S.work[i]; if (!w) return;
+      w.altPath = v; w.altId = ''; w.source = ''; w.verifyStatus = 'unverified';
       App.reload(); repaintEntryModal(i);
     },
 
     // ---- verification: explicit "Verify Details" click per entry — happy-path only, per the
-    // segmentation flowchart (fallback identifiers like UAN/PPF/NPS are a documented concept,
-    // not a live failure-and-retry demo in this prototype) ----
+    // segmentation flowchart. When Company = "Others" (not in our HRMS lookup), direct/
+    // agency entries offer a UAN/PPF/NPS fallback identifier or DAV; gig entries go
+    // straight to DAV since there's no equivalent fallback identifier for platform work. ----
     verifyEntry(i) {
       const w = S.work[i]; if (!w) return;
 
@@ -464,9 +484,28 @@
       }
 
       if (w.relation === 'gig') {
+        if (w._orgCustom) {
+          // platform isn't in our lookup — no fallback identifier for gig work, so
+          // straight to Digital Address Verification.
+          if (!w.address || !w.state || !w.pincode) { App.toast('Fill in the address details to verify', 'alert'); return; }
+          WorkerSettings.openDAV(i); return;
+        }
         if (!w.org) { App.toast('Enter the platform/company name to verify', 'alert'); return; }
         w.verifyStatus = 'pending'; App.reload(); repaintEntryModal(i);
         setTimeout(() => { w.source = 'platform'; w.verifyStatus = 'verified'; w.tier = 'verified'; App.reload(); repaintEntryModal(i); App.toast('Details verified and saved'); }, 1400);
+        return;
+      }
+
+      // direct + agency, Company = "Others": fall back to a UAN/PPF/NPS identifier or DAV
+      if ((w.relation === 'direct' || w.relation === 'agency') && w._orgCustom) {
+        if (!w.altPath) { App.toast('Choose how you\'d like to verify this entry', 'alert'); return; }
+        if (w.altPath === 'dav') {
+          if (!w.address || !w.state || !w.pincode) { App.toast('Fill in the address details to verify', 'alert'); return; }
+          WorkerSettings.openDAV(i); return;
+        }
+        if (!w.altId) { App.toast('Enter your ' + (ALT_ID_META[w.altPath] || {}).label, 'alert'); return; }
+        w.verifyStatus = 'pending'; App.reload(); repaintEntryModal(i);
+        setTimeout(() => { w.source = w.altPath; w.verifyStatus = 'verified'; w.tier = 'verified'; App.reload(); repaintEntryModal(i); App.toast('Details verified and saved'); }, 1400);
         return;
       }
 
@@ -617,10 +656,20 @@
     return App.ui.pill('Not yet verified', 'gray', true);
   }
 
+  // true when this entry's current path resolves to Digital Address Verification —
+  // either inherently (informal, self with no PAN, gig/direct/agency with an
+  // unrecognised company and no other fallback) or because it already has been (source).
+  function needsDavPath(w) {
+    return w.relation === 'informal' || (w.relation === 'self' && w.hasPan === 'no')
+      || (w.relation === 'gig' && w._orgCustom)
+      || ((w.relation === 'direct' || w.relation === 'agency') && w._orgCustom && w.altPath === 'dav')
+      || w.source === 'dav';
+  }
+
   // Address/State/Pincode — City is already collected as a general field above, so DAV
   // only needs these three. Shown when the entry's path requires (or has fallen back to) DAV.
   function addressBlock(w, i) {
-    const needsDav = w.relation === 'informal' || (w.relation === 'self' && w.hasPan === 'no') || w.source === 'dav';
+    const needsDav = needsDavPath(w);
     if (!needsDav) return '';
     return `
       <div class="label" style="margin-top:14px;margin-bottom:2px">Work Address</div>
@@ -763,6 +812,26 @@
       </div>` : ''}
       ${w.hasPan === 'no' ? `<div class="hint" style="margin-top:8px">No PAN — we'll verify this entry via Digital Address Verification instead.</div>` : ''}` : ''}
 
+      ${(w.relation === 'direct' || w.relation === 'agency') && w._orgCustom ? `
+      <div class="field" style="margin-top:14px;margin-bottom:0">
+        <label class="label wset-flabel">Company isn't in our records — how would you like to verify this entry?</label>
+        <div class="row gap-8 wrap">
+          <button class="btn btn--sm ${w.altPath === 'uan' ? 'btn--primary' : ''}" onclick="WorkerSettings.setAltPath(${i},'uan')">UAN</button>
+          <button class="btn btn--sm ${w.altPath === 'ppf' ? 'btn--primary' : ''}" onclick="WorkerSettings.setAltPath(${i},'ppf')">PPF</button>
+          <button class="btn btn--sm ${w.altPath === 'nps' ? 'btn--primary' : ''}" onclick="WorkerSettings.setAltPath(${i},'nps')">NPS</button>
+          <button class="btn btn--sm ${w.altPath === 'dav' ? 'btn--primary' : ''}" onclick="WorkerSettings.setAltPath(${i},'dav')">${App.icon('mappin')} Verify via Address</button>
+        </div>
+      </div>
+      ${w.altPath && w.altPath !== 'dav' ? `
+      <div class="field" style="margin-top:12px;margin-bottom:0">
+        <label class="label wset-flabel">${App.esc(ALT_ID_META[w.altPath].label)}</label>
+        <input class="input mono" value="${App.esc(w.altId)}" placeholder="${App.esc(ALT_ID_META[w.altPath].placeholder)}" oninput="WorkerSettings.editWork(${i},'altId',this.value)">
+      </div>` : ''}
+      ${w.altPath === 'dav' ? `<div class="hint" style="margin-top:8px">We'll verify this entry via Digital Address Verification instead.</div>` : ''}` : ''}
+
+      ${w.relation === 'gig' && w._orgCustom ? `
+      <div class="hint" style="margin-top:14px">Platform isn't in our records — we'll verify this entry via Digital Address Verification instead.</div>` : ''}
+
       ${addressBlock(w, i)}
 
       <div class="row between" style="margin-top:13px;padding-top:12px;border-top:1px solid var(--line-2)">
@@ -771,7 +840,7 @@
       </div>
       <div class="row between" style="margin-top:11px">
         ${verifyChip(w)}
-        ${w.verifyStatus !== 'verified' ? `<button class="btn btn--primary btn--sm" ${w.verifyStatus === 'pending' ? 'disabled' : ''} onclick="${w.verifyStatus === 'scheduled' ? `WorkerSettings.resumeScheduledDAV(${i})` : `WorkerSettings.verifyEntry(${i})`}">${w.verifyStatus === 'pending' ? spinner('Verifying…') : w.verifyStatus === 'scheduled' ? `${App.icon('arrow')} Start Now` : ((w.relation === 'informal' || (w.relation === 'self' && w.hasPan === 'no')) ? `${App.icon('mappin')} Verify via Address` : `${App.icon('shieldcheck')} Verify Details`)}</button>` : ''}
+        ${w.verifyStatus !== 'verified' ? `<button class="btn btn--primary btn--sm" ${w.verifyStatus === 'pending' ? 'disabled' : ''} onclick="${w.verifyStatus === 'scheduled' ? `WorkerSettings.resumeScheduledDAV(${i})` : `WorkerSettings.verifyEntry(${i})`}">${w.verifyStatus === 'pending' ? spinner('Verifying…') : w.verifyStatus === 'scheduled' ? `${App.icon('arrow')} Start Now` : (needsDavPath(w) ? `${App.icon('mappin')} Verify via Address` : `${App.icon('shieldcheck')} Verify Details`)}</button>` : ''}
       </div>`;
   }
 

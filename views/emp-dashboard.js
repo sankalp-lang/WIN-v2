@@ -68,15 +68,25 @@
   // Job Management / Candidate Discovery / Hiring Pipeline live under one "Hiring &
   // Recruitment" tab (subtab), rather than each being its own top-level tab — Overview
   // is the only other top-level tab.
-  const S = { tab: 'overview', subtab: 'jobs', range: '30d', showForm: false, role: 'All', invited: [], sync: 'idle', posted: 0 };
+  const S = { tab: 'overview', subtab: 'jobs', _lastParam: null, range: '30d', showForm: false, role: 'All', invited: [], sync: 'idle', posted: 0 };
   const jsq = s => String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
   const alive = () => App.state.route === 'emp-dashboard';
 
   window.EmpDash = {
-    setTab(t) { S.tab = t; App.reload(); },
-    setSubTab(t) { S.tab = 'hiring'; S.subtab = t; App.reload(); },
+    // keep App.state.params.tab in sync so the sidebar's nested Overview/Recruitment
+    // items (see navHtml() in core.js) highlight whichever is actually showing.
+    setTab(t) { S.tab = t; App.state.params = Object.assign({}, App.state.params, { tab: t }); App.reload(); },
+    setSubTab(t) {
+      S.tab = 'hiring'; S.subtab = t;
+      App.state.params = Object.assign({}, App.state.params, { tab: 'hiring' });
+      App.reload();
+    },
     setRange(r) { S.range = r; App.reload(); },
-    postJob() { S.tab = 'hiring'; S.subtab = 'jobs'; S.showForm = true; S.sync = 'idle'; App.reload(); },
+    postJob() {
+      S.tab = 'hiring'; S.subtab = 'jobs'; S.showForm = true; S.sync = 'idle';
+      App.state.params = Object.assign({}, App.state.params, { tab: 'hiring' });
+      App.reload();
+    },
     openForm() { S.showForm = true; S.sync = 'idle'; App.reload(); },
     closeForm() { S.showForm = false; S.sync = 'idle'; App.reload(); },
     submitJob() {
@@ -483,8 +493,9 @@
       </div>`;
   }
 
-  // Job Management / Candidate Discovery / Hiring Pipeline as sub-items of "Recruitment"
-  // in the left rail (see ed-rail in render()) — Overview is the only other rail item.
+  // Job Management / Candidate Discovery / Hiring Pipeline as an in-page sub-nav shown
+  // when "Recruitment" is the active section (Overview/Recruitment themselves are chosen
+  // from the sidebar — see the nested items under Dashboard in navHtml(), core.js).
   const SUBTABS = [
     ['jobs', 'Job Management'],
     ['discovery', 'Candidate Discovery'],
@@ -539,6 +550,11 @@
     render(ctx) {
       const org = (ctx && ctx.user && ctx.user.org) || (DB.profiles.employer && DB.profiles.employer.org);
       if (window.EmpHrms && !EmpHrms.hasActiveConnection(org)) return syncPromptPage();
+      // Overview/Recruitment now live as nested items under Dashboard in the sidebar
+      // itself (see navHtml() in core.js) — honour a ?tab= deep-link from there once,
+      // then let in-page clicks (Recruitment sub-nav, Post Job, etc.) win.
+      const p = ctx.params && ctx.params.tab;
+      if (p && p !== S._lastParam && (p === 'overview' || p === 'hiring')) { S.tab = p; S._lastParam = p; }
       const body = S.tab === 'overview' ? overviewTab()
         : S.subtab === 'jobs' ? jobsTab()
         : S.subtab === 'discovery' ? discoveryTab()
@@ -570,24 +586,7 @@
         .ed-ok{ width:46px; height:46px; border-radius:50%; display:grid; place-items:center; background:var(--green-600); color:#fff; }
         .ed-ok .ico{ width:26px; height:26px; }
         @keyframes ed-spin{ to{ transform:rotate(360deg); } }
-        .ed-shell{ display:grid; grid-template-columns:222px minmax(0,1fr); gap:24px; align-items:start; }
-        .ed-rail{ position:sticky; top:8px; display:flex; flex-direction:column; gap:4px; }
-        .ed-railitem{ display:flex; align-items:center; gap:11px; width:100%; text-align:left; padding:11px 13px; border-radius:var(--r-sm);
-          border:1px solid transparent; background:none; color:var(--ink-2); cursor:pointer; transition:.13s; font-size:13.5px; font-weight:600; }
-        .ed-railitem:hover{ background:var(--surface-2); }
-        .ed-railitem .ico{ color:var(--faint); flex-shrink:0; transition:.13s; }
-        .ed-railitem.is-active{ background:var(--accent-weak); border-color:var(--accent-ring); color:var(--accent-strong); }
-        .ed-railitem.is-active .ico{ color:var(--accent); }
-        .ed-railsub{ display:flex; flex-direction:column; gap:2px; margin:2px 0 8px 16px; padding-left:14px; border-left:2px solid var(--line-2); }
-        .ed-railsubitem{ padding:8px 11px; border-radius:var(--r-sm); font-size:12.5px; font-weight:600; color:var(--muted); cursor:pointer; text-align:left; background:none; border:none; transition:.13s; }
-        .ed-railsubitem:hover{ background:var(--surface-2); color:var(--ink-2); }
-        .ed-railsubitem.is-active{ background:var(--accent-weak); color:var(--accent-strong); }
-        .ed-main{ min-width:0; }
-        @media (max-width:900px){
-          .ed-shell{ grid-template-columns:1fr; }
-          .ed-rail{ position:static; flex-direction:row; overflow-x:auto; padding-bottom:4px; }
-          .ed-railsub{ flex-direction:row; margin:0 0 0 8px; padding-left:8px; }
-        }
+        .ed-hiringseg{ margin-bottom:20px; }
         @media (max-width:1000px){ .ed-grid-a, .ed-grid-b{ grid-template-columns:1fr; } .ed-candgrid{ grid-template-columns:repeat(2,1fr); } }
         @media (max-width:680px){ .ed-candgrid{ grid-template-columns:1fr; } }
       </style>`;
@@ -620,17 +619,11 @@
           </div>
         </div>
 
-        <div class="ed-shell">
-          <div class="ed-rail">
-            <button class="ed-railitem ${S.tab === 'overview' ? 'is-active' : ''}" onclick="EmpDash.setTab('overview')">${App.icon('home')}<span>Overview</span></button>
-            <button class="ed-railitem ${S.tab === 'hiring' ? 'is-active' : ''}" onclick="EmpDash.setTab('hiring')">${App.icon('briefcase')}<span>Recruitment</span></button>
-            ${S.tab === 'hiring' ? `
-            <div class="ed-railsub">
-              ${SUBTABS.map(([k, l]) => `<button class="ed-railsubitem ${S.subtab === k ? 'is-active' : ''}" onclick="EmpDash.setSubTab('${k}')">${l}</button>`).join('')}
-            </div>` : ''}
-          </div>
-          <div class="ed-main">${body}</div>
-        </div>
+        ${S.tab === 'hiring' ? `
+        <div class="seg ed-hiringseg" aria-label="Recruitment section">
+          ${SUBTABS.map(([k, l]) => `<button class="${S.subtab === k ? 'is-active' : ''}" onclick="EmpDash.setSubTab('${k}')">${l}</button>`).join('')}
+        </div>` : ''}
+        ${body}
       </div>`;
     }
   });

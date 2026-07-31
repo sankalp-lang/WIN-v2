@@ -266,7 +266,9 @@
 
           <div class="row" style="justify-content:flex-end;margin-top:22px">${saveBtn('profile')}</div>
         </div>
-      </div>`;
+      </div>
+
+      ${App.langCard()}`;
   }
 
   function orgTab() {
