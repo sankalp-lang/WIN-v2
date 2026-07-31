@@ -250,15 +250,42 @@ window.App = (function () {
   App.persona = () => PERSONAS[App.state.persona];
   App.personas = PERSONAS;
 
+  // the language chosen at login carries into the sidebar nav + a few topbar strings —
+  // the rest of each page's own content is not translated in this pass.
+  const NAV_I18N = {
+    hi: {
+      sections: { Overview: 'अवलोकन', Grow: 'विकास', Account: 'खाता', Workspace: 'कार्यक्षेत्र', Build: 'निर्माण', Registry: 'रजिस्ट्री', Operations: 'संचालन' },
+      items: {
+        'worker-home': 'होम', 'worker-portfolio': 'मेरा पोर्टफोलियो', 'worker-skills': 'स्किल सलाहकार', 'worker-jobs': 'नौकरियां',
+        'worker-cv': 'सीवी बिल्डर', 'worker-courses': 'कोर्स', 'worker-grievance': 'शिकायतें', 'worker-settings': 'प्रोफ़ाइल और सेटिंग्स', 'worker-help': 'सहायता',
+        'emp-dashboard': 'डैशबोर्ड', 'emp-verifications': 'कर्मचारी', 'emp-hrms': 'HRMS सिंक', 'emp-apidocs': 'API और दस्तावेज़', 'emp-settings': 'सेटिंग्स',
+        'gov-demographics': 'जनसांख्यिकी', 'gov-enrollment': 'नामांकन', 'gov-grievances': 'शिकायतें', 'gov-reports': 'रिपोर्ट', 'gov-settings': 'सेटिंग्स',
+      },
+      searchPlaceholder: 'खोजें…', switchPersona: 'व्यक्तित्व बदलें',
+    },
+    mr: {
+      sections: { Overview: 'आढावा', Grow: 'वाढ', Account: 'खाते', Workspace: 'कार्यक्षेत्र', Build: 'तयार करा', Registry: 'नोंदणी', Operations: 'कामकाज' },
+      items: {
+        'worker-home': 'मुख्यपृष्ठ', 'worker-portfolio': 'माझा पोर्टफोलिओ', 'worker-skills': 'कौशल्य सल्लागार', 'worker-jobs': 'नोकऱ्या',
+        'worker-cv': 'सीव्ही बिल्डर', 'worker-courses': 'अभ्यासक्रम', 'worker-grievance': 'तक्रारी', 'worker-settings': 'प्रोफाइल आणि सेटिंग्ज', 'worker-help': 'मदत',
+        'emp-dashboard': 'डॅशबोर्ड', 'emp-verifications': 'कर्मचारी', 'emp-hrms': 'HRMS सिंक', 'emp-apidocs': 'API आणि दस्तऐवज', 'emp-settings': 'सेटिंग्ज',
+        'gov-demographics': 'लोकसंख्याशास्त्र', 'gov-enrollment': 'नोंदणी', 'gov-grievances': 'तक्रारी', 'gov-reports': 'अहवाल', 'gov-settings': 'सेटिंग्ज',
+      },
+      searchPlaceholder: 'शोधा…', switchPersona: 'व्यक्तिरेखा बदला',
+    },
+  };
+  App.navT = () => NAV_I18N[App.state.lang] || null;
+
   /* ---------------- shell ---------------- */
   function navHtml() {
     const p = App.persona(); const route = App.state.route;
     const fresh = !!(App.state.user && App.state.user._fresh);
+    const nt = App.navT();
     return p.nav.map(group => `
-      <div class="nav__section">${group.section}</div>
+      <div class="nav__section">${nt ? (nt.sections[group.section] || group.section) : group.section}</div>
       ${group.items.map(it => `
         <div class="nav__item ${it.id === route ? 'is-active' : ''}" onclick="App.navigate('${it.id}')">
-          ${App.icon(it.icon)}<span>${it.label}</span>${it.tag && !fresh ? `<span class="nav__tag">${it.tag}</span>` : ''}
+          ${App.icon(it.icon)}<span>${nt ? (nt.items[it.id] || it.label) : it.label}</span>${it.tag && !fresh ? `<span class="nav__tag">${it.tag}</span>` : ''}
         </div>`).join('')}
     `).join('');
   }
@@ -281,7 +308,7 @@ window.App = (function () {
               <div class="userchip__meta grow"><b>${App.esc(u.name)}</b><span>${App.esc(u.subtitle || '')}</span></div>
               ${App.icon('settings')}
             </div>
-            <button class="btn btn--ghost btn--sm btn--block" style="margin-top:6px;justify-content:flex-start" onclick="App.logout()">${App.icon('logout')} Switch persona</button>
+            <button class="btn btn--ghost btn--sm btn--block" style="margin-top:6px;justify-content:flex-start" onclick="App.logout()">${App.icon('logout')} ${(App.navT() || {}).switchPersona || 'Switch persona'}</button>
           </div>
         </aside>
         <div class="main">
@@ -289,7 +316,7 @@ window.App = (function () {
             <button class="iconbtn menu-btn" onclick="App.toggleNav()" title="Menu">${App.icon('menu')}</button>
             <div><div class="topbar__title" id="tbTitle"></div><div class="topbar__sub" id="tbSub"></div></div>
             <div class="topbar__spacer"></div>
-            <div class="searchbar" onclick="App.toast('Search is a demo affordance in this prototype')">${App.icon('search')}<span>Search…</span><span class="kbd">⌘K</span></div>
+            <div class="searchbar" onclick="App.toast('Search is a demo affordance in this prototype')">${App.icon('search')}<span>${(App.navT() || {}).searchPlaceholder || 'Search…'}</span><span class="kbd">⌘K</span></div>
             <button class="iconbtn" onclick="App.notifications()" title="Notifications">${App.icon('bell')}<span class="dot"></span></button>
           </header>
           <div class="content" id="content"></div>
@@ -332,6 +359,9 @@ window.App = (function () {
     App.state.persona = persona;
     App.state.user = user || (DB.profiles && DB.profiles[persona]) || { name: 'Demo User' };
     App.state.chat = [];
+    // carry the landing-page language choice into the app shell (sidebar nav + topbar);
+    // individual page content stays in English for now — see navHtml()/T() below.
+    App.state.lang = L.lang;
     renderShell();
     App.navigate(App.persona().home);
   };
@@ -443,6 +473,24 @@ window.App = (function () {
       statWorkers: 'Workers in scope', statVerify: 'Live verification', statSources: 'Source systems',
       tabWorker: 'Worker', tabEmployer: 'Employer', tabGov: 'Government',
       terms: 'By continuing you agree to the WiN Terms &amp; Privacy Policy.',
+      verifyTitle: 'Verify your identity', verifySub: 'Sign in the way the Government of India already knows you.',
+      aadhaarLabel: 'Aadhaar (UIDAI)', aadhaarSub: 'Aadhaar-linked mobile + OTP',
+      digilockerLabel: 'DigiLocker', digilockerSub: 'Mobile + security PIN + OTP',
+      dataNotice: 'Your data is encrypted and never stored. Authentication is powered by Government of India services.',
+      newHere: 'New here?', createAccount: 'Create an account',
+      back: 'Back', mobileLabel: 'Mobile number', pinLabel: '6-digit security PIN', sendOtpBtn: 'Send OTP',
+      aadhaarVerifyTitle: 'Aadhaar verification', aadhaarVerifySub: 'Enter your Aadhaar-linked mobile number',
+      digilockerSigninTitle: 'DigiLocker sign-in', digilockerSigninSub: 'Enter your registered mobile & PIN',
+      otpTitle: 'Enter OTP', otpSentTo: 'Sent to mobile ending', verifyContinue: 'Verify & continue',
+      resendPrompt: "Didn't get it?", resendLink: 'Resend OTP',
+      verifyingTitle: 'Verifying identity', verifyingSub: 'Authenticating with',
+      govSigninTitle: 'Government sign-in', employerSigninTitle: 'Employer sign-in',
+      govSigninSub: 'Access is restricted to authorised officials. All actions are logged and audited.',
+      employerSigninSub: 'Sign in with your organisation credentials.',
+      emailLabel: 'Email address', passwordLabel: 'Password', signInBtn: 'Sign in',
+      demoCredsGov: 'Demo credentials are pre-filled. Any input signs you in.',
+      demoBuildEmployer: 'This is a demo build - any credentials sign you in.',
+      newHereEmployer: 'New here?', createEmployerAccount: 'Create an employer account',
     },
     hi: {
       tagline: 'भारत के हर श्रमिक के लिए एक सत्यापित पहचान।',
@@ -451,6 +499,24 @@ window.App = (function () {
       statWorkers: 'कार्यक्षेत्र में श्रमिक', statVerify: 'लाइव सत्यापन', statSources: 'स्रोत प्रणालियाँ',
       tabWorker: 'श्रमिक', tabEmployer: 'नियोक्ता', tabGov: 'सरकार',
       terms: 'जारी रखकर आप WiN की शर्तों और गोपनीयता नीति से सहमत होते हैं।',
+      verifyTitle: 'अपनी पहचान सत्यापित करें', verifySub: 'भारत सरकार आपको जिस तरह जानती है, उसी तरह साइन इन करें।',
+      aadhaarLabel: 'आधार (UIDAI)', aadhaarSub: 'आधार-लिंक्ड मोबाइल + OTP',
+      digilockerLabel: 'डिजिलॉकर', digilockerSub: 'मोबाइल + सुरक्षा पिन + OTP',
+      dataNotice: 'आपका डेटा एन्क्रिप्टेड है और कभी संग्रहीत नहीं किया जाता। प्रमाणीकरण भारत सरकार की सेवाओं द्वारा संचालित है।',
+      newHere: 'नए हैं?', createAccount: 'खाता बनाएं',
+      back: 'वापस', mobileLabel: 'मोबाइल नंबर', pinLabel: '6-अंकीय सुरक्षा पिन', sendOtpBtn: 'OTP भेजें',
+      aadhaarVerifyTitle: 'आधार सत्यापन', aadhaarVerifySub: 'अपना आधार-लिंक्ड मोबाइल नंबर दर्ज करें',
+      digilockerSigninTitle: 'डिजिलॉकर साइन-इन', digilockerSigninSub: 'अपना पंजीकृत मोबाइल और पिन दर्ज करें',
+      otpTitle: 'OTP दर्ज करें', otpSentTo: 'मोबाइल पर भेजा गया, अंत', verifyContinue: 'सत्यापित करें और जारी रखें',
+      resendPrompt: 'नहीं मिला?', resendLink: 'OTP पुनः भेजें',
+      verifyingTitle: 'पहचान सत्यापित हो रही है', verifyingSub: 'प्रमाणीकरण जारी है',
+      govSigninTitle: 'सरकारी साइन-इन', employerSigninTitle: 'नियोक्ता साइन-इन',
+      govSigninSub: 'पहुंच केवल अधिकृत अधिकारियों तक सीमित है। सभी कार्रवाइयां लॉग और ऑडिट की जाती हैं।',
+      employerSigninSub: 'अपने संगठन की साख से साइन इन करें।',
+      emailLabel: 'ईमेल पता', passwordLabel: 'पासवर्ड', signInBtn: 'साइन इन करें',
+      demoCredsGov: 'डेमो साख पहले से भरी हुई है। कोई भी इनपुट आपको साइन इन कर देगा।',
+      demoBuildEmployer: 'यह एक डेमो बिल्ड है - कोई भी साख आपको साइन इन कर देगी।',
+      newHereEmployer: 'नए हैं?', createEmployerAccount: 'नियोक्ता खाता बनाएं',
     },
     mr: {
       tagline: 'भारतातील प्रत्येक कामगारासाठी एक सत्यापित ओळख.',
@@ -459,6 +525,24 @@ window.App = (function () {
       statWorkers: 'व्याप्तीतील कामगार', statVerify: 'थेट पडताळणी', statSources: 'स्रोत प्रणाली',
       tabWorker: 'कामगार', tabEmployer: 'नियोक्ता', tabGov: 'सरकार',
       terms: 'सुरू ठेवून तुम्ही WiN च्या अटी व गोपनीयता धोरणाशी सहमत आहात.',
+      verifyTitle: 'तुमची ओळख सत्यापित करा', verifySub: 'भारत सरकारला तुम्ही आधीच ज्या पद्धतीने माहीत आहात त्याच पद्धतीने साइन इन करा.',
+      aadhaarLabel: 'आधार (UIDAI)', aadhaarSub: 'आधार-लिंक्ड मोबाइल + OTP',
+      digilockerLabel: 'डिजीलॉकर', digilockerSub: 'मोबाइल + सुरक्षा पिन + OTP',
+      dataNotice: 'तुमचा डेटा एन्क्रिप्टेड आहे आणि कधीही साठवला जात नाही. प्रमाणीकरण भारत सरकारच्या सेवांद्वारे चालवले जाते.',
+      newHere: 'नवीन आहात?', createAccount: 'खाते तयार करा',
+      back: 'मागे', mobileLabel: 'मोबाइल नंबर', pinLabel: '6-अंकी सुरक्षा पिन', sendOtpBtn: 'OTP पाठवा',
+      aadhaarVerifyTitle: 'आधार पडताळणी', aadhaarVerifySub: 'तुमचा आधार-लिंक्ड मोबाइल नंबर टाका',
+      digilockerSigninTitle: 'डिजीलॉकर साइन-इन', digilockerSigninSub: 'तुमचा नोंदणीकृत मोबाइल आणि पिन टाका',
+      otpTitle: 'OTP टाका', otpSentTo: 'मोबाइलवर पाठवले, शेवट', verifyContinue: 'सत्यापित करा आणि पुढे जा',
+      resendPrompt: 'मिळाला नाही?', resendLink: 'OTP पुन्हा पाठवा',
+      verifyingTitle: 'ओळख सत्यापित होत आहे', verifyingSub: 'प्रमाणीकरण सुरू आहे',
+      govSigninTitle: 'सरकारी साइन-इन', employerSigninTitle: 'नियोक्ता साइन-इन',
+      govSigninSub: 'प्रवेश फक्त अधिकृत अधिकाऱ्यांपुरता मर्यादित आहे. सर्व क्रिया लॉग आणि ऑडिट केल्या जातात.',
+      employerSigninSub: 'तुमच्या संस्थेच्या क्रेडेन्शियल्सने साइन इन करा.',
+      emailLabel: 'ईमेल पत्ता', passwordLabel: 'पासवर्ड', signInBtn: 'साइन इन करा',
+      demoCredsGov: 'डेमो क्रेडेन्शियल्स आधीच भरलेले आहेत. कोणताही इनपुट तुम्हाला साइन इन करेल.',
+      demoBuildEmployer: 'हे डेमो बिल्ड आहे - कोणतेही क्रेडेन्शियल्स तुम्हाला साइन इन करतील.',
+      newHereEmployer: 'नवीन आहात?', createEmployerAccount: 'नियोक्ता खाते तयार करा',
     },
   };
   App.login = {
@@ -525,7 +609,7 @@ window.App = (function () {
   // through — this is a prototype, not a real KYB check.
   const SU = {
     active: false, step: 'credentials',
-    legalName: 'Rampur Traders Pvt. Ltd.', email: 'admin@rampurtraders.in',
+    legalName: 'Aditya Birla Construction Ltd.', email: 'hr@abconstruction.in',
     password: 'Passw0rd!23', confirm: 'Passw0rd!23',
     hasMca: 'yes', cin: 'U45201MH2010PTC123456', hasGst: 'yes', gstUdyam: '07AAACB1234C1Z5',
     address: '', city: '', state: '', pincode: '',
@@ -549,7 +633,7 @@ window.App = (function () {
     setHasMca(v) { SU.hasMca = v; SU.cin = ''; renderLogin(); },
     setHasGst(v) { SU.hasGst = v; SU.gstUdyam = ''; renderLogin(); },
     autofillCredentials() {
-      SU.legalName = 'Rampur Traders Pvt. Ltd.'; SU.email = 'admin@rampurtraders.in';
+      SU.legalName = 'Aditya Birla Construction Ltd.'; SU.email = 'hr@abconstruction.in';
       SU.password = 'Passw0rd!23'; SU.confirm = 'Passw0rd!23';
       renderLogin();
     },
@@ -594,7 +678,8 @@ window.App = (function () {
           <h2 class="auth__title">Create an employer account</h2>
           <button class="btn btn--ghost btn--sm" onclick="App.signup.autofillCredentials()">${App.icon('sparkles')} Autofill demo data</button>
         </div>
-        <p class="muted" style="margin:6px 0 22px">Let's start with your account details.</p>
+        <p class="muted" style="margin:6px 0 12px">Let's start with your account details.</p>
+        <div class="banner banner--info" style="margin-bottom:18px">${App.icon('plug')}<div>You won't need to enter employee data here — once your account is verified, you'll connect your HRMS and worker records sync in automatically.</div></div>
         <div class="field"><label class="label">Organisation Name</label>
           <input class="input" value="${App.esc(SU.legalName)}" placeholder="e.g. Aditya Birla Construction Ltd." oninput="App.signup.set('legalName',this.value)"></div>
         <div class="field"><label class="label">Work Email</label>
@@ -702,67 +787,65 @@ window.App = (function () {
     if (L.mode === 'worker') {
       if (L.method === 'choose') {
         form = `
-          <h2 class="auth__title">Verify your identity</h2>
-          <p class="muted" style="margin:6px 0 22px">Sign in the way the Government of India already knows you.</p>
+          <h2 class="auth__title">${T.verifyTitle}</h2>
+          <p class="muted" style="margin:6px 0 22px">${T.verifySub}</p>
           <button class="method-card" onclick="App.login.pickMethod('aadhaar')">
             <div class="method-card__logo">${UIDAI}</div>
-            <div class="grow"><b>Aadhaar (UIDAI)</b><span>Aadhaar-linked mobile + OTP</span></div>${App.icon('arrow')}
+            <div class="grow"><b>${T.aadhaarLabel}</b><span>${T.aadhaarSub}</span></div>${App.icon('arrow')}
           </button>
           <button class="method-card" onclick="App.login.pickMethod('digilocker')">
             <div class="method-card__logo">${DIGILOCKER}</div>
-            <div class="grow"><b>DigiLocker</b><span>Mobile + security PIN + OTP</span></div>${App.icon('arrow')}
+            <div class="grow"><b>${T.digilockerLabel}</b><span>${T.digilockerSub}</span></div>${App.icon('arrow')}
           </button>
-          <div class="banner banner--green" style="margin-top:16px">${App.icon('lock')}<div>Your data is encrypted and never stored. Authentication is powered by Government of India services.</div></div>
-          <p class="muted" style="text-align:center;font-size:13px;margin-top:16px">New here? <b style="color:var(--accent-strong);cursor:pointer" onclick="App.workerSignup.open()">Create an account</b></p>`;
+          <div class="banner banner--green" style="margin-top:16px">${App.icon('lock')}<div>${T.dataNotice}</div></div>
+          <p class="muted" style="text-align:center;font-size:13px;margin-top:16px">${T.newHere} <b style="color:var(--accent-strong);cursor:pointer" onclick="App.workerSignup.open()">${T.createAccount}</b></p>`;
       } else if (L.step === 'input') {
         const isAad = L.method === 'aadhaar';
         form = `
-          <button class="btn btn--ghost btn--sm" style="margin-bottom:14px" onclick="App.login.back()">${App.icon('arrowleft')} Back</button>
-          <div class="row gap-12" style="margin-bottom:18px">${isAad ? UIDAI : DIGILOCKER}<div><h2 class="auth__title" style="font-size:19px">${isAad ? 'Aadhaar verification' : 'DigiLocker sign-in'}</h2><p class="muted" style="font-size:13px">${isAad ? 'Enter your Aadhaar-linked mobile number' : 'Enter your registered mobile & PIN'}</p></div></div>
-          <div class="field"><label class="label">Mobile number</label>
+          <button class="btn btn--ghost btn--sm" style="margin-bottom:14px" onclick="App.login.back()">${App.icon('arrowleft')} ${T.back}</button>
+          <div class="row gap-12" style="margin-bottom:18px">${isAad ? UIDAI : DIGILOCKER}<div><h2 class="auth__title" style="font-size:19px">${isAad ? T.aadhaarVerifyTitle : T.digilockerSigninTitle}</h2><p class="muted" style="font-size:13px">${isAad ? T.aadhaarVerifySub : T.digilockerSigninSub}</p></div></div>
+          <div class="field"><label class="label">${T.mobileLabel}</label>
             <div class="input-group"><span class="prefix">+91</span><input class="input" id="lgPhone" inputmode="numeric" maxlength="10" placeholder="98••• •••••" value="${App.esc(L.phone)}"></div>
           </div>
-          ${isAad ? '' : `<div class="field"><label class="label">6-digit security PIN</label><input class="input mono" id="lgPin" type="password" inputmode="numeric" maxlength="6" placeholder="••••••"></div>`}
-          <button class="btn btn--primary btn--block btn--lg" onclick="App.login.sendOtp()">${App.icon('send')} Send OTP</button>`;
+          ${isAad ? '' : `<div class="field"><label class="label">${T.pinLabel}</label><input class="input mono" id="lgPin" type="password" inputmode="numeric" maxlength="6" placeholder="••••••"></div>`}
+          <button class="btn btn--primary btn--block btn--lg" onclick="App.login.sendOtp()">${App.icon('send')} ${T.sendOtpBtn}</button>`;
       } else if (L.step === 'otp') {
         form = `
-          <button class="btn btn--ghost btn--sm" style="margin-bottom:14px" onclick="App.login.back()">${App.icon('arrowleft')} Back</button>
+          <button class="btn btn--ghost btn--sm" style="margin-bottom:14px" onclick="App.login.back()">${App.icon('arrowleft')} ${T.back}</button>
           <div style="text-align:center;margin-bottom:20px"><div class="kpi__icon" style="width:46px;height:46px;margin:0 auto 12px;background:var(--accent-weak);color:var(--accent)">${App.icon('lock')}</div>
-            <h2 class="auth__title" style="font-size:20px">Enter OTP</h2><p class="muted" style="font-size:13px;margin-top:4px">Sent to mobile ending ${App.esc((L.phone || '000000').replace(/\D/g,'').slice(-4) || '••••')}</p></div>
+            <h2 class="auth__title" style="font-size:20px">${T.otpTitle}</h2><p class="muted" style="font-size:13px;margin-top:4px">${T.otpSentTo} ${App.esc((L.phone || '000000').replace(/\D/g,'').slice(-4) || '••••')}</p></div>
           <div class="otp" id="otpWrap">${[0,1,2,3,4,5].map(i => `<input maxlength="1" inputmode="numeric" data-i="${i}" oninput="App._otpAdvance(event,${i})">`).join('')}</div>
-          <button class="btn btn--primary btn--block btn--lg" style="margin-top:22px" onclick="App.login.verify()">Verify & continue</button>
-          <p class="muted" style="text-align:center;font-size:12.5px;margin-top:14px">Didn't get it? <b style="color:var(--accent-strong)">Resend OTP</b></p>`;
+          <button class="btn btn--primary btn--block btn--lg" style="margin-top:22px" onclick="App.login.verify()">${T.verifyContinue}</button>
+          <p class="muted" style="text-align:center;font-size:12.5px;margin-top:14px">${T.resendPrompt} <b style="color:var(--accent-strong)">${T.resendLink}</b></p>`;
       } else if (L.step === 'verifying') {
         form = `<div style="text-align:center;padding:30px 0">
           <div class="spin" style="width:46px;height:46px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;margin:0 auto 20px;animation:spin 1s linear infinite"></div>
-          <h2 class="auth__title" style="font-size:20px">Verifying identity</h2>
-          <p class="muted" style="font-size:13px;margin-top:6px">Authenticating with ${L.method === 'aadhaar' ? 'UIDAI' : 'DigiLocker'}…</p></div>
+          <h2 class="auth__title" style="font-size:20px">${T.verifyingTitle}</h2>
+          <p class="muted" style="font-size:13px;margin-top:6px">${T.verifyingSub} ${L.method === 'aadhaar' ? 'UIDAI' : 'DigiLocker'}…</p></div>
           <style>@keyframes spin{to{transform:rotate(360deg)}}</style>`;
       }
     } else {
       // employer / gov
       const gov = L.mode === 'gov';
       form = `
-        <h2 class="auth__title">${gov ? 'Government sign-in' : 'Employer sign-in'}</h2>
-        <p class="muted" style="margin:6px 0 22px">${gov ? 'Access is restricted to authorised officials. All actions are logged and audited.' : 'Sign in with your organisation credentials.'}</p>
-        <div class="field"><label class="label">Email address</label>
+        <h2 class="auth__title">${gov ? T.govSigninTitle : T.employerSigninTitle}</h2>
+        <p class="muted" style="margin:6px 0 22px">${gov ? T.govSigninSub : T.employerSigninSub}</p>
+        <div class="field"><label class="label">${T.emailLabel}</label>
           <div class="input--icon">${App.icon('mail')}<input class="input" id="lgEmail" placeholder="${gov ? 'you@ministry.gov.in' : 'you@company.com'}" value="${gov ? 'commissioner@labour.mh.gov.in' : 'hr@acmelogistics.in'}"></div></div>
-        <div class="field"><label class="label">Password</label>
+        <div class="field"><label class="label">${T.passwordLabel}</label>
           <div class="input--icon">${App.icon('lock')}<input class="input" type="password" placeholder="••••••••" value="demo-password"></div></div>
-        <button class="btn btn--primary btn--block btn--lg" onclick="App.login.submit('${gov ? 'gov' : 'employer'}')">Sign in ${App.icon('arrow')}</button>
-        ${gov ? `<div class="banner banner--info" style="margin-top:16px">${App.icon('shield')}<div>Demo credentials are pre-filled. Any input signs you in.</div></div>` : `<p class="muted" style="text-align:center;font-size:12.5px;margin-top:16px">This is a demo build - any credentials sign you in.</p>
-        <p style="text-align:center;font-size:13px;margin-top:14px">New here? <b style="color:var(--accent-strong);cursor:pointer" onclick="App.signup.open()">Create an employer account</b></p>`}`;
+        <button class="btn btn--primary btn--block btn--lg" onclick="App.login.submit('${gov ? 'gov' : 'employer'}')">${T.signInBtn} ${App.icon('arrow')}</button>
+        ${gov ? `<div class="banner banner--info" style="margin-top:16px">${App.icon('shield')}<div>${T.demoCredsGov}</div></div>` : `<p class="muted" style="text-align:center;font-size:12.5px;margin-top:16px">${T.demoBuildEmployer}</p>
+        <p style="text-align:center;font-size:13px;margin-top:14px">${T.newHereEmployer} <b style="color:var(--accent-strong);cursor:pointer" onclick="App.signup.open()">${T.createEmployerAccount}</b></p>`}`;
     }
     if (L.mode === 'employer' && SU.active) form = signupForm();
     if (L.mode === 'worker' && WU.active) form = workerSignupForm();
 
     $('#app').innerHTML = `
       <div class="auth" data-persona="${accent}">
+        ${langSwitcher}
         <div class="auth__aside">
-          <div class="row between" style="align-items:flex-start">
-            <div class="auth__brand"><div class="brandmark">${App.icon('shieldcheck')}</div><b>WiN</b></div>
-            ${langSwitcher}
-          </div>
+          <div class="auth__brand"><div class="brandmark">${App.icon('shieldcheck')}</div><b>WiN</b></div>
           <div class="auth__pitch">
             <div class="auth__eyebrow">${App.icon('fingerprint')} ${T.eyebrow}</div>
             <h2>${T.tagline}</h2>
@@ -779,10 +862,7 @@ window.App = (function () {
         </div>
         <div class="auth__main">
           <div class="auth__card">
-            <div class="row between" style="align-items:flex-start">
-              <div class="auth__mobilebrand"><div class="brandmark">${App.icon('shieldcheck')}</div><b>WiN</b></div>
-              <div class="auth__lang--card">${langSwitcher}</div>
-            </div>
+            <div class="auth__mobilebrand"><div class="brandmark">${App.icon('shieldcheck')}</div><b>WiN</b></div>
             <div class="auth__tabs">
               <div class="auth__tab ${L.mode === 'worker' ? 'is-active' : ''}" onclick="App.login.setMode('worker')">${App.icon('user')} ${T.tabWorker}</div>
               <div class="auth__tab ${L.mode === 'employer' ? 'is-active' : ''}" onclick="App.login.setMode('employer')">${App.icon('building')} ${T.tabEmployer}</div>

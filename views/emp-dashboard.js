@@ -483,11 +483,8 @@
       </div>`;
   }
 
-  const TABS = [
-    ['overview', 'Overview'],
-    ['hiring', 'Hiring & Recruitment'],
-  ];
-  // Job Management / Candidate Discovery / Hiring Pipeline as sub-tabs of "Hiring & Recruitment"
+  // Job Management / Candidate Discovery / Hiring Pipeline as sub-items of "Recruitment"
+  // in the left rail (see ed-rail in render()) — Overview is the only other rail item.
   const SUBTABS = [
     ['jobs', 'Job Management'],
     ['discovery', 'Candidate Discovery'],
@@ -546,11 +543,6 @@
         : S.subtab === 'jobs' ? jobsTab()
         : S.subtab === 'discovery' ? discoveryTab()
         : pipelineTab();
-      const subNav = S.tab === 'hiring' ? `
-        <div class="seg mb-20" aria-label="Hiring & Recruitment section">
-          ${SUBTABS.map(([k, l]) => `<button class="${S.subtab === k ? 'is-active' : ''}" onclick="EmpDash.setSubTab('${k}')">${l}</button>`).join('')}
-        </div>` : '';
-
       const style = `<style>
         .ed-rangeseg button.is-active{ background:var(--accent); color:#fff; box-shadow:var(--sh-xs); }
         .ed-grid-a{ display:grid; grid-template-columns:1.35fr 1fr; gap:20px; align-items:start; }
@@ -578,6 +570,24 @@
         .ed-ok{ width:46px; height:46px; border-radius:50%; display:grid; place-items:center; background:var(--green-600); color:#fff; }
         .ed-ok .ico{ width:26px; height:26px; }
         @keyframes ed-spin{ to{ transform:rotate(360deg); } }
+        .ed-shell{ display:grid; grid-template-columns:222px minmax(0,1fr); gap:24px; align-items:start; }
+        .ed-rail{ position:sticky; top:8px; display:flex; flex-direction:column; gap:4px; }
+        .ed-railitem{ display:flex; align-items:center; gap:11px; width:100%; text-align:left; padding:11px 13px; border-radius:var(--r-sm);
+          border:1px solid transparent; background:none; color:var(--ink-2); cursor:pointer; transition:.13s; font-size:13.5px; font-weight:600; }
+        .ed-railitem:hover{ background:var(--surface-2); }
+        .ed-railitem .ico{ color:var(--faint); flex-shrink:0; transition:.13s; }
+        .ed-railitem.is-active{ background:var(--accent-weak); border-color:var(--accent-ring); color:var(--accent-strong); }
+        .ed-railitem.is-active .ico{ color:var(--accent); }
+        .ed-railsub{ display:flex; flex-direction:column; gap:2px; margin:2px 0 8px 16px; padding-left:14px; border-left:2px solid var(--line-2); }
+        .ed-railsubitem{ padding:8px 11px; border-radius:var(--r-sm); font-size:12.5px; font-weight:600; color:var(--muted); cursor:pointer; text-align:left; background:none; border:none; transition:.13s; }
+        .ed-railsubitem:hover{ background:var(--surface-2); color:var(--ink-2); }
+        .ed-railsubitem.is-active{ background:var(--accent-weak); color:var(--accent-strong); }
+        .ed-main{ min-width:0; }
+        @media (max-width:900px){
+          .ed-shell{ grid-template-columns:1fr; }
+          .ed-rail{ position:static; flex-direction:row; overflow-x:auto; padding-bottom:4px; }
+          .ed-railsub{ flex-direction:row; margin:0 0 0 8px; padding-left:8px; }
+        }
         @media (max-width:1000px){ .ed-grid-a, .ed-grid-b{ grid-template-columns:1fr; } .ed-candgrid{ grid-template-columns:repeat(2,1fr); } }
         @media (max-width:680px){ .ed-candgrid{ grid-template-columns:1fr; } }
       </style>`;
@@ -610,12 +620,17 @@
           </div>
         </div>
 
-        <div class="tabs">
-          ${TABS.map(([k, l]) => `<div class="tab ${S.tab === k ? 'is-active' : ''}" onclick="EmpDash.setTab('${k}')">${l}</div>`).join('')}
+        <div class="ed-shell">
+          <div class="ed-rail">
+            <button class="ed-railitem ${S.tab === 'overview' ? 'is-active' : ''}" onclick="EmpDash.setTab('overview')">${App.icon('home')}<span>Overview</span></button>
+            <button class="ed-railitem ${S.tab === 'hiring' ? 'is-active' : ''}" onclick="EmpDash.setTab('hiring')">${App.icon('briefcase')}<span>Recruitment</span></button>
+            ${S.tab === 'hiring' ? `
+            <div class="ed-railsub">
+              ${SUBTABS.map(([k, l]) => `<button class="ed-railsubitem ${S.subtab === k ? 'is-active' : ''}" onclick="EmpDash.setSubTab('${k}')">${l}</button>`).join('')}
+            </div>` : ''}
+          </div>
+          <div class="ed-main">${body}</div>
         </div>
-
-        ${subNav}
-        ${body}
       </div>`;
     }
   });
