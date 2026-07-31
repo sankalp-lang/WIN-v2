@@ -346,7 +346,7 @@ window.App = (function () {
           <div class="content" id="content"></div>
         </div>
       </div>
-      <button class="assistant-fab" id="assistantFab" data-persona="${p.key}" onclick="App.assistant.toggle(true)" title="Ask WiN">${App.icon('sparkles')}</button>
+      <button class="assistant-fab" id="assistantFab" data-persona="${p.key}" onclick="App.openAssistant()" title="Ask WiN">${App.icon('sparkles')}</button>
     `;
   }
   App.renderNav = () => { const el = $('#sidebarNav'); if (el) el.innerHTML = navHtml(); };
@@ -433,6 +433,9 @@ window.App = (function () {
   };
 
   /* ---------------- assistant (WiN copilot) ---------------- */
+  // Worker uses the full inline Diya surface (on Home); other personas use the quick panel.
+  App.openAssistant = () => { if (App.state.persona === 'worker' && App.diya) App.diya.open(); else App.assistant.toggle(true); };
+
   App.assistant = {
     toggle(open) {
       App.state.assistantOpen = open;

@@ -4,8 +4,8 @@
   let schemeDismissed = false;
   window.WorkerHome = {
     dismissScheme() { schemeDismissed = true; App.reload(); },
-    ask(q) { App.assistant.toggle(true); if (q) App.assistant.ask(q); },
-    askInput() { const el = document.getElementById('whAsk'); const v = el ? el.value.trim() : ''; App.assistant.toggle(true); if (v) { App.assistant.ask(v); el.value = ''; } },
+    ask(q) { if (q) App.diya.ask(q); },
+    askInput() { const el = document.getElementById('whAsk'); const v = el ? el.value.trim() : ''; if (el) el.value = ''; if (v) App.diya.ask(v); },
   };
 
   // shown to a freshly signed-up worker instead of Rajan's demo home — there's no
@@ -29,6 +29,7 @@
     subtitle: 'Your verified worker identity',
     render(ctx) {
       const u = ctx.user;
+      if (App.diya && App.diya.active) return App.diya.surface(ctx);
       if (u && u._fresh) return freshHome();
       const fn = (u.name || 'there').split(' ')[0];
 
@@ -125,6 +126,9 @@
 
         ${scheme}
       </div>`;
+    },
+    mounted(ctx) {
+      if (App.diya && App.diya.active) { App.diya.renderThread(); const i = document.getElementById('diyaInput'); if (i) i.focus(); }
     }
   });
 })();
