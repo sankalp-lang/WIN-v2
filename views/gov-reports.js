@@ -43,11 +43,12 @@
   ];
   const SECTOR_LIST = ['Construction', 'Manufacturing', 'Gig & Platform', 'Agriculture', 'Domestic & Services'];
   const DISTRICT_SEED = ['Central', 'North', 'South', 'East', 'West', 'Rural Belt'];
-  // a fuller 10-district split used whenever a state is selected in the Reports section, so
-  // filtering/expanding to one state still yields 50+ rows (5 sectors/sub-sectors x 10
-  // districts) instead of a handful — "district-wise", not a single repeated state figure.
-  const REPORT_DISTRICTS = ['Central', 'North', 'South', 'East', 'West', 'North-East', 'North-West', 'South-East', 'South-West', 'Rural Belt']
-    .map(n => ({ n, p: 10 }));
+  // real district names per state (from data.js — the same set gov-dashboard/demographics/
+  // enrollment use) rather than generic "State North/South/East/West" placeholders.
+  function districtsFor(state) {
+    return (window.DB && DB.districtShares && DB.districtShares[state])
+      || ['Central', 'North', 'South', 'East', 'West', 'Rural Belt'].map(n => ({ n, p: fmt1(100 / 6) }));
+  }
 
   // deterministic pseudo-random (no Math.random) so the seed data is stable across renders
   function seeded(i, salt) { return ((i * 9301 + salt * 49297 + 233280) % 100000) / 100000; }
@@ -127,10 +128,10 @@
 
   function genVacancyIndex() {
     const rows = [];
-    ALL_STATES.forEach((st, si) => REPORT_DISTRICTS.forEach((d, di) => SECTOR_LIST.forEach((sec, sci) => {
+    ALL_STATES.forEach((st, si) => districtsFor(st).forEach((d, di) => SECTOR_LIST.forEach((sec, sci) => {
       const vacancies = Math.round((80 + si * 22 + di * 14 + sci * 30) * (0.6 + seeded(si + di, sci) * 0.8));
       const change = fmt1(seeded(di, sci) * 24 - 8);
-      rows.push([st, st + ' ' + d.n, sec, vacancies, change]);
+      rows.push([st, d.n, sec, vacancies, change]);
     })));
     return { headers: ['State', 'District', 'Sector', 'Open Vacancies', 'YoY Change %'], rows };
   }
@@ -298,12 +299,12 @@
     if (stateIdx === -1 || headers.indexOf('District') !== -1) return null;
     const matched = rows.filter(r => r[stateIdx] === state);
     if (!matched.length) return null;
-    const shares = REPORT_DISTRICTS;
+    const shares = districtsFor(state);
     const newHeaders = headers.slice(0, stateIdx + 1).concat(['District'], headers.slice(stateIdx + 1));
     const rows2 = [];
     matched.forEach(r => shares.forEach(sh => {
       const tail = r.slice(stateIdx + 1).map(v => typeof v === 'number' ? Math.round((v * sh.p / 100) * 10) / 10 : v);
-      rows2.push(r.slice(0, stateIdx + 1).concat([state + ' ' + sh.n], tail));
+      rows2.push(r.slice(0, stateIdx + 1).concat([sh.n], tail));
     }));
     return { headers: newHeaders, rows: rows2 };
   }
