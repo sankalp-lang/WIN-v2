@@ -65,14 +65,18 @@
   const EMP_TYPES = ['Full-time', 'Part-time', 'Contract', 'Gig / Daily Wage'];
 
   // ---- local state + controller ----
-  const S = { tab: 'overview', range: '30d', showForm: false, role: 'All', invited: [], sync: 'idle', posted: 0 };
+  // Job Management / Candidate Discovery / Hiring Pipeline live under one "Hiring &
+  // Recruitment" tab (subtab), rather than each being its own top-level tab — Overview
+  // is the only other top-level tab.
+  const S = { tab: 'overview', subtab: 'jobs', range: '30d', showForm: false, role: 'All', invited: [], sync: 'idle', posted: 0 };
   const jsq = s => String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
   const alive = () => App.state.route === 'emp-dashboard';
 
   window.EmpDash = {
     setTab(t) { S.tab = t; App.reload(); },
+    setSubTab(t) { S.tab = 'hiring'; S.subtab = t; App.reload(); },
     setRange(r) { S.range = r; App.reload(); },
-    postJob() { S.tab = 'jobs'; S.showForm = true; S.sync = 'idle'; App.reload(); },
+    postJob() { S.tab = 'hiring'; S.subtab = 'jobs'; S.showForm = true; S.sync = 'idle'; App.reload(); },
     openForm() { S.showForm = true; S.sync = 'idle'; App.reload(); },
     closeForm() { S.showForm = false; S.sync = 'idle'; App.reload(); },
     submitJob() {
@@ -153,7 +157,7 @@
         </div>
         <div class="mt-16"><div class="row between" style="margin-bottom:6px"><span style="font-size:13px">Applied → shortlisted conversion</span><span class="num" style="font-size:12.5px;font-weight:600">${conv}%</span></div>${App.ui.bar(conv, conv >= 30 ? 'var(--green-600)' : conv >= 20 ? 'var(--amber-600)' : 'var(--red-600)')}</div>`;
       const foot = `<button class="btn" onclick="App.modal.close()">Close</button>
-        <button class="btn btn--primary" onclick="App.modal.close();EmpDash.setTab('pipeline')">View in pipeline ${App.icon('arrow')}</button>`;
+        <button class="btn btn--primary" onclick="App.modal.close();EmpDash.setSubTab('pipeline')">View in pipeline ${App.icon('arrow')}</button>`;
       App.modal.open(html, { title: 'Job Posting', icon: 'briefcase', foot });
     },
   };
@@ -216,7 +220,7 @@
 
     const positions = `
       <div class="card">
-        <div class="card__head"><h3 class="grow">Active Positions Overview</h3><button class="btn btn--ghost btn--sm" onclick="EmpDash.setTab('pipeline')">View pipeline ${App.icon('arrow')}</button></div>
+        <div class="card__head"><h3 class="grow">Active Positions Overview</h3><button class="btn btn--ghost btn--sm" onclick="EmpDash.setSubTab('pipeline')">View pipeline ${App.icon('arrow')}</button></div>
         <div class="card__body" style="padding-top:6px;padding-bottom:6px">
           <div class="list--divided">
             ${POSITIONS.slice(0, 3).map((p, i) => `
@@ -469,7 +473,7 @@
     return `
       ${summary}
       <div class="card reveal">
-        <div class="card__head"><h3 class="grow">Open Positions Tracker</h3><button class="btn btn--ghost btn--sm" onclick="EmpDash.setTab('jobs')">${App.icon('plus')} Add Position</button></div>
+        <div class="card__head"><h3 class="grow">Open Positions Tracker</h3><button class="btn btn--ghost btn--sm" onclick="EmpDash.postJob()">${App.icon('plus')} Add Position</button></div>
         <div class="tablewrap tablewrap--scroll" style="border:none;border-radius:0;box-shadow:none">
           <table class="tbl">
             <thead><tr><th>Position</th><th>Dept / Location</th><th>Openings</th><th>Applied</th><th>Shortlisted</th><th>Conversion</th><th>NCS</th></tr></thead>
@@ -481,6 +485,10 @@
 
   const TABS = [
     ['overview', 'Overview'],
+    ['hiring', 'Hiring & Recruitment'],
+  ];
+  // Job Management / Candidate Discovery / Hiring Pipeline as sub-tabs of "Hiring & Recruitment"
+  const SUBTABS = [
     ['jobs', 'Job Management'],
     ['discovery', 'Candidate Discovery'],
     ['pipeline', 'Hiring Pipeline'],
@@ -535,9 +543,13 @@
       const org = (ctx && ctx.user && ctx.user.org) || (DB.profiles.employer && DB.profiles.employer.org);
       if (window.EmpHrms && !EmpHrms.hasActiveConnection(org)) return syncPromptPage();
       const body = S.tab === 'overview' ? overviewTab()
-        : S.tab === 'jobs' ? jobsTab()
-        : S.tab === 'discovery' ? discoveryTab()
+        : S.subtab === 'jobs' ? jobsTab()
+        : S.subtab === 'discovery' ? discoveryTab()
         : pipelineTab();
+      const subNav = S.tab === 'hiring' ? `
+        <div class="seg mb-20" aria-label="Hiring & Recruitment section">
+          ${SUBTABS.map(([k, l]) => `<button class="${S.subtab === k ? 'is-active' : ''}" onclick="EmpDash.setSubTab('${k}')">${l}</button>`).join('')}
+        </div>` : '';
 
       const style = `<style>
         .ed-rangeseg button.is-active{ background:var(--accent); color:#fff; box-shadow:var(--sh-xs); }
@@ -602,6 +614,7 @@
           ${TABS.map(([k, l]) => `<div class="tab ${S.tab === k ? 'is-active' : ''}" onclick="EmpDash.setTab('${k}')">${l}</div>`).join('')}
         </div>
 
+        ${subNav}
         ${body}
       </div>`;
     }

@@ -43,6 +43,11 @@
   ];
   const SECTOR_LIST = ['Construction', 'Manufacturing', 'Gig & Platform', 'Agriculture', 'Domestic & Services'];
   const DISTRICT_SEED = ['Central', 'North', 'South', 'East', 'West', 'Rural Belt'];
+  // a fuller 10-district split used whenever a state is selected in the Reports section, so
+  // filtering/expanding to one state still yields 50+ rows (5 sectors/sub-sectors x 10
+  // districts) instead of a handful — "district-wise", not a single repeated state figure.
+  const REPORT_DISTRICTS = ['Central', 'North', 'South', 'East', 'West', 'North-East', 'North-West', 'South-East', 'South-West', 'Rural Belt']
+    .map(n => ({ n, p: 10 }));
 
   // deterministic pseudo-random (no Math.random) so the seed data is stable across renders
   function seeded(i, salt) { return ((i * 9301 + salt * 49297 + 233280) % 100000) / 100000; }
@@ -122,10 +127,10 @@
 
   function genVacancyIndex() {
     const rows = [];
-    ALL_STATES.forEach((st, si) => DISTRICT_SEED.forEach((d, di) => SECTOR_LIST.slice(0, 3).forEach((sec, sci) => {
+    ALL_STATES.forEach((st, si) => REPORT_DISTRICTS.forEach((d, di) => SECTOR_LIST.forEach((sec, sci) => {
       const vacancies = Math.round((80 + si * 22 + di * 14 + sci * 30) * (0.6 + seeded(si + di, sci) * 0.8));
       const change = fmt1(seeded(di, sci) * 24 - 8);
-      rows.push([st, st + ' ' + d, sec, vacancies, change]);
+      rows.push([st, st + ' ' + d.n, sec, vacancies, change]);
     })));
     return { headers: ['State', 'District', 'Sector', 'Open Vacancies', 'YoY Change %'], rows };
   }
@@ -284,12 +289,33 @@
       </div>`;
   }
 
-  // narrow a report's rows to the header page's selected state, when that report has a
-  // State column and a state is selected — otherwise every row is kept unchanged.
+  // when a state is selected and a report has a State column but no District column yet,
+  // expand that state's row(s) into a district-wise breakdown instead of just filtering
+  // down to it — otherwise selecting a state leaves you with only 1-6 rows of the same
+  // state-level figures repeated, which reads as "state-wise" data, not "district-wise".
+  function districtExpand(headers, rows, state) {
+    const stateIdx = headers.indexOf('State');
+    if (stateIdx === -1 || headers.indexOf('District') !== -1) return null;
+    const matched = rows.filter(r => r[stateIdx] === state);
+    if (!matched.length) return null;
+    const shares = REPORT_DISTRICTS;
+    const newHeaders = headers.slice(0, stateIdx + 1).concat(['District'], headers.slice(stateIdx + 1));
+    const rows2 = [];
+    matched.forEach(r => shares.forEach(sh => {
+      const tail = r.slice(stateIdx + 1).map(v => typeof v === 'number' ? Math.round((v * sh.p / 100) * 10) / 10 : v);
+      rows2.push(r.slice(0, stateIdx + 1).concat([state + ' ' + sh.n], tail));
+    }));
+    return { headers: newHeaders, rows: rows2 };
+  }
+
+  // narrow (or district-expand) a report's rows to the header page's selected state —
+  // otherwise every row is kept unchanged. Returns {headers, rows}.
   function stateFilteredRows(headers, rows) {
     const idx = headers.indexOf('State');
-    if (idx === -1 || S.state === 'All') return rows;
-    return rows.filter(r => r[idx] === S.state);
+    if (idx === -1 || S.state === 'All') return { headers, rows };
+    const expanded = districtExpand(headers, rows, S.state);
+    if (expanded) return expanded;
+    return { headers, rows: rows.filter(r => r[idx] === S.state) };
   }
 
   // actually trigger a real file download for a report (falls back to a registry-overview
@@ -298,7 +324,8 @@
   function downloadReportCSV(rep, fmt) {
     const data = REPORT_DATA[rep.id];
     if (data) {
-      App.downloadReport('win-' + rep.id + '-report', rep.title || rep.id, data.headers, stateFilteredRows(data.headers, data.rows), fmt || 'CSV');
+      const f = stateFilteredRows(data.headers, data.rows);
+      App.downloadReport('win-' + rep.id + '-report', rep.title || rep.id, f.headers, f.rows, fmt || 'CSV');
     } else {
       App.downloadReport('win-custom-extract', 'Custom extract',
         ['Report', 'Section', 'Frequency', 'Last generated'],
@@ -371,12 +398,15 @@
       const rep = REPORTS.find(r => r.id === id);
       if (!rep) return;
       const data = REPORT_DATA[rep.id];
-      const headers = data ? data.headers : ['Report', 'Section', 'Frequency', 'Last generated'];
-      const allRows = stateFilteredRows(headers, data ? data.rows : REPORTS.map(r => [r.title, r.section, r.freq, r.last]));
+      const rawHeaders = data ? data.headers : ['Report', 'Section', 'Frequency', 'Last generated'];
+      const filtered = stateFilteredRows(rawHeaders, data ? data.rows : REPORTS.map(r => [r.title, r.section, r.freq, r.last]));
+      const headers = filtered.headers, allRows = filtered.rows;
       const sample = allRows.slice(0, 50);
       const thead = '<tr>' + headers.map(h => `<th>${App.esc(h)}</th>`).join('') + '</tr>';
       const tbody = sample.map(r => '<tr>' + r.map(c => `<td>${App.esc(c)}</td>`).join('') + '</tr>').join('');
-      const stateNote = (headers.indexOf('State') !== -1 && S.state !== 'All') ? ` filtered to <b>${App.esc(S.state)}</b>` : '';
+      const stateNote = (rawHeaders.indexOf('State') !== -1 && S.state !== 'All')
+        ? (headers.indexOf('District') !== -1 ? ` — district-wise for <b>${App.esc(S.state)}</b>` : ` filtered to <b>${App.esc(S.state)}</b>`)
+        : '';
       App.modal.open(`
         <p class="muted" style="font-size:13px;margin-bottom:12px">Preview of <b>${App.esc(rep.title)}</b>${stateNote} — <span class="num">${App.num(allRows.length)}</span> total rows. Showing the first ${sample.length}:</p>
         <div class="tablewrap tablewrap--scroll" style="max-height:280px;overflow:auto">

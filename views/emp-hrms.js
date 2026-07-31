@@ -1,24 +1,21 @@
 /* Employer · HRMS Sync — connect the org's HRMS so employee records flow into
-   verified worker profiles automatically. Modelled directly on Tartan's own
-   HyperSync Home tab: Connection Requests / Active Connections / Terminated
-   Connections, each request showing the Vendor Name (the business itself,
-   for a freshly signed-up org) with a Connect action that opens the Data
-   Transfer Method → HRMS Selection → Credentials wizard. All flows are
-   simulated (no real host/API calls), consistent with the rest of the app. */
+   verified worker profiles automatically. The connect options (HRMS
+   Integration / SFTP Transfer / Upload CSV) are shown directly on the page
+   rather than behind a "Connect HRMS" button + tabbed connection-request
+   table, since there's only ever one org connecting from this console.
+   Picking a method opens the HRMS Selection → Credentials wizard. All flows
+   are simulated (no real host/API calls), consistent with the rest of the app. */
 (function () {
   const HS = {
-    tab: 'requests', // requests | active | terminated
-    requests: [],
     connections: [
       { id: 'c1', vendor: 'Aditya Birla Construction Ltd.', platform: 'Keka', host: 'abconstruction.keka.com', connectedOn: 'Mar 12, 2024', status: 'active' },
     ],
     modal: null, // set when the Connect wizard is open
-    _seeded: false,
   };
 
-  function freshModal(requestId, vendor) {
+  function freshModal(vendor) {
     return {
-      requestId, vendor, step: 'method', method: '', search: '', platform: '',
+      vendor, step: 'method', method: '', search: '', platform: '',
       host: '', clientId: '', clientSecret: '', apiKey: '', agree: false,
       sftpHost: '', sftpPort: '22', sftpUser: '', sftpPass: '', sftpDir: '',
       csvFile: '',
@@ -54,14 +51,6 @@
 
   function modalBody() {
     const m = HS.modal;
-    if (m.step === 'method') {
-      const rows = (DB.hrmsMethods || []).map(x => `
-        <button class="hs-choice" onclick="EmpHrms.pickMethod('${x.key}')">
-          <span class="hs-choice__ic">${App.icon(x.ic)}</span>
-          <div><b style="display:block">${App.esc(x.title)}</b><span class="muted" style="font-size:12px">${App.esc(x.desc)}</span></div>
-        </button>`).join('');
-      return { title: 'Data Transfer Method', icon: 'plug', body: rows, foot: `<button class="btn" onclick="EmpHrms.closeConnect()">Cancel</button>` };
-    }
     if (m.step === 'platform') {
       const q = (m.search || '').toLowerCase();
       const platforms = (DB.hrmsPlatforms || []).filter(p => p.toLowerCase().includes(q));
@@ -73,7 +62,7 @@
       const body = `
         <div class="field"><input class="input" placeholder="Search HRMS…" value="${App.esc(m.search)}" oninput="EmpHrms.setSearch(this.value)"></div>
         <div class="hs-platforms">${grid || `<p class="muted" style="font-size:13px;grid-column:1/-1">No match.</p>`}</div>`;
-      return { title: 'Select Your HRMS Platform', icon: 'plug', body, foot: `<button class="btn" onclick="EmpHrms.backModal()">${App.icon('arrowleft')} Back</button>` };
+      return { title: 'Select Your HRMS Platform', icon: 'plug', body, foot: `<button class="btn" onclick="EmpHrms.closeConnect()">Cancel</button>` };
     }
     if (m.step === 'credentials') {
       const body = `
@@ -109,7 +98,7 @@
         <div class="field" style="margin-top:16px"><label class="label">Directory Path <span class="muted" style="font-weight:400">(optional)</span></label>
           <input class="input mono" value="${App.esc(m.sftpDir)}" placeholder="/exports/hrms" oninput="EmpHrms.set('sftpDir',this.value)"></div>
         <label class="hs-check" style="margin-top:14px"><input type="checkbox" ${m.agree ? 'checked' : ''} onchange="EmpHrms.toggleAgree()"> I agree to the terms &amp; conditions</label>`;
-      const foot = `<button class="btn" onclick="EmpHrms.backModal()">${App.icon('arrowleft')} Back</button>
+      const foot = `<button class="btn" onclick="EmpHrms.closeConnect()">Cancel</button>
         <button class="btn btn--primary" onclick="EmpHrms.connectSftp()">${App.icon('database')} Connect</button>`;
       return { title: 'SFTP Transfer', icon: 'database', body, foot };
     }
@@ -121,7 +110,7 @@
         <input class="input" type="file" accept=".csv" onchange="EmpHrms.setCsvFile(this)"></div>
       ${m.csvFile ? `<div class="banner banner--green">${App.icon('filecheck')}<div>${App.esc(m.csvFile)} selected</div></div>` : ''}
       <label class="hs-check" style="margin-top:14px"><input type="checkbox" ${m.agree ? 'checked' : ''} onchange="EmpHrms.toggleAgree()"> I agree to the terms &amp; conditions</label>`;
-    const foot = `<button class="btn" onclick="EmpHrms.backModal()">${App.icon('arrowleft')} Back</button>
+    const foot = `<button class="btn" onclick="EmpHrms.closeConnect()">Cancel</button>
       <button class="btn btn--primary" onclick="EmpHrms.uploadCsv()">${App.icon('upload')} Upload</button>`;
     return { title: 'Upload CSV', icon: 'share', body, foot };
   }
@@ -132,25 +121,21 @@
   }
 
   window.EmpHrms = {
-    setTab(t) { HS.tab = t; App.reload(); },
     hasActiveConnection(vendor) { return HS.connections.some(c => c.status === 'active' && (!vendor || c.vendor === vendor)); },
-    openConnect(requestId) {
-      const r = requestId ? HS.requests.find(x => x.id === requestId) : null;
-      HS.modal = freshModal(requestId || null, r ? r.vendor : HS.currentOrg);
-      paintModal();
-    },
-    closeConnect() { HS.modal = null; App.modal.close(); },
-    pickMethod(key) {
+    // opens the wizard directly at the chosen method's step — the Data Transfer Method
+    // choice itself is now shown inline on the page, not as a first modal step.
+    startMethod(key) {
+      HS.modal = freshModal(HS.currentOrg);
       HS.modal.method = key;
       HS.modal.step = key === 'hrms' ? 'platform' : key; // 'sftp' | 'csv'
       paintModal();
     },
+    closeConnect() { HS.modal = null; App.modal.close(); },
     setSearch(v) { HS.modal.search = v; paintModal(); },
     pickPlatform(p) { HS.modal.platform = p; HS.modal.step = 'credentials'; paintModal(); },
-    backModal() {
-      HS.modal.step = HS.modal.step === 'credentials' ? 'platform' : 'method';
-      paintModal();
-    },
+    // "Back" from the credentials step returns to the HRMS platform picker (the only
+    // remaining multi-step path — SFTP/CSV go straight from the page to their one step).
+    backModal() { HS.modal.step = 'platform'; paintModal(); },
     set(k, v) { if (HS.modal) HS.modal[k] = v; },
     toggleAgree() { HS.modal.agree = !HS.modal.agree; paintModal(); },
     connect() {
@@ -179,14 +164,13 @@
     },
     _finishConnection(m, platformLabel) {
       const host = m.method === 'sftp' ? m.sftpHost : (m.method === 'csv' ? m.csvFile : m.host);
-      HS.requests = HS.requests.filter(r => r.id !== m.requestId);
       HS.connections.push({
         id: 'c' + (HS.connections.length + 1), vendor: m.vendor, platform: platformLabel, host: host || '—',
         connectedOn: new Date().toDateString().slice(4), status: 'active',
       });
       App.modal.close(); HS.modal = null;
       App.toast(`Connected to ${platformLabel}`, 'checkcircle');
-      HS.tab = 'active'; App.reload();
+      App.reload();
     },
     disconnect(id) {
       const c = HS.connections.find(x => x.id === id); if (!c) return;
@@ -204,76 +188,74 @@
     title: 'HRMS Sync',
     subtitle: 'Connect your HR system to power verified worker profiles',
     render(ctx) {
-      // a freshly signed-up business shows up here as its own pending connection
-      // request — mirrors HyperSync's model where a vendor requests to connect.
       const org = (ctx.user && ctx.user.org) || (DB.profiles.employer && DB.profiles.employer.org) || 'Your Organisation';
       HS.currentOrg = org;
-      if (ctx.user && ctx.user.org && !HS._seeded) {
-        const already = HS.requests.some(r => r.vendor === org) || HS.connections.some(c => c.vendor === org);
-        if (!already) HS.requests.unshift({ id: 'r' + (HS.requests.length + 1), vendor: org, date: new Date().toDateString().slice(4) });
-        HS._seeded = true;
-      }
 
       const active = HS.connections.filter(c => c.status === 'active');
       const terminated = HS.connections.filter(c => c.status === 'terminated');
+      // scoped to this org specifically — matches the hasActiveConnection(vendor) fix
+      // elsewhere, so one org's connection never shows as "connected" for another.
+      const connected = active.find(c => c.vendor === org);
 
-      let body;
-      if (HS.tab === 'requests') {
-        body = HS.requests.length ? `
-          <table class="hs-table">
-            <thead><tr><th>Vendor Name</th><th>Date</th><th>Action</th></tr></thead>
-            <tbody>${HS.requests.map(r => `
-              <tr>
-                <td><div class="hs-vendor"><span class="hs-ic">${App.icon('building')}</span><b>${App.esc(r.vendor)}</b></div></td>
-                <td class="muted">${App.esc(r.date)}</td>
-                <td><button class="btn btn--primary btn--sm" onclick="EmpHrms.openConnect('${r.id}')">${App.icon('plug')} Connect</button></td>
-              </tr>`).join('')}</tbody>
-          </table>` : App.ui.empty('plug', 'No connection requests', 'New businesses ready to sync their HRMS will show up here.');
-      } else {
-        const rows = (HS.tab === 'active' ? active : terminated);
-        body = rows.length ? `
-          <table class="hs-table">
-            <thead><tr><th>Vendor Name</th><th>Platform</th><th>${HS.tab === 'active' ? 'Connected' : 'Terminated'}</th><th>Status</th><th></th></tr></thead>
-            <tbody>${rows.map(c => `
-              <tr>
-                <td><div class="hs-vendor"><span class="hs-ic">${App.icon('building')}</span><b>${App.esc(c.vendor)}</b></div></td>
-                <td class="muted">${App.esc(c.platform)}</td>
-                <td class="muted">${App.esc(c.status === 'active' ? c.connectedOn : (c.terminatedOn || ''))}</td>
-                <td>${App.ui.pill(c.status === 'active' ? 'Active' : 'Terminated', c.status === 'active' ? 'green' : 'gray', true)}</td>
-                <td>${c.status === 'active'
-                  ? `<button class="btn btn--ghost btn--sm" onclick="EmpHrms.disconnect('${c.id}')">${App.icon('x')} Disconnect</button>`
-                  : `<button class="btn btn--ghost btn--sm" onclick="EmpHrms.reconnect('${c.id}')">${App.icon('plug')} Reconnect</button>`}</td>
-              </tr>`).join('')}</tbody>
-          </table>` : App.ui.empty('plug', HS.tab === 'active' ? 'No active connections' : 'No terminated connections',
-            HS.tab === 'active' ? 'Connect an HRMS from Connection Requests to see it here.' : 'Connections you disconnect will show up here.');
-      }
+      const connectedCard = connected ? `
+        <div class="card reveal">
+          <div class="card__body">
+            <div class="row between wrap gap-12" style="align-items:center">
+              <div class="hs-vendor"><span class="hs-ic">${App.icon('checkcircle')}</span>
+                <div><b>${App.esc(connected.vendor)}</b><div class="muted" style="font-size:12.5px;margin-top:2px">${App.esc(connected.platform)} · connected ${App.esc(connected.connectedOn)}</div></div>
+              </div>
+              <div class="row gap-10" style="align-items:center">
+                ${App.ui.pill('Active', 'green', true)}
+                <button class="btn btn--ghost btn--sm" onclick="EmpHrms.disconnect('${connected.id}')">${App.icon('x')} Disconnect</button>
+              </div>
+            </div>
+          </div>
+        </div>` : '';
+
+      // the connect options themselves — shown directly, not behind a "Connect HRMS"
+      // button + a separate Data Transfer Method modal step.
+      const methodCards = connected ? '' : `
+        <div class="card reveal">
+          <div class="card__head"><h3 class="grow">Connect your HRMS</h3></div>
+          <div class="card__body">
+            ${(DB.hrmsMethods || []).map(x => `
+              <button class="hs-choice" onclick="EmpHrms.startMethod('${x.key}')">
+                <span class="hs-choice__ic">${App.icon(x.ic)}</span>
+                <div class="grow"><b style="display:block">${App.esc(x.title)}</b><span class="muted" style="font-size:12px">${App.esc(x.desc)}</span></div>
+                ${App.icon('arrow')}
+              </button>`).join('')}
+          </div>
+        </div>`;
+
+      const terminatedCard = terminated.length ? `
+        <div class="card reveal">
+          <div class="card__head"><h3 class="grow">Previously connected</h3></div>
+          <div class="card__body" style="padding-top:2px;padding-bottom:6px">
+            <div class="list--divided">
+              ${terminated.map(c => `
+                <div class="row between wrap gap-10" style="padding:12px 0;align-items:center">
+                  <div class="hs-vendor"><span class="hs-ic">${App.icon('building')}</span>
+                    <div><b>${App.esc(c.vendor)}</b><div class="muted" style="font-size:12px;margin-top:2px">${App.esc(c.platform)} · terminated ${App.esc(c.terminatedOn || '')}</div></div></div>
+                  <button class="btn btn--ghost btn--sm" onclick="EmpHrms.reconnect('${c.id}')">${App.icon('plug')} Reconnect</button>
+                </div>`).join('')}
+            </div>
+          </div>
+        </div>` : '';
 
       return `<div class="page fade-in">
         ${HS_STYLE}
         <div class="hero reveal">
           <div class="hero__wash"></div>
           <div class="hero__in">
-            <div class="row between wrap gap-16" style="align-items:flex-start">
-              <div>
-                <div class="eyebrow">${App.icon('plug')} HRMS Sync Console</div>
-                <h1 class="h-grad" style="margin-top:12px">Sync your HRMS, verify at the source.</h1>
-                <p class="lead">Connect your HR system so employee records flow straight into verified WiN worker profiles — no manual entry, no spreadsheets.</p>
-              </div>
-              <button class="btn btn--accent" onclick="EmpHrms.openConnect()">${App.icon('plus')} Connect HRMS</button>
-            </div>
+            <div class="eyebrow">${App.icon('plug')} HRMS Sync Console</div>
+            <h1 class="h-grad" style="margin-top:12px">Sync your HRMS, verify at the source.</h1>
+            <p class="lead">Connect your HR system so employee records flow straight into verified WiN worker profiles — no manual entry, no spreadsheets.</p>
           </div>
         </div>
 
-        <div class="card reveal">
-          <div class="card__body">
-            <div class="hs-tabs">
-              <div class="hs-tab ${HS.tab === 'requests' ? 'is-active' : ''}" onclick="EmpHrms.setTab('requests')">Connection Requests <span class="mono">${HS.requests.length}</span></div>
-              <div class="hs-tab ${HS.tab === 'active' ? 'is-active' : ''}" onclick="EmpHrms.setTab('active')">Active Connections <span class="mono">${active.length}</span></div>
-              <div class="hs-tab ${HS.tab === 'terminated' ? 'is-active' : ''}" onclick="EmpHrms.setTab('terminated')">Terminated Connections <span class="mono">${terminated.length}</span></div>
-            </div>
-            ${body}
-          </div>
-        </div>
+        ${connectedCard}
+        ${methodCards}
+        ${terminatedCard}
       </div>`;
     },
   });

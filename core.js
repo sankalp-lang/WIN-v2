@@ -431,9 +431,39 @@ window.App = (function () {
   /* ============================================================
      LOGIN  (multi-persona; worker = Aadhaar / DigiLocker + OTP)
      ============================================================ */
-  const L = { mode: 'worker', method: 'choose', step: 'input', otp: '', phone: '', pin: '' };
+  const L = { mode: 'worker', method: 'choose', step: 'input', otp: '', phone: '', pin: '', lang: 'en' };
+  // landing-page language switcher — translates the pitch/aside and mode tabs (the
+  // "landing page" itself); the deeper sign-in/OTP/signup flows stay in English.
+  const LANG_LABELS = { en: 'English', hi: 'हिंदी', mr: 'मराठी' };
+  const I18N = {
+    en: {
+      tagline: 'A verified identity for every worker in India.',
+      pitch: 'One live, consent-driven golden record — employment, income and identity, verified at source and portable across every state line.',
+      eyebrow: 'Workforce Identity Network',
+      statWorkers: 'Workers in scope', statVerify: 'Live verification', statSources: 'Source systems',
+      tabWorker: 'Worker', tabEmployer: 'Employer', tabGov: 'Government',
+      terms: 'By continuing you agree to the WiN Terms &amp; Privacy Policy.',
+    },
+    hi: {
+      tagline: 'भारत के हर श्रमिक के लिए एक सत्यापित पहचान।',
+      pitch: 'एक लाइव, सहमति-आधारित स्वर्ण रिकॉर्ड — रोजगार, आय और पहचान, स्रोत पर सत्यापित और हर राज्य में पोर्टेबल।',
+      eyebrow: 'कार्यबल पहचान नेटवर्क',
+      statWorkers: 'कार्यक्षेत्र में श्रमिक', statVerify: 'लाइव सत्यापन', statSources: 'स्रोत प्रणालियाँ',
+      tabWorker: 'श्रमिक', tabEmployer: 'नियोक्ता', tabGov: 'सरकार',
+      terms: 'जारी रखकर आप WiN की शर्तों और गोपनीयता नीति से सहमत होते हैं।',
+    },
+    mr: {
+      tagline: 'भारतातील प्रत्येक कामगारासाठी एक सत्यापित ओळख.',
+      pitch: 'एक थेट, संमती-आधारित सुवर्ण नोंद — रोजगार, उत्पन्न आणि ओळख, स्रोतावर सत्यापित आणि प्रत्येक राज्यात पोर्टेबल.',
+      eyebrow: 'कार्यबल ओळख नेटवर्क',
+      statWorkers: 'व्याप्तीतील कामगार', statVerify: 'थेट पडताळणी', statSources: 'स्रोत प्रणाली',
+      tabWorker: 'कामगार', tabEmployer: 'नियोक्ता', tabGov: 'सरकार',
+      terms: 'सुरू ठेवून तुम्ही WiN च्या अटी व गोपनीयता धोरणाशी सहमत आहात.',
+    },
+  };
   App.login = {
     set(k, v) { L[k] = v; renderLogin(); },
+    setLang(l) { L.lang = I18N[l] ? l : 'en'; renderLogin(); },
     setMode(m) { L.mode = m; L.method = 'choose'; L.step = 'input'; L.phone = ''; L.pin = ''; L.otp = ''; SU.active = false; WU.active = false; renderLogin(); },
     pickMethod(m) { L.method = m; L.step = 'input'; renderLogin(); },
     back() { if (L.step === 'otp') { L.step = 'input'; } else { L.method = 'choose'; } renderLogin(); },
@@ -491,10 +521,13 @@ window.App = (function () {
      not during onboarding — signup only gets the business to the point where
      its own "connection request" is waiting there.
      ============================================================ */
+  // pre-filled with demo data so the employer signup flow needs zero typing to click
+  // through — this is a prototype, not a real KYB check.
   const SU = {
     active: false, step: 'credentials',
-    legalName: '', email: '', password: '', confirm: '',
-    hasMca: '', cin: '', hasGst: '', gstUdyam: '',
+    legalName: 'Rampur Traders Pvt. Ltd.', email: 'admin@rampurtraders.in',
+    password: 'Passw0rd!23', confirm: 'Passw0rd!23',
+    hasMca: 'yes', cin: 'U45201MH2010PTC123456', hasGst: 'yes', gstUdyam: '07AAACB1234C1Z5',
     address: '', city: '', state: '', pincode: '',
     tier: null,
   };
@@ -527,7 +560,6 @@ window.App = (function () {
     },
     submitCredentials() {
       if (!SU.legalName || !SU.email) { App.toast('Fill in your organisation name and email', 'alert'); return; }
-      if (SU.password.length < 8) { App.toast('Password must be at least 8 characters', 'alert'); return; }
       if (SU.password !== SU.confirm) { App.toast('Passwords do not match', 'alert'); return; }
       SU.step = 'business'; renderLogin();
     },
@@ -569,12 +601,13 @@ window.App = (function () {
           <div class="input--icon">${App.icon('mail')}<input class="input" value="${App.esc(SU.email)}" placeholder="you@company.com" oninput="App.signup.set('email',this.value)"></div></div>
         <div class="grid grid-2">
           <div class="field" style="margin-bottom:0"><label class="label">Password</label>
-            <div class="input--icon">${App.icon('lock')}<input class="input" type="password" value="${App.esc(SU.password)}" placeholder="At least 8 characters" oninput="App.signup.set('password',this.value)"></div></div>
+            <div class="input--icon">${App.icon('lock')}<input class="input" type="password" value="${App.esc(SU.password)}" placeholder="Choose a password" oninput="App.signup.set('password',this.value)"></div></div>
           <div class="field" style="margin-bottom:0"><label class="label">Confirm Password</label>
             <div class="input--icon">${App.icon('lock')}<input class="input" type="password" value="${App.esc(SU.confirm)}" placeholder="Re-enter password" oninput="App.signup.set('confirm',this.value)"></div></div>
         </div>
         <button class="btn btn--primary btn--block btn--lg" style="margin-top:18px" onclick="App.signup.submitCredentials()">Continue ${App.icon('arrow')}</button>
-        <p class="muted" style="text-align:center;font-size:13px;margin-top:16px">Already have an account? <b style="color:var(--accent-strong);cursor:pointer" onclick="App.signup.cancel()">Sign in</b></p>`;
+        <p class="muted" style="text-align:center;font-size:12.5px;margin-top:16px">This is a demo build - any credentials sign you in.</p>
+        <p class="muted" style="text-align:center;font-size:13px;margin-top:8px">Already have an account? <b style="color:var(--accent-strong);cursor:pointer" onclick="App.signup.cancel()">Sign in</b></p>`;
     }
     if (SU.step === 'business') {
       const requiresDav = SU.hasMca === 'no';
@@ -661,6 +694,10 @@ window.App = (function () {
 
   function renderLogin() {
     const accent = L.mode === 'worker' ? 'worker' : L.mode === 'employer' ? 'employer' : 'gov';
+    const T = I18N[L.lang] || I18N.en;
+    const langSwitcher = `<div class="auth__lang">
+      ${Object.keys(LANG_LABELS).map(l => `<button class="${L.lang === l ? 'is-active' : ''}" onclick="App.login.setLang('${l}')">${LANG_LABELS[l]}</button>`).join('')}
+    </div>`;
     let form = '';
     if (L.mode === 'worker') {
       if (L.method === 'choose') {
@@ -722,31 +759,37 @@ window.App = (function () {
     $('#app').innerHTML = `
       <div class="auth" data-persona="${accent}">
         <div class="auth__aside">
-          <div class="auth__brand"><div class="brandmark">${App.icon('shieldcheck')}</div><b>WiN</b></div>
+          <div class="row between" style="align-items:flex-start">
+            <div class="auth__brand"><div class="brandmark">${App.icon('shieldcheck')}</div><b>WiN</b></div>
+            ${langSwitcher}
+          </div>
           <div class="auth__pitch">
-            <div class="auth__eyebrow">${App.icon('fingerprint')} Workforce Identity Network</div>
-            <h2>A verified identity for every worker in India.</h2>
-            <p>One live, consent-driven golden record — employment, income and identity, verified at source and portable across every state line.</p>
+            <div class="auth__eyebrow">${App.icon('fingerprint')} ${T.eyebrow}</div>
+            <h2>${T.tagline}</h2>
+            <p>${T.pitch}</p>
             <div class="auth__srcs">
               ${(DB.sources || []).map(s => `<span>${App.esc(s.label)}</span>`).join('')}
             </div>
           </div>
           <div class="auth__stats">
-            <div class="auth__stat"><b>150M+</b><span>Workers in scope</span></div>
-            <div class="auth__stat"><b>&lt;30s</b><span>Live verification</span></div>
-            <div class="auth__stat"><b>7</b><span>Source systems</span></div>
+            <div class="auth__stat"><b>150M+</b><span>${T.statWorkers}</span></div>
+            <div class="auth__stat"><b>&lt;30s</b><span>${T.statVerify}</span></div>
+            <div class="auth__stat"><b>7</b><span>${T.statSources}</span></div>
           </div>
         </div>
         <div class="auth__main">
           <div class="auth__card">
-            <div class="auth__mobilebrand"><div class="brandmark">${App.icon('shieldcheck')}</div><b>WiN</b></div>
+            <div class="row between" style="align-items:flex-start">
+              <div class="auth__mobilebrand"><div class="brandmark">${App.icon('shieldcheck')}</div><b>WiN</b></div>
+              <div class="auth__lang--card">${langSwitcher}</div>
+            </div>
             <div class="auth__tabs">
-              <div class="auth__tab ${L.mode === 'worker' ? 'is-active' : ''}" onclick="App.login.setMode('worker')">${App.icon('user')} Worker</div>
-              <div class="auth__tab ${L.mode === 'employer' ? 'is-active' : ''}" onclick="App.login.setMode('employer')">${App.icon('building')} Employer</div>
-              <div class="auth__tab ${L.mode === 'gov' ? 'is-active' : ''}" onclick="App.login.setMode('gov')">${App.icon('landmark')} Government</div>
+              <div class="auth__tab ${L.mode === 'worker' ? 'is-active' : ''}" onclick="App.login.setMode('worker')">${App.icon('user')} ${T.tabWorker}</div>
+              <div class="auth__tab ${L.mode === 'employer' ? 'is-active' : ''}" onclick="App.login.setMode('employer')">${App.icon('building')} ${T.tabEmployer}</div>
+              <div class="auth__tab ${L.mode === 'gov' ? 'is-active' : ''}" onclick="App.login.setMode('gov')">${App.icon('landmark')} ${T.tabGov}</div>
             </div>
             ${form}
-            <p class="muted" style="text-align:center;font-size:11.5px;margin-top:24px">By continuing you agree to the WiN Terms & Privacy Policy.</p>
+            <p class="muted" style="text-align:center;font-size:11.5px;margin-top:24px">${T.terms}</p>
           </div>
         </div>
       </div>`;
