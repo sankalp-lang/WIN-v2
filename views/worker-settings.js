@@ -496,8 +496,9 @@
         return;
       }
 
-      // direct + agency, Company = "Others": fall back to a UAN/PPF/NPS identifier or DAV
-      if ((w.relation === 'direct' || w.relation === 'agency') && w._orgCustom) {
+      // direct (full-time), Company = "Others": fall back to a UAN/PPF/NPS identifier or
+      // DAV. Contract Worker (agency) just types the agency name — see entryFormBody().
+      if (w.relation === 'direct' && w._orgCustom) {
         if (!w.altPath) { App.toast('Choose how you\'d like to verify this entry', 'alert'); return; }
         if (w.altPath === 'dav') {
           if (!w.address || !w.state || !w.pincode) { App.toast('Fill in the address details to verify', 'alert'); return; }
@@ -657,12 +658,12 @@
   }
 
   // true when this entry's current path resolves to Digital Address Verification —
-  // either inherently (informal, self with no PAN, gig/direct/agency with an
-  // unrecognised company and no other fallback) or because it already has been (source).
+  // either inherently (informal, self with no PAN, gig with an unrecognised platform,
+  // direct with an unrecognised employer and DAV chosen) or because it already has been (source).
   function needsDavPath(w) {
     return w.relation === 'informal' || (w.relation === 'self' && w.hasPan === 'no')
       || (w.relation === 'gig' && w._orgCustom)
-      || ((w.relation === 'direct' || w.relation === 'agency') && w._orgCustom && w.altPath === 'dav')
+      || (w.relation === 'direct' && w._orgCustom && w.altPath === 'dav')
       || w.source === 'dav';
   }
 
@@ -812,7 +813,7 @@
       </div>` : ''}
       ${w.hasPan === 'no' ? `<div class="hint" style="margin-top:8px">No PAN — we'll verify this entry via Digital Address Verification instead.</div>` : ''}` : ''}
 
-      ${(w.relation === 'direct' || w.relation === 'agency') && w._orgCustom ? `
+      ${w.relation === 'direct' && w._orgCustom ? `
       <div class="field" style="margin-top:14px;margin-bottom:0">
         <label class="label wset-flabel">Company isn't in our records — how would you like to verify this entry?</label>
         <div class="row gap-8 wrap">

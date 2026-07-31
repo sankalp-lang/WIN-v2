@@ -279,20 +279,15 @@ window.App = (function () {
   };
   App.navT = () => NAV_I18N[App.state.lang] || null;
 
-  // change the app language from inside a Settings page (not just the login screen) —
-  // updates the sidebar/topbar chrome immediately, same as the landing-page switcher.
+  // change the app language from the topbar dropdown (see renderShell()) — updates the
+  // sidebar/topbar chrome immediately, same as the landing-page switcher.
   App.setLang = (l) => { App.state.lang = LANG_LABELS[l] ? l : 'en'; App.reload(); };
-  // a reusable "Language" settings card any persona's Settings page can drop in —
-  // keeps the sidebar-nav translation (see navT()/navHtml() above) reachable post-login.
-  App.langCard = () => `
-    <div class="card reveal">
-      <div class="card__head">${App.icon('globe')}<h3 class="grow">Language</h3></div>
-      <div class="card__body">
-        <p class="muted" style="font-size:12.5px;margin:-2px 0 12px">Changes the sidebar navigation and a few shared labels. Individual page content stays in English for now.</p>
-        <div class="row gap-8 wrap">
-          ${Object.keys(LANG_LABELS).map(l => `<button class="btn btn--sm ${App.state.lang === l || (!App.state.lang && l === 'en') ? 'btn--primary' : 'btn--soft'}" onclick="App.setLang('${l}')">${LANG_LABELS[l]}</button>`).join('')}
-        </div>
-      </div>
+  // the topbar language dropdown markup, shared by every persona's shell.
+  App.langSelect = () => `
+    <div class="topbar__lang">${App.icon('globe')}
+      <select onchange="App.setLang(this.value)" aria-label="Language">
+        ${Object.keys(LANG_LABELS).map(l => `<option value="${l}" ${(App.state.lang || 'en') === l ? 'selected' : ''}>${LANG_LABELS[l]}</option>`).join('')}
+      </select>
     </div>`;
 
   /* ---------------- shell ---------------- */
@@ -344,6 +339,7 @@ window.App = (function () {
             <button class="iconbtn menu-btn" onclick="App.toggleNav()" title="Menu">${App.icon('menu')}</button>
             <div><div class="topbar__title" id="tbTitle"></div><div class="topbar__sub" id="tbSub"></div></div>
             <div class="topbar__spacer"></div>
+            ${App.langSelect()}
             <div class="searchbar" onclick="App.toast('Search is a demo affordance in this prototype')">${App.icon('search')}<span>${(App.navT() || {}).searchPlaceholder || 'Search…'}</span><span class="kbd">⌘K</span></div>
             <button class="iconbtn" onclick="App.notifications()" title="Notifications">${App.icon('bell')}<span class="dot"></span></button>
           </header>
