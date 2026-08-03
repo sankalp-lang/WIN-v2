@@ -59,29 +59,6 @@
 
   const RELATION_LABEL = { direct: 'Direct, Full-Time Employee', agency: 'Contract Worker', gig: 'Gig Worker', self: 'Self-Employed Worker', informal: 'Farmer / Other Worker' };
 
-  // state labour-department benefits & schemes — view-only surface; eligibility check
-  // and enrollment happens on Mahasarthi (WiN does not run its own eligibility logic).
-  const BENEFITS = [
-    { id: 'bocw', ic: 'shieldcheck', c: '#0e9f6e', title: 'BOCW Cess Welfare Benefits', desc: 'Building & Other Construction Workers welfare fund — accident, maternity and pension support.' },
-    { id: 'ayushman', ic: 'filecheck', c: '#d64545', title: 'Ayushman Bharat — PMJAY', desc: 'Cashless health cover up to ₹5 lakh/year for you and your family at empanelled hospitals.' },
-    { id: 'skill-subsidy', ic: 'graduation', c: '#2f5fd0', title: 'Skill Upgradation Subsidy', desc: 'Reimbursement for approved certification courses under the state skilling mission.' },
-  ];
-
-  function openBenefit(id) {
-    const b = BENEFITS.find(x => x.id === id); if (!b) return;
-    App.modal.open(`
-      <div class="banner banner--info" style="margin-bottom:14px">${App.icon('idcard')}<div><b>${App.esc(b.title)}</b><div style="margin-top:3px;opacity:.9">${App.esc(b.desc)}</div></div></div>
-      <p class="muted" style="font-size:13px">Checking eligibility and completing enrollment happens on <b>Mahasarthi</b>, the state scheme portal. We'll share your verified WiN profile (identity, work history, income) with your consent so you don't have to re-enter it.</p>
-      <label class="row gap-8" style="margin-top:14px;align-items:flex-start;cursor:pointer">
-        <input type="checkbox" id="benefitConsent" style="margin-top:3px">
-        <span style="font-size:13px">I consent to sharing my verified WiN profile with Mahasarthi to check eligibility for this scheme.</span>
-      </label>`, {
-      title: 'Continue to Mahasarthi', icon: 'shieldcheck',
-      foot: `<button class="btn" onclick="App.modal.close()">Cancel</button>
-             <button class="btn btn--primary" onclick="WorkerPortfolio.confirmBenefit('${id}')">${App.icon('external')} Continue to Mahasarthi</button>`,
-    });
-  }
-
   // per-employment-type tint (govt is a fixed navy shade regardless of relation, so the
   // sector distinction reads as consistent across all five relation types)
   const REL_META = {
@@ -113,15 +90,6 @@
     toggleWork() { workOpen = !workOpen; App.reload(); },
     edit(tab) { App.navigate('worker-settings', { tab }); },
     grievance() { App.navigate('worker-grievance'); },
-
-    // ---- benefits & schemes (view-only; consent-gated redirect to Mahasarthi) ----
-    openBenefit,
-    confirmBenefit(id) {
-      const box = document.getElementById('benefitConsent');
-      if (!box || !box.checked) { App.toast && App.toast('Please provide consent to continue.'); return; }
-      App.modal.close();
-      App.toast ? App.toast('Redirecting to Mahasarthi…') : null;
-    },
 
     // ---- share sheet (works fully; no clipping inside the hero) ----
     openShare() {
@@ -201,28 +169,6 @@
     },
   };
 
-  // shown to a freshly signed-up worker instead of Rajan's demo portfolio — there's
-  // no work history, skills or schemes to show yet.
-  function benefitsCard(u) {
-    return `
-      <div class="card reveal">
-        <div class="wp-strip" style="background:var(--green-50);color:var(--green-700)">${App.icon('shieldcheck')} Benefits &amp; Schemes · ${App.esc((u && u.location) || 'Delhi NCR')}</div>
-        <div class="card__body">
-          <p class="muted" style="font-size:13px;margin-bottom:14px">Labour-department schemes and subsidies you may be eligible for, based on your worker segment. Eligibility is checked and enrollment is completed on Mahasarthi.</p>
-          <div class="list--divided">
-            ${BENEFITS.map(b => `
-              <div class="row between wrap gap-10" style="padding:10px 0">
-                <div class="row gap-10" style="align-items:flex-start">
-                  <span style="color:${b.c};flex-shrink:0;margin-top:1px">${App.icon(b.ic)}</span>
-                  <div><b style="font-size:13.5px">${App.esc(b.title)}</b><div class="faint" style="font-size:12px;margin-top:2px">${App.esc(b.desc)}</div></div>
-                </div>
-                <button class="btn btn--sm" onclick="WorkerPortfolio.openBenefit('${b.id}')">View</button>
-              </div>`).join('')}
-          </div>
-        </div>
-      </div>`;
-  }
-
   function freshPortfolio(u) {
     return `<div class="page fade-in">
       <div class="hero reveal">
@@ -234,7 +180,6 @@
           <button class="btn btn--accent" style="margin-top:16px" onclick="App.navigate('worker-settings')">${App.icon('edit')} Add Work History</button>
         </div>
       </div>
-      <div style="margin-top:20px">${benefitsCard(u)}</div>
     </div>`;
   }
 
@@ -438,9 +383,6 @@
                 ${work.length > 3 ? `<button class="btn btn--ghost btn--sm" style="margin-top:14px" onclick="WorkerPortfolio.toggleWork()">${workOpen ? 'Show Less' : 'View Complete History'} ${App.icon(workOpen ? 'chevron' : 'chevrondown')}</button>` : ''}
               </div>
             </div>
-
-            <!-- benefits & schemes -->
-            ${benefitsCard(u)}
 
             <!-- skills -->
             <div class="card reveal">

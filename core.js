@@ -201,6 +201,7 @@ window.App = (function () {
         { section: 'Overview', items: [
           { id: 'worker-home', label: 'Home', icon: 'home' },
           { id: 'worker-portfolio', label: 'My Work History', icon: 'idcard' },
+          { id: 'worker-benefits', label: 'Benefits', icon: 'shieldcheck' },
         ]},
         { section: 'Grow', items: [
           { id: 'worker-skills', label: 'Skill Advisor', icon: 'sparkles' },
@@ -258,7 +259,7 @@ window.App = (function () {
     hi: {
       sections: { Overview: 'अवलोकन', Grow: 'विकास', Account: 'खाता', Workspace: 'कार्यक्षेत्र', Build: 'निर्माण', Registry: 'रजिस्ट्री', Operations: 'संचालन' },
       items: {
-        'worker-home': 'होम', 'worker-portfolio': 'मेरा पोर्टफोलियो', 'worker-skills': 'स्किल सलाहकार', 'worker-jobs': 'नौकरियां',
+        'worker-home': 'होम', 'worker-portfolio': 'मेरा पोर्टफोलियो', 'worker-benefits': 'लाभ', 'worker-skills': 'स्किल सलाहकार', 'worker-jobs': 'नौकरियां',
         'worker-cv': 'सीवी बिल्डर', 'worker-courses': 'कोर्स', 'worker-grievance': 'शिकायतें', 'worker-settings': 'प्रोफ़ाइल और सेटिंग्स', 'worker-help': 'सहायता',
         'emp-dashboard': 'डैशबोर्ड', 'emp-verifications': 'कर्मचारी', 'emp-hrms': 'HRMS सिंक', 'emp-apidocs': 'API और दस्तावेज़', 'emp-settings': 'सेटिंग्स',
         'gov-demographics': 'जनसांख्यिकी', 'gov-enrollment': 'नामांकन', 'gov-grievances': 'शिकायतें', 'gov-reports': 'रिपोर्ट', 'gov-settings': 'सेटिंग्स',
@@ -268,7 +269,7 @@ window.App = (function () {
     mr: {
       sections: { Overview: 'आढावा', Grow: 'वाढ', Account: 'खाते', Workspace: 'कार्यक्षेत्र', Build: 'तयार करा', Registry: 'नोंदणी', Operations: 'कामकाज' },
       items: {
-        'worker-home': 'मुख्यपृष्ठ', 'worker-portfolio': 'माझा पोर्टफोलिओ', 'worker-skills': 'कौशल्य सल्लागार', 'worker-jobs': 'नोकऱ्या',
+        'worker-home': 'मुख्यपृष्ठ', 'worker-portfolio': 'माझा पोर्टफोलिओ', 'worker-benefits': 'लाभ', 'worker-skills': 'कौशल्य सल्लागार', 'worker-jobs': 'नोकऱ्या',
         'worker-cv': 'सीव्ही बिल्डर', 'worker-courses': 'अभ्यासक्रम', 'worker-grievance': 'तक्रारी', 'worker-settings': 'प्रोफाइल आणि सेटिंग्ज', 'worker-help': 'मदत',
         'emp-dashboard': 'डॅशबोर्ड', 'emp-verifications': 'कर्मचारी', 'emp-hrms': 'HRMS सिंक', 'emp-apidocs': 'API आणि दस्तऐवज', 'emp-settings': 'सेटिंग्ज',
         'gov-demographics': 'लोकसंख्याशास्त्र', 'gov-enrollment': 'नोंदणी', 'gov-grievances': 'तक्रारी', 'gov-reports': 'अहवाल', 'gov-settings': 'सेटिंग्ज',
@@ -439,11 +440,19 @@ window.App = (function () {
         ? `<button class="btn" onclick="App.modal.close()">Cancel</button>
            <button class="btn btn--primary" ${S.busy ? 'disabled' : ''} onclick="App._otpGateSend()">${S.busy ? 'Sending…' : App.icon('send') + ' Send OTP'}</button>`
         : `<button class="btn" onclick="App.modal.close()">Cancel</button>
-           <button class="btn btn--primary" ${(S.otp.length !== 6 || S.busy) ? 'disabled' : ''} onclick="App._otpGateVerify()">${S.busy ? 'Verifying…' : App.icon('shieldcheck') + ' Verify & Continue'}</button>`;
+           <button class="btn btn--primary" id="otpGateVerifyBtn" ${(S.otp.length !== 6 || S.busy) ? 'disabled' : ''} onclick="App._otpGateVerify()">${S.busy ? 'Verifying…' : App.icon('shieldcheck') + ' Verify & Continue'}</button>`;
       App.modal.open(body, { title: 'Confirm with OTP', icon: 'shieldcheck', foot });
     };
     App._otpGateSend = () => { S.busy = true; render(); setTimeout(() => { S.step = 'otp'; S.busy = false; render(); }, 1200); };
-    App._otpGateInput = (el) => { S.otp = el.value.replace(/\D/g, '').slice(0, 6); render(); const i = $('#otpGateInput'); if (i) { i.focus(); i.setSelectionRange(S.otp.length, S.otp.length); } };
+    // typing must NOT re-render the modal (that recreates the DOM and causes visible
+    // flicker) — just sanitize the value in place and toggle the Verify button.
+    App._otpGateInput = (el) => {
+      const clean = el.value.replace(/\D/g, '').slice(0, 6);
+      if (el.value !== clean) el.value = clean;
+      S.otp = clean;
+      const btn = $('#otpGateVerifyBtn');
+      if (btn) btn.disabled = S.busy || S.otp.length !== 6;
+    };
     App._otpGateVerify = () => {
       if (S.otp.length !== 6) return;
       S.busy = true; render();

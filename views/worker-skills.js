@@ -315,7 +315,7 @@
             <div class="eyebrow">${App.icon('sparkles')} Skill advisor</div>
             <div class="row between wrap gap-20" style="margin-top:12px;align-items:flex-end">
               <div style="flex:1;min-width:280px">
-                <h1 class="h-grad">Khud ka vikas — skill up, ${App.esc(fn)}.</h1>
+                <h1 class="h-grad">Khud Ka Vikas.</h1>
                 <p class="lead">Every new certification puts you closer to a higher daily rate. Your certified skills, the fastest-rising trades in construction, and courses matched to higher-paying roles.</p>
                 <div class="ws-stats mt-16">
                   <div class="ws-stat"><span class="ws-stat__v num" style="color:var(--accent-strong)">${fresh ? 0 : 6}</span><span class="ws-stat__l">Certified skills</span></div>
