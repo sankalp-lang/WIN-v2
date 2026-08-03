@@ -1,7 +1,7 @@
 /* Government · Dashboard — national labour-data command center for the
    Ministry of Labour & Employment. Editorial hero + four tabs (Overview,
    Risk Vigilance, Compliance Gaps, Push Schemes & Alerts) with an
-   Export-report modal, a header "Push Scheme" shortcut, a state-wise
+   Export-report modal, a state-wise
    enrollment table, a sector distribution + 12-month enrollment sparkline,
    real-time employer risk flags, sector compliance trends with a live
    filter, and a scheme/alert push composer with quick templates and a send
@@ -10,7 +10,6 @@
   // ---- inline icons not in the base App.icon set ----
   const svg = (p, s) => `<svg class="ico" width="${s || 16}" height="${s || 16}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
   const ICO = {
-    radio: svg('<circle cx="12" cy="12" r="2"/><path d="M7.8 7.8a6 6 0 0 0 0 8.5M16.2 16.2a6 6 0 0 0 0-8.5"/><path d="M4.9 4.9a10 10 0 0 0 0 14.2M19.1 19.1a10 10 0 0 0 0-14.2"/>'),
     fileChart: svg('<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 17v-3M12 17v-5M15 17v-2"/>'),
     trendUp: svg('<path d="m22 7-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/>', 15),
     trendDown: svg('<path d="m22 17-8.5-8.5-5 5L2 7"/><path d="M16 17h6v-6"/>', 15),
@@ -529,8 +528,7 @@
                 <div class="gd-selwrap">${App.icon('filter')}
                   <select class="select gd-sel" onchange="GovDash.setState(this.value)" aria-label="Filter by state">${stateOptions}</select>
                 </div>
-                <button class="btn" onclick="GovDash.exportReport()">${ICO.fileChart} Export Report</button>
-                <button class="btn btn--primary" onclick="App.navigate('gov-benefits', {tab:'push'})">${ICO.radio} Push Scheme</button>
+                <button class="btn btn--primary" onclick="GovDash.exportReport()">${ICO.fileChart} Export Report</button>
               </div>
             </div>
           </div>
