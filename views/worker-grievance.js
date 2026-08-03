@@ -7,6 +7,7 @@
   const base = [
     { id: 'GRV-4521', subject: 'ESIC Renewal Delay',          cat: 'ESIC',     date: '2025-03-18', status: 'Resolved',    res: 'Renewal processed and benefits activated until Dec 2025.' },
     { id: 'GRV-4498', subject: 'EPFO Withdrawal Pending',     cat: 'EPFO',     date: '2025-03-12', status: 'In Progress', res: '' },
+    { id: 'GRV-4509', subject: 'ESIC Claim Reimbursement',    cat: 'ESIC',     date: '2025-03-22', status: 'In Progress', res: '' },
     { id: 'GRV-4476', subject: 'Salary Discrepancy — Feb',    cat: 'Employer', date: '2025-02-28', status: 'Resolved',    res: 'Employer corrected salary and paid the difference of Rs. 3,200.' },
     { id: 'GRV-4451', subject: 'E-Shram Card Update Request', cat: 'E-Shram',  date: '2025-02-15', status: 'Resolved',    res: 'Card details updated with new address and phone number.' },
     { id: 'GRV-4430', subject: 'Delayed PF Transfer',         cat: 'EPFO',     date: '2025-01-22', status: 'Resolved',    res: 'PF transferred from previous employer UAN to current account.' },
@@ -278,17 +279,16 @@
         { t: 'Case Escalated for Priority Processing',  d: '' },
         { t: 'Case Resolved: Benefit Info Sent',        d: '' },
       ];
-      const tracker = !rows.length ? `
-        <div class="card">
-          <div class="card__body">${App.ui.empty('message', 'No grievances yet', 'File a grievance and its live resolution status will track here.')}</div>
-        </div>` : `
+      const openRows = rows.filter(r => r.status === 'In Progress');
+      const trackerCard = (row, doneSteps, pct, barCol) => `
         <div class="card">
           <div class="card__head">
             <h3 class="grow">Live Resolution Tracker</h3>
-            <span class="pill pill--gray mono">${App.esc(rows[0].id)}</span>
-            ${App.ui.statusPill(rows[0].status)}
+            <span class="pill pill--gray mono">${App.esc(row.id)}</span>
+            ${App.ui.statusPill(row.status)}
           </div>
           <div class="card__body">
+            <div class="faint" style="font-size:12px;margin-bottom:10px">${App.esc(row.subject)}</div>
             <div class="wg-routebox">
               <div class="row between wrap gap-8" style="margin-bottom:12px">
                 <span class="pill pill--accent">${App.icon('fingerprint')} WIN ID</span>
@@ -300,20 +300,30 @@
                 ${mchip('PF', 'var(--blue-700)', 'EPFO')}
               </div>
               <div class="meter-row mt-16">
-                ${App.ui.bar(100, 'var(--green-600)')}
-                <span class="val num" style="color:var(--green-700)">100%</span>
+                ${App.ui.bar(pct, barCol)}
+                <span class="val num" style="color:${barCol}">${pct}%</span>
               </div>
-              <div class="muted" style="font-size:11.5px;margin-top:7px">Case routed and resolved across all linked ministries.</div>
+              <div class="muted" style="font-size:11.5px;margin-top:7px">${pct === 100 ? 'Case routed and resolved across all linked ministries.' : 'Case routed and being processed across linked ministries.'}</div>
             </div>
             <div class="timeline">
-              ${steps.map(s => `
+              ${steps.map((s, i) => `
                 <div class="timeline__item">
-                  <span class="timeline__dot done"></span>
+                  <span class="timeline__dot ${i < doneSteps ? 'done' : ''}"></span>
                   <b>${App.esc(s.t)}</b>${s.d ? `<div class="when">${App.esc(s.d)}</div>` : ''}
                 </div>`).join('')}
             </div>
           </div>
         </div>`;
+      const tracker = !rows.length ? `
+        <div class="card">
+          <div class="card__body">${App.ui.empty('message', 'No grievances yet', 'File a grievance and its live resolution status will track here.')}</div>
+        </div>`
+        : !openRows.length ? trackerCard(rows[0], steps.length, 100, 'var(--green-600)')
+        : `<div class="grid grid-2" style="align-items:start">${openRows.map((row, i) => {
+            const doneSteps = Math.max(2, steps.length - 1 - i);
+            const pct = Math.round((doneSteps / steps.length) * 100);
+            return trackerCard(row, doneSteps, pct, 'var(--blue-700)');
+          }).join('')}</div>`;
 
       /* ---- activity log ---- */
       const acts = WG.activity();
