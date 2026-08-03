@@ -222,7 +222,10 @@ window.App = (function () {
             { id: 'overview', label: 'Overview' },
             { id: 'hiring', label: 'Recruitment' },
           ] },
-          { id: 'emp-verifications', label: 'Employees', icon: 'shieldcheck' },
+          { id: 'emp-verifications', label: 'Employees', icon: 'shieldcheck', children: [
+            { id: 'overview', label: 'Overview' },
+            { id: 'manual', label: 'Manual Verification' },
+          ] },
           { id: 'emp-compliance', label: 'Compliance', icon: 'filecheck' },
           { id: 'emp-hrms', label: 'HRMS Sync', icon: 'plug' },
         ]},

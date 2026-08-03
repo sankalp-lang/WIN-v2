@@ -97,9 +97,11 @@
     status: 'all',    // all | Completed | In Progress | Pending
     added: [],        // employees submitted this session
     _focusSearch: false,
-    tab: 'roster',    // roster | manual
+    tab: 'overview', // overview | manual
 
-    setTab(t) { EV.tab = t; App.reload(); },
+    // keep App.state.params.tab in sync so the sidebar's nested Overview/Manual
+    // Verification children (see PERSONAS.employer nav in core.js) highlight correctly.
+    setTab(t) { EV.tab = t; App.state.params = Object.assign({}, App.state.params, { tab: t }); App.reload(); },
     reviewDoc(id) {
       const d = MANUAL_DOCS.find(x => x.id === id); if (!d) return;
       const firstName = (d.worker || '').split(' ')[0];
@@ -303,6 +305,8 @@
     render(ctx) {
       const org = (ctx && ctx.user && ctx.user.org) || (DB.profiles.employer && DB.profiles.employer.org);
       if (window.EmpHrms && !EmpHrms.hasActiveConnection(org)) return syncPromptPage();
+      const paramTab = ctx.params && ctx.params.tab;
+      if (paramTab && paramTab !== EV._lastParam && (paramTab === 'overview' || paramTab === 'manual')) { EV.tab = paramTab; EV._lastParam = paramTab; }
       const rows = EV.filtered();
       const total = EV.all().length;
       const filtering = !!(EV.query.trim() || EV.type !== 'all' || EV.status !== 'all');
@@ -453,7 +457,7 @@
 
       const tabs = `
         <div class="tabs">
-          <div class="tab ${EV.tab === 'roster' ? 'is-active' : ''}" onclick="EmpVerifications.setTab('roster')">${App.icon('shieldcheck')} Verification Roster</div>
+          <div class="tab ${EV.tab === 'overview' ? 'is-active' : ''}" onclick="EmpVerifications.setTab('overview')">${App.icon('shieldcheck')} Verification Roster</div>
           <div class="tab ${EV.tab === 'manual' ? 'is-active' : ''}" onclick="EmpVerifications.setTab('manual')">${App.icon('idcard')} Manual Document Review${pendingDocs ? ` <span class="nav__tag">${pendingDocs}</span>` : ''}</div>
         </div>`;
 
@@ -510,7 +514,7 @@
         ${hero}
         ${stats}
         ${tabs}
-        ${EV.tab === 'roster' ? roster : manualReview}
+        ${EV.tab === 'overview' ? roster : manualReview}
       </div>`;
     },
     mounted() {
