@@ -312,7 +312,7 @@
 
     const keyIndicators = `
       <div class="card reveal mb-20">
-        <div class="card__head">${App.icon('shieldcheck')}<h3 class="grow">Key Indicators — RAG Status</h3></div>
+        <div class="card__head">${App.icon('shieldcheck')}<h3 class="grow">Key Indicators</h3></div>
         <div class="card__body">
           <div class="grid grid-3">
             ${KEY_INDICATORS.map(ind => {
