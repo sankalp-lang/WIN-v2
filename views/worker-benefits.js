@@ -13,18 +13,18 @@
   ];
 
   const ENROLLED = [
-    { id: 'eshram', name: 'e-Shram', sub: 'UAN XXXX-XXXX-1234', st: 'Active', c: '#0e9f6e', ic: 'idcard',
-      since: 'Jan 2022', desc: 'National database of unorganised workers, unlocking accident insurance and access to welfare schemes.',
-      cover: '₹2,00,000 accident cover (PMSBY)' },
-    { id: 'esic', name: 'ESIC', sub: 'IP No: 1234567890', st: 'Active', c: '#0e9f6e', ic: 'shieldcheck',
-      since: 'Jun 2018', desc: 'Employees\' State Insurance — medical, sickness and maternity benefits for you and your dependants.',
-      cover: 'Cashless treatment at ESIC hospitals & dispensaries' },
-    { id: 'epfo', name: 'EPFO', sub: 'UAN 1001-2345-6789', st: 'Active', c: '#2f5fd0', ic: 'landmark',
-      since: 'Jun 2018', desc: 'Employees\' Provident Fund — retirement savings with employer + employee contributions.',
+    { id: 'epf', name: "Employees' Provident Fund Scheme (EPFO)", sub: 'UAN 1001-2345-6789', st: 'Active', c: '#2f5fd0', ic: 'landmark',
+      since: 'Jun 2018', desc: 'Retirement savings with matching employer + employee contributions, managed by the Employees\' Provident Fund Organisation.',
       cover: 'Current balance: ₹1,84,220 (demo)' },
-    { id: 'pmsym', name: 'PM-SYM', sub: 'Enrolment: PSM-84921', st: 'Enrolled', c: '#0d9488', ic: 'award',
-      since: 'Mar 2023', desc: 'Pradhan Mantri Shram Yogi Maandhan — voluntary pension scheme for unorganised workers.',
+    { id: 'esi', name: "Employees' State Insurance Scheme (ESIC)", sub: 'IP No: 1234567890', st: 'Active', c: '#0e9f6e', ic: 'shieldcheck',
+      since: 'Jun 2018', desc: 'Medical, sickness and maternity benefits for you and your dependants through ESIC hospitals and dispensaries.',
+      cover: 'Cashless treatment at ESIC hospitals & dispensaries' },
+    { id: 'pmsym', name: 'Pradhan Mantri Shram Yogi Maandhan (PM-SYM)', sub: 'Enrolment: PSM-84921', st: 'Enrolled', c: '#0d9488', ic: 'award',
+      since: 'Mar 2023', desc: 'Voluntary pension scheme for unorganised-sector workers, with matching government contribution.',
       cover: '₹3,000/month pension after age 60' },
+    { id: 'pmsby', name: 'Pradhan Mantri Suraksha Bima Yojana (PMSBY)', sub: 'Policy: PMSBY-2291087', st: 'Active', c: '#c07d10', ic: 'idcard',
+      since: 'Jan 2022', desc: 'Low-cost personal accident insurance, linked to your e-Shram registration.',
+      cover: '₹2,00,000 accident cover' },
   ];
 
   const WB = { tab: 'eligible' };
@@ -49,24 +49,12 @@
     confirmBenefit(id) {
       const box = document.getElementById('benefitConsent');
       if (!box || !box.checked) { App.toast('Please provide consent to continue.', 'alert'); return; }
-      const b = ELIGIBLE.find(x => x.id === id);
       const btn = document.getElementById('mahasarthiGoBtn');
       if (btn) { btn.disabled = true; btn.innerHTML = 'Redirecting…'; }
-      // simulated redirect: brief loading state, then a confirmation screen that
-      // stands in for landing on Mahasarthi (no real cross-domain nav in a demo).
       setTimeout(() => {
-        const ref = 'MHS-' + Math.floor(100000 + Math.random() * 900000);
-        App.modal.open(`
-          <div style="text-align:center;padding:8px 0 4px">
-            <div class="kpi__icon" style="width:52px;height:52px;margin:0 auto 14px;background:var(--green-50);color:var(--green-600)">${App.icon('checkcircle')}</div>
-            <h3 style="margin-bottom:6px">You're on Mahasarthi</h3>
-            <p class="muted" style="font-size:13px;max-width:38ch;margin:0 auto">Your verified WiN profile was shared and an eligibility check for <b>${App.esc(b ? b.title : 'this scheme')}</b> has been started.</p>
-            <div class="mono" style="font-size:12px;color:var(--muted);margin-top:12px">Reference: <b>${ref}</b></div>
-          </div>`, {
-          title: 'Redirected to Mahasarthi', icon: 'external',
-          foot: `<button class="btn btn--primary" style="width:100%" onclick="App.modal.close()">Done</button>`,
-        });
-      }, 1100);
+        App.modal.close();
+        App.navigate('mahasarthi-portal', { scheme: id });
+      }, 500);
     },
 
     openEnrolled(id) {
@@ -108,17 +96,21 @@
   }
 
   function enrolledTab() {
-    const cards = ENROLLED.map(sc => `
-      <button class="card card--pad card--hover" style="text-align:left;width:100%;cursor:pointer" onclick="WorkerBenefits.openEnrolled('${sc.id}')">
-        <div class="row between">
-          <div class="row gap-12">
-            <div class="kpi__icon" style="width:40px;height:40px;background:${sc.c}1a;color:${sc.c}">${App.icon(sc.ic)}</div>
-            <div><b style="font-size:14.5px">${App.esc(sc.name)}</b><div class="mono muted" style="font-size:12px;margin-top:2px">${App.esc(sc.sub)}</div></div>
-          </div>
-          <div class="row gap-8" style="align-items:center">${App.ui.pill(sc.st, 'green', true)}${App.icon('chevron')}</div>
+    const rows = ENROLLED.map(sc => `
+      <div class="row between wrap gap-10" style="padding:14px 0">
+        <div class="row gap-10" style="align-items:flex-start">
+          <span class="kpi__icon" style="width:34px;height:34px;flex-shrink:0;background:${sc.c}1a;color:${sc.c}">${App.icon(sc.ic)}</span>
+          <div><b style="font-size:14px">${App.esc(sc.name)}</b><div class="mono muted" style="font-size:11.5px;margin-top:3px">${App.esc(sc.sub)}</div><div class="muted" style="font-size:12.5px;margin-top:3px;max-width:52ch">${App.esc(sc.desc)}</div></div>
         </div>
-      </button>`).join('');
-    return `<div class="grid grid-2 reveal">${cards}</div>`;
+        <div class="row gap-8" style="align-items:center;flex-shrink:0">${App.ui.pill(sc.st, 'green', true)}<button class="btn btn--sm" onclick="WorkerBenefits.openEnrolled('${sc.id}')">${App.icon('external')} View</button></div>
+      </div>`).join('');
+    return `
+      <div class="card reveal">
+        <div class="card__head"><div class="grow"><h3>Schemes you're enrolled in</h3><div class="muted" style="font-size:12.5px;margin-top:2px">Active enrollments linked to your verified WiN profile</div></div></div>
+        <div class="card__body" style="padding-top:0">
+          <div class="list--divided">${rows}</div>
+        </div>
+      </div>`;
   }
 
   App.registerView('worker-benefits', {
