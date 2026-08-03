@@ -411,7 +411,7 @@
       const roster = `
         <div class="card reveal" style="overflow:hidden">
           <div class="card__head">
-            <div class="grow"><h3>Verification roster</h3><div class="muted" style="font-size:12.5px;margin-top:2px">Live per-source status — click any row for the full verification trail</div></div>
+            <div class="grow muted" style="font-size:12.5px">Live per-source status — click any row for the full verification trail</div>
             <span class="pill ${filtering ? 'pill--accent' : 'pill--gray'}">${App.icon('users')} <span class="num">${rows.length}</span>${filtering ? ' matched' : ' on roster'}</span>
           </div>
           ${filterBody}
@@ -444,7 +444,7 @@
         <div class="banner banner--info reveal" style="margin-bottom:18px">${App.icon('idcard')}<div>When a worker can't be verified through your HRMS, they can upload a salary slip or appointment letter instead. Review and approve or reject those submissions here.</div></div>
         <div class="card reveal" style="overflow:hidden">
           <div class="card__head">
-            <div class="grow"><h3>Manual Document Verification</h3><div class="muted" style="font-size:12.5px;margin-top:2px">Documents uploaded when HRMS verification isn't available</div></div>
+            <div class="grow muted" style="font-size:12.5px">Documents uploaded when HRMS verification isn't available</div>
             <span class="pill ${pendingDocs ? 'pill--amber' : 'pill--gray'}">${App.icon('clock')} <span class="num">${pendingDocs}</span> pending</span>
           </div>
           <div class="tablewrap tablewrap--scroll" style="border:none;border-radius:0;box-shadow:none">
