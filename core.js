@@ -117,9 +117,26 @@ window.App = (function () {
   // hand-rolled, dependency-free single/multi-page PDF (Courier, one row per line) —
   // no PDF library available in this no-build-step prototype.
   App.downloadPDF = (filename, title, headers, rows) => {
-    const escPdf = s => String(s).replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
+    // Courier is a WinAnsi Type1 face — ₹ and typographic dashes aren't in it and
+    // render as mojibake, so fold them to ASCII equivalents for the PDF only.
+    const asciiPdf = s => String(s == null ? '' : s)
+      .replace(/₹/g, 'Rs.').replace(/[—–]/g, '-').replace(/[’‘]/g, "'").replace(/[“”]/g, '"').replace(/·/g, '-');
+    const escPdf = s => asciiPdf(s).replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
     const lines = [title, ''].concat([headers.join('   |   ')]).concat(rows.map(r => r.map(c => String(c == null ? '' : c)).join('   |   ')));
-    const perPage = 54;
+
+    // wide tables (10+ columns) used to run off the right edge — pick orientation and
+    // font size from the widest line so every column stays on the page.
+    const maxLen = lines.reduce((m, l) => Math.max(m, asciiPdf(l).length), 0);
+    const M = 40;
+    const portrait = { w: 612, h: 792 }, landscape = { w: 792, h: 612 };
+    const fits = (pg, fs) => (pg.w - M * 2) / (fs * 0.6) >= maxLen;
+    let page = portrait, font = 8;
+    if (!fits(portrait, 8)) {
+      page = landscape;
+      font = [8, 7, 6, 5].find(fs => fits(landscape, fs)) || 5;
+    }
+    const lead = Math.max(font + 2, 7);
+    const perPage = Math.max(10, Math.floor((page.h - M * 2) / lead));
     const pages = [];
     for (let i = 0; i < lines.length; i += perPage) pages.push(lines.slice(i, i + perPage));
     if (!pages.length) pages.push([]);
@@ -134,11 +151,11 @@ window.App = (function () {
     objects.push(`2 0 obj\n<< /Type /Pages /Kids [${kids}] /Count ${pages.length} >>\nendobj\n`);
     pages.forEach((_, p) => {
       const pageNum = pageObjStart + p, contentNum = contentObjStart + p;
-      objects.push(`${pageNum} 0 obj\n<< /Type /Page /Parent 2 0 R /Resources << /Font << /F1 ${fontObjNum} 0 R >> >> /MediaBox [0 0 612 792] /Contents ${contentNum} 0 R >>\nendobj\n`);
+      objects.push(`${pageNum} 0 obj\n<< /Type /Page /Parent 2 0 R /Resources << /Font << /F1 ${fontObjNum} 0 R >> >> /MediaBox [0 0 ${page.w} ${page.h}] /Contents ${contentNum} 0 R >>\nendobj\n`);
     });
     objects.push(`${fontObjNum} 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Courier >>\nendobj\n`);
     pages.forEach(pageLines => {
-      let stream = `BT /F1 8 Tf 40 760 Td 10 TL\n`;
+      let stream = `BT /F1 ${font} Tf ${M} ${page.h - M} Td ${lead} TL\n`;
       pageLines.forEach(line => { stream += `(${escPdf(line)}) Tj T*\n`; });
       stream += `ET`;
       objects.push(`${contentObjStart + pages.indexOf(pageLines)} 0 obj\n<< /Length ${stream.length} >>\nstream\n${stream}\nendstream\nendobj\n`);
@@ -286,9 +303,16 @@ window.App = (function () {
   };
   App.navT = () => NAV_I18N[App.state.lang] || null;
 
-  // change the app language from the topbar dropdown (see renderShell()) — updates the
-  // sidebar/topbar chrome immediately, same as the landing-page switcher.
-  App.setLang = (l) => { App.state.lang = LANG_LABELS[l] ? l : 'en'; App.reload(); };
+  // change the app language from the topbar dropdown (see renderShell()) — rebuilds the
+  // whole shell (sidebar, topbar, persona tag, search) and then re-renders the current
+  // route, so the switch takes effect on chrome and page content alike.
+  App.setLang = (l) => {
+    App.state.lang = LANG_LABELS[l] ? l : 'en';
+    const route = App.state.route, params = App.state.params;
+    renderShell();
+    if (App.translateTree) try { App.translateTree($('#shell')); } catch (e) { console.error(e); }
+    App.navigate(route || App.persona().home, params);
+  };
   // the topbar language dropdown markup, shared by every persona's shell.
   App.langSelect = () => `
     <div class="topbar__lang">
@@ -371,9 +395,10 @@ window.App = (function () {
     const s = $('#shell'); if (s) s.classList.remove('nav-open');
     const content = $('#content');
     const nt = App.navT();
-    const title = (nt && nt.items[route]) || (view && view.title) || route;
+    const title = (nt && nt.items[route]) || (App.t ? App.t((view && view.title) || route) : (view && view.title) || route);
     const tb = $('#tbTitle'); if (tb) tb.textContent = title;
-    const tbs = $('#tbSub'); if (tbs) tbs.textContent = (view && view.subtitle) || '';
+    const sub = (view && view.subtitle) || '';
+    const tbs = $('#tbSub'); if (tbs) tbs.textContent = App.t ? App.t(sub) : sub;
     if (!content) return;
     if (!view) {
       content.innerHTML = `<div class="page">${App.ui.empty('layers', 'Screen coming up', 'This module isn\'t wired in this build yet.')}</div>`;
@@ -382,6 +407,9 @@ window.App = (function () {
     const ctx = { user: App.state.user, persona: App.state.persona, params: App.state.params };
     try { content.innerHTML = view.render(ctx); }
     catch (e) { content.innerHTML = `<div class="page"><div class="banner banner--red">${App.icon('alert')} <div><b>Render error in “${App.esc(title)}”</b><div style="margin-top:4px;font-size:12px">${App.esc(e.message)}</div></div></div></div>`; console.error(e); }
+    // single app-wide translation hook: views render English, this swaps the
+    // rendered text in place per the selected language (see i18n.js).
+    if (App.translateTree) try { App.translateTree(content); } catch (e) { console.error(e); }
     content.scrollTop = 0;
     if (view.mounted) try { view.mounted(ctx); } catch (e) { console.error(e); }
   };
@@ -397,6 +425,7 @@ window.App = (function () {
     // individual page content stays in English for now — see navHtml()/T() below.
     App.state.lang = L.lang;
     renderShell();
+    if (App.translateTree) try { App.translateTree($('#shell')); } catch (e) { console.error(e); }
     App.navigate(App.persona().home);
   };
   App.logout = () => {
@@ -422,6 +451,7 @@ window.App = (function () {
           <div class="modal__body">${html}</div>
           ${opts.foot ? `<div class="modal__foot">${opts.foot}</div>` : ''}
         </div></div>`;
+      if (App.translateTree) try { App.translateTree(root); } catch (e) { console.error(e); }
     },
     close() {
       if (App.modal._onClose) { const fn = App.modal._onClose; App.modal._onClose = null; fn(); }

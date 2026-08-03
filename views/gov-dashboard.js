@@ -93,17 +93,40 @@
   // deterministic per-region spread around an indicator's value, plus the extra
   // context (sample size, likely driver, data source) that explains how the
   // number was arrived at — used by both the preview modal and the download.
+  const f1 = n => Math.round(n * 10) / 10;
   function indicatorRegionRows(ind, regions) {
     return regions.map(r => {
-      const spread = ((seed(r.name + ind.id) % 21) - 10) / 100; // ±10%
+      const spread = ((seed(r.name + ind.id) % 21) - 10) / 100;         // ±10% around national
       const val = Math.max(0, ind.cur * (1 + spread));
+      const prevSpread = ((seed(r.name + ind.id + 'p') % 17) - 8) / 100;
+      const prev = Math.max(0, ind.prev * (1 + prevSpread));
       const onTrack = (val >= ind.bench) === !!ind.higherIsBetter;
       const driverPool = onTrack ? DRIVERS_UP : DRIVERS_DOWN;
       const driver = driverPool[seed(r.name + ind.id + 'd') % driverPool.length];
       const sample = r.sample != null ? App.num(r.sample) : '—';
-      return [r.name, (Math.round(val * 10) / 10) + ind.unit, ind.bench + ind.unit, onTrack ? 'On track' : 'Off track', sample, driver];
+      const chg = val - prev;
+      // signed so the direction is unambiguous in a spreadsheet, and framed as
+      // "better/worse" rather than just up/down since some indicators invert
+      const chgStr = (chg >= 0 ? '+' : '') + f1(chg) + ind.unit;
+      const gapRaw = ind.higherIsBetter ? val - ind.bench : ind.bench - val;
+      const gapStr = (gapRaw >= 0 ? '+' : '') + f1(gapRaw) + ind.unit;
+      const improving = ind.higherIsBetter ? chg >= 0 : chg <= 0;
+      return [
+        r.name,
+        f1(val) + ind.unit,
+        f1(prev) + ind.unit,
+        chgStr,
+        improving ? 'Improving' : 'Worsening',
+        ind.bench + ind.unit,
+        gapStr,
+        onTrack ? 'On track' : 'Off track',
+        sample,
+        driver,
+      ];
     });
   }
+  const INDICATOR_HEADERS = (regionLabel) => [regionLabel, 'Current', 'Last Month', 'Change',
+    'Trend', 'Benchmark', 'Gap vs Benchmark', 'Status', 'Sample Size', 'Primary Driver'];
   // resolves which regions to report on — all states nationally, or the
   // districts of just the one state currently selected in the header filter.
   function indicatorRegions(ind) {
@@ -197,8 +220,13 @@
       const { scope, regions } = indicatorRegions(ind);
       const rows = indicatorRegionRows(ind, regions);
       const regionLabel = S.state === 'All' ? 'State' : 'District';
+      const hdrs = INDICATOR_HEADERS(regionLabel);
       const preview = rows.slice(0, 6).map(r => `
-        <tr><td>${App.esc(r[0])}</td><td class="num">${App.esc(r[1])}</td><td class="num">${App.esc(r[2])}</td><td>${App.ui.statusPill(r[3])}</td><td class="num">${App.esc(r[4])}</td><td class="muted" style="font-size:12px">${App.esc(r[5])}</td></tr>`).join('');
+        <tr><td>${App.esc(r[0])}</td><td class="num">${App.esc(r[1])}</td><td class="num">${App.esc(r[2])}</td>
+        <td class="num">${App.esc(r[3])}</td><td class="muted" style="font-size:12px">${App.esc(r[4])}</td>
+        <td class="num">${App.esc(r[5])}</td><td class="num">${App.esc(r[6])}</td>
+        <td>${App.ui.statusPill(r[7])}</td><td class="num">${App.esc(r[8])}</td>
+        <td class="muted" style="font-size:12px">${App.esc(r[9])}</td></tr>`).join('');
       App.modal.open(`
         <div class="row between" style="align-items:flex-start;margin-bottom:6px">
           <div><b style="font-size:15px">${App.esc(ind.label)}</b><div class="muted" style="font-size:12.5px;margin-top:3px;max-width:44ch">${App.esc(ind.note)}</div></div>
@@ -216,7 +244,7 @@
           ${S.state !== 'All' ? `<span class="pill pill--accent">${App.icon('filter')} Filtered to ${App.esc(S.state)}</span>` : ''}
         </div>
         <div class="tablewrap tablewrap--scroll" style="margin-bottom:6px">
-          <table class="tbl"><thead><tr><th>${regionLabel}</th><th>Value</th><th>Benchmark</th><th>Status</th><th>Sample Size</th><th>Primary Driver</th></tr></thead><tbody>${preview}</tbody></table>
+          <table class="tbl"><thead><tr>${hdrs.map(h => `<th>${App.esc(h)}</th>`).join('')}</tr></thead><tbody>${preview}</tbody></table>
         </div>
         <div class="faint" style="font-size:11.5px">Showing 6 of ${rows.length} ${regionLabel.toLowerCase()}s — download the full report below.</div>`, {
         title: 'Key Indicator', icon: ind.icon, wide: true,
@@ -232,7 +260,7 @@
       const regionLabel = S.state === 'All' ? 'State' : 'District';
       const baseName = 'win-indicator-' + id + (S.state !== 'All' ? '-' + S.state.toLowerCase().replace(/\s+/g, '-') : '');
       App.downloadReport(baseName, ind.label + ' — ' + scope + ' (Source: ' + ind.source + ')',
-        [regionLabel, 'Value', 'Benchmark', 'Status', 'Sample Size', 'Primary Driver'], rows, fmt);
+        INDICATOR_HEADERS(regionLabel), rows, fmt);
       App.toast(ind.label + ' report downloaded as ' + fmt, 'download');
     },
     exportReport() {

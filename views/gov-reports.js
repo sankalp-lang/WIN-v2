@@ -22,17 +22,17 @@
   // warrants a table rather than a headline number (see METRICS below for the rest) ----
   const REPORTS = [
     { id: 'sector', title: 'Sectoral Workforce Concentration & Growth', section: 'workforce', ic: 'chart', size: '2.0 MB', last: 'Nov 5, 2024', freq: 'Monthly',
-      desc: 'Headcount and year-over-year growth of the workforce by sector and state — agriculture, gig/platform, construction, manufacturing, services.' },
+      desc: 'Headcount, YoY growth, formal and female share, average wage, verified headcount and registered employers — by sector and state. Select a state to break it down district-wise.' },
     { id: 'informal-subsector', title: 'Informal Sector Segmentation & Social Security Coverage', section: 'formal', ic: 'file', size: '1.6 MB', last: 'Nov 6, 2024', freq: 'Monthly',
-      desc: 'Within the informal segment: headcount by sub-sector (construction, farm labour, gig, domestic, other) and PF/ESIC coverage rate, by state.' },
+      desc: 'Within the informal segment: headcount by sub-sector, PF/ESIC coverage, average daily wage, verification rate, social-security gap and women\u2019s share \u2014 by state, expandable district-wise.' },
     { id: 'grad-outcome', title: 'Graduate Outcome Mapping', section: 'skilling', ic: 'graduation', size: '1.4 MB', last: 'Oct 28, 2024', freq: 'Quarterly',
-      desc: 'Stream of graduation cross-tabulated against sector and state of first employment.' },
+      desc: 'Graduation stream against state and sector of first employment, with placement counts, entry wage, skill-match rate and median time to placement.' },
     { id: 'wage-distribution', title: 'Wage Distribution by Sector, Gender & Skill', section: 'income', ic: 'trend', size: '2.2 MB', last: 'Nov 9, 2024', freq: 'Monthly',
-      desc: 'Median and mean wages disaggregated by sector, gender and skill level, plus a state-wise cut.' },
+      desc: 'Median, mean and P25/P75 wages by sector, state and skill level, with male/female medians and the resulting gender gap.' },
     { id: 'migration', title: 'In-Migrant Worker Stock & Sector Concentration', section: 'migration', ic: 'mappin', size: '3.1 MB', last: 'Nov 12, 2024', freq: 'Quarterly',
-      desc: 'Interstate worker inflow by source state and destination state, dominant sector and peak season.' },
+      desc: 'Interstate inflow by source and destination state, with dominant sector, peak season, average stay, benefit-portability eligibility and return-migration rate.' },
     { id: 'vacancy-index', title: 'Vacancy Index by Sector & District', section: 'demand', ic: 'briefcase', size: '1.3 MB', last: 'Nov 4, 2024', freq: 'Monthly',
-      desc: 'Registered and online job vacancies by sector and district, from HRMS-integrated employers.' },
+      desc: 'Open vacancies by state, district and sector, with YoY change, vacancies filled last month, average days to fill, median offered wage and count of posting employers.' },
   ];
 
   // ---- shared seed lists for generating realistic report/metric data ----
@@ -63,9 +63,18 @@
       const current = Math.round((900000 + si * 180000 + sci * 240000) * (0.8 + seeded(si, sci) * 0.5));
       const prev = Math.round(current / (1 + (0.04 + seeded(sci, si) * 0.35)));
       const growth = fmt1((current - prev) / prev * 100);
-      rows.push([sec, st, current, prev, growth]);
+      const formal = fmt1(14 + seeded(sci, si + 3) * 46);
+      const female = fmt1(9 + seeded(si + 5, sci) * 34);
+      const wage = Math.round((11000 + sci * 2300 + si * 400) * (0.85 + seeded(si, sci + 7) * 0.35));
+      const verified = Math.round(current * (0.62 + seeded(sci + 2, si) * 0.33));
+      const employers = Math.round((900 + si * 260 + sci * 180) * (0.7 + seeded(si + 1, sci) * 0.7));
+      rows.push([sec, st, current, prev, growth, formal, female, wage, verified, employers]);
     }));
-    return { headers: ['Sector', 'State', 'Current Workers', 'Previous Year', 'YoY Growth %'], rows };
+    return {
+      headers: ['Sector', 'State', 'Current Workers', 'Previous Year Workers', 'YoY Growth %',
+        'Formal Share %', 'Female Share %', 'Avg Monthly Wage (₹)', 'WIN-Verified Workers', 'Employers Registered'],
+      rows,
+    };
   }
 
   function genInformalSubsector() {
@@ -75,55 +84,84 @@
       const headcount = Math.round((40000 + si * 8200 + subi * 6100) * (0.7 + seeded(subi, si) * 0.6));
       const pf = Math.round(8 + seeded(si, subi) * 30);
       const esic = Math.round(6 + seeded(subi, si) * 28);
-      rows.push([sub, st, headcount, pf, esic]);
+      const daily = Math.round((380 + subi * 55 + si * 9) * (0.88 + seeded(subi + 4, si) * 0.3));
+      const verified = fmt1(48 + seeded(si + 2, subi) * 44);
+      const gap = fmt1(Math.max(0, 100 - (pf + esic) / 2 - seeded(subi, si + 6) * 12));
+      const women = fmt1(11 + seeded(si + 8, subi) * 42);
+      rows.push([sub, st, headcount, pf, esic, daily, verified, gap, women]);
     }));
-    return { headers: ['Informal Sub-sector', 'State', 'Headcount', 'PF Coverage %', 'ESIC Coverage %'], rows };
+    return {
+      headers: ['Informal Sub-sector', 'State', 'Headcount', 'PF Coverage %', 'ESIC Coverage %',
+        'Avg Daily Wage (₹)', 'WIN-Verified %', 'Social Security Gap %', 'Women Share %'],
+      rows,
+    };
   }
 
   function genGradOutcome() {
     const STREAMS = ['Economics', 'Engineering', 'Commerce', 'Arts', 'Science', 'Agriculture', 'Law', 'Management'];
     const rows = [];
-    STREAMS.forEach((stream, sti) => SECTOR_LIST.forEach((sec, sci) => {
-      const placed = Math.round((800 + sti * 220 + sci * 140) * (0.6 + seeded(sti, sci) * 0.7));
-      const pct = fmt1(6 + seeded(sci, sti) * 34);
-      rows.push([stream, sec, placed, pct]);
+    STREAMS.forEach((stream, sti) => ALL_STATES.forEach((st, si) => {
+      const sector = SECTOR_LIST[(sti + si) % SECTOR_LIST.length];
+      const placed = Math.round((520 + sti * 160 + si * 70) * (0.6 + seeded(sti, si) * 0.7));
+      const pct = fmt1(6 + seeded(si, sti) * 34);
+      const wage = Math.round((13500 + sti * 1900 + si * 350) * (0.85 + seeded(sti + 3, si) * 0.3));
+      const match = fmt1(38 + seeded(si + 4, sti) * 52);
+      const months = fmt1(2 + seeded(sti + 6, si) * 9);
+      rows.push([stream, st, sector, placed, pct, wage, match, months]);
     }));
-    STREAMS.slice(0, 5).forEach((stream, sti) => ALL_STATES.slice(0, 15).forEach((st, si) => {
-      const placed = Math.round((300 + sti * 90 + si * 40) * (0.6 + seeded(sti, si) * 0.7));
-      rows.push([stream, st, placed, fmt1(5 + seeded(si, sti) * 20)]);
-    }));
-    return { headers: ['Graduation Stream', 'First-Employment Sector/State', 'Placed (count)', 'Share of Stream %'], rows };
+    return {
+      headers: ['Graduation Stream', 'State', 'First-Employment Sector', 'Placed (count)',
+        'Share of Stream %', 'Avg Entry Wage (₹/mo)', 'Skill-Match %', 'Median Months to Placement'],
+      rows,
+    };
   }
 
   function genWageDistribution() {
-    const GENDERS = ['Male', 'Female'];
     const SKILLS = ['Unskilled', 'Semi-skilled', 'Skilled'];
     const rows = [];
-    SECTOR_LIST.forEach((sec, sci) => GENDERS.forEach((g, gi) => SKILLS.forEach((sk, ski) => {
-      const base = 9000 + sci * 2600 + ski * 5200 - gi * 1400;
-      const median = Math.round(base * (0.9 + seeded(sci + ski, gi) * 0.25));
-      const mean = Math.round(median * (1.04 + seeded(gi, ski) * 0.1));
-      rows.push([sec, g, sk, median, mean]);
+    SECTOR_LIST.forEach((sec, sci) => ALL_STATES.forEach((st, si) => SKILLS.forEach((sk, ski) => {
+      const base = 9000 + sci * 2600 + ski * 5200 + si * 320;
+      const median = Math.round(base * (0.9 + seeded(sci + ski, si) * 0.25));
+      const mean = Math.round(median * (1.04 + seeded(si, ski) * 0.1));
+      const p25 = Math.round(median * (0.74 + seeded(ski, sci) * 0.08));
+      const p75 = Math.round(median * (1.2 + seeded(sci, si + ski) * 0.16));
+      const male = Math.round(median * (1.02 + seeded(si + 1, ski) * 0.09));
+      const female = Math.round(median * (0.82 + seeded(ski + 2, si) * 0.12));
+      const gap = fmt1((male - female) / male * 100);
+      rows.push([sec, st, sk, median, mean, p25, p75, male, female, gap]);
     })));
-    ALL_STATES.forEach((st, si) => SECTOR_LIST.forEach((sec, sci) => {
-      const median = Math.round((12000 + si * 900 + sci * 2400) * (0.85 + seeded(si, sci) * 0.3));
-      rows.push([sec, st, 'All', median, Math.round(median * 1.05)]);
-    }));
-    return { headers: ['Sector', 'Gender / State', 'Skill Level', 'Median Wage (₹/mo)', 'Mean Wage (₹/mo)'], rows };
+    return {
+      headers: ['Sector', 'State', 'Skill Level', 'Median Wage (₹/mo)', 'Mean Wage (₹/mo)',
+        'P25 Wage (₹/mo)', 'P75 Wage (₹/mo)', 'Male Median (₹/mo)', 'Female Median (₹/mo)', 'Gender Gap %'],
+      rows,
+    };
   }
 
   function genMigration() {
-    const origins = ['Bihar', 'Uttar Pradesh', 'Odisha', 'West Bengal', 'Madhya Pradesh', 'Rajasthan', 'Jharkhand', 'Chhattisgarh', 'Assam', 'Uttarakhand'];
-    const dests = ['Maharashtra', 'Delhi NCR', 'Gujarat', 'Tamil Nadu', 'Karnataka', 'Telangana', 'Kerala', 'Punjab', 'Haryana', 'Andhra Pradesh'];
+    const origins = ['Bihar', 'Uttar Pradesh', 'Odisha', 'West Bengal', 'Madhya Pradesh', 'Rajasthan',
+      'Jharkhand', 'Chhattisgarh', 'Assam', 'Uttarakhand', 'Andhra Pradesh', 'Kerala'];
+    const dests = ['Maharashtra', 'Delhi NCR', 'Gujarat', 'Tamil Nadu', 'Karnataka', 'Telangana',
+      'Kerala', 'Punjab', 'Haryana', 'Andhra Pradesh', 'Uttar Pradesh', 'West Bengal'];
     const seasons = ['Year-round', 'Oct - Mar', 'Nov - Apr', 'Jun - Sep', 'Dec - Feb'];
     const rows = [];
     origins.forEach((o, oi) => dests.forEach((d, di) => {
       if (o === d) return;
       const workers = Math.round((60000 + oi * 9000 + di * 4000) * (0.6 + seeded(oi, di) * 0.8));
-      rows.push([o, d, workers, SECTOR_LIST[(oi + di) % SECTOR_LIST.length], seasons[(oi * 3 + di) % seasons.length]]);
+      const stay = fmt1(3 + seeded(oi + 2, di) * 18);
+      const portable = fmt1(34 + seeded(di, oi + 5) * 56);
+      const verified = fmt1(52 + seeded(oi + 7, di) * 42);
+      const ret = fmt1(8 + seeded(di + 3, oi) * 30);
+      rows.push([o, d, workers, SECTOR_LIST[(oi + di) % SECTOR_LIST.length],
+        seasons[(oi * 3 + di) % seasons.length], stay, portable, verified, ret]);
     }));
     rows.sort((a, b) => b[2] - a[2]);
-    return { headers: ['Origin State', 'Destination State', 'Workers (est.)', 'Dominant Sector', 'Peak Season'], rows: rows.slice(0, 100) };
+    return {
+      headers: ['Origin State', 'Destination State', 'Workers (est.)', 'Dominant Sector', 'Peak Season',
+        'Avg Stay (months)', 'Benefit Portability Eligible %', 'WIN-Verified %', 'Return Migration %'],
+      // a registry officer filters by where migrants are arriving, not leaving
+      stateCol: 'Destination State',
+      rows,
+    };
   }
 
   function genVacancyIndex() {
@@ -131,9 +169,17 @@
     ALL_STATES.forEach((st, si) => districtsFor(st).forEach((d, di) => SECTOR_LIST.forEach((sec, sci) => {
       const vacancies = Math.round((80 + si * 22 + di * 14 + sci * 30) * (0.6 + seeded(si + di, sci) * 0.8));
       const change = fmt1(seeded(di, sci) * 24 - 8);
-      rows.push([st, d.n, sec, vacancies, change]);
+      const filled = Math.round(vacancies * (0.28 + seeded(sci, si + di) * 0.4));
+      const days = fmt1(9 + seeded(di + 5, sci) * 32);
+      const wage = Math.round((12500 + sci * 2100 + si * 380) * (0.86 + seeded(si, sci + 2) * 0.3));
+      const employers = Math.round(Math.max(1, vacancies * (0.08 + seeded(di, si) * 0.14)));
+      rows.push([st, d.n, sec, vacancies, change, filled, days, wage, employers]);
     })));
-    return { headers: ['State', 'District', 'Sector', 'Open Vacancies', 'YoY Change %'], rows };
+    return {
+      headers: ['State', 'District', 'Sector', 'Open Vacancies', 'YoY Change %',
+        'Filled Last Month', 'Avg Days to Fill', 'Median Offered Wage (₹/mo)', 'Employers Posting'],
+      rows,
+    };
   }
 
   // ---- headline-metric generators — these back a KPI tile only, not a downloadable
@@ -290,20 +336,44 @@
       </div>`;
   }
 
-  // when a state is selected and a report has a State column but no District column yet,
+  // A district's figure derives from its state's differently depending on what the
+  // column measures: headcounts split by the district's population share, but rates,
+  // wages and durations must NOT be divided down (a 21% PF coverage rate doesn't
+  // become 5% in a district holding 26% of the workers) — those stay at roughly the
+  // state level with a small deterministic variation instead.
+  const COUNT_RE = /count|workers|headcount|vacanc|placed|employers|enrolled|filled|total|\(est\.\)/i;
+  const RATE_RE = /%|wage|rate|share|avg|average|median|mean|month|day|score|index/i;
+  function districtValue(header, v, share, salt) {
+    if (typeof v !== 'number') return v;
+    if (COUNT_RE.test(header)) return Math.round(v * share / 100);
+    if (RATE_RE.test(header)) return fmt1(v * (0.94 + seeded(salt, Math.round(share)) * 0.12));
+    return fmt1(v * share / 100);
+  }
+
+  // resolves which column holds the state a registry officer filters by — the plain
+  // 'State' column when there is one, else the report's declared stateCol (e.g.
+  // migration reports filter on 'Destination State').
+  function stateIdxOf(headers, stateCol) {
+    const i = headers.indexOf('State');
+    if (i !== -1) return i;
+    return stateCol ? headers.indexOf(stateCol) : -1;
+  }
+
+  // when a state is selected and a report has a state column but no District column yet,
   // expand that state's row(s) into a district-wise breakdown instead of just filtering
   // down to it — otherwise selecting a state leaves you with only 1-6 rows of the same
   // state-level figures repeated, which reads as "state-wise" data, not "district-wise".
-  function districtExpand(headers, rows, state) {
-    const stateIdx = headers.indexOf('State');
+  function districtExpand(headers, rows, state, stateCol) {
+    const stateIdx = stateIdxOf(headers, stateCol);
     if (stateIdx === -1 || headers.indexOf('District') !== -1) return null;
     const matched = rows.filter(r => r[stateIdx] === state);
     if (!matched.length) return null;
     const shares = districtsFor(state);
     const newHeaders = headers.slice(0, stateIdx + 1).concat(['District'], headers.slice(stateIdx + 1));
+    const tailHeaders = headers.slice(stateIdx + 1);
     const rows2 = [];
-    matched.forEach(r => shares.forEach(sh => {
-      const tail = r.slice(stateIdx + 1).map(v => typeof v === 'number' ? Math.round((v * sh.p / 100) * 10) / 10 : v);
+    matched.forEach((r, ri) => shares.forEach((sh, shi) => {
+      const tail = r.slice(stateIdx + 1).map((v, vi) => districtValue(tailHeaders[vi], v, sh.p, ri + shi + vi));
       rows2.push(r.slice(0, stateIdx + 1).concat([sh.n], tail));
     }));
     return { headers: newHeaders, rows: rows2 };
@@ -311,10 +381,10 @@
 
   // narrow (or district-expand) a report's rows to the header page's selected state —
   // otherwise every row is kept unchanged. Returns {headers, rows}.
-  function stateFilteredRows(headers, rows) {
-    const idx = headers.indexOf('State');
+  function stateFilteredRows(headers, rows, stateCol) {
+    const idx = stateIdxOf(headers, stateCol);
     if (idx === -1 || S.state === 'All') return { headers, rows };
-    const expanded = districtExpand(headers, rows, S.state);
+    const expanded = districtExpand(headers, rows, S.state, stateCol);
     if (expanded) return expanded;
     return { headers, rows: rows.filter(r => r[idx] === S.state) };
   }
@@ -325,7 +395,7 @@
   function downloadReportCSV(rep, fmt) {
     const data = REPORT_DATA[rep.id];
     if (data) {
-      const f = stateFilteredRows(data.headers, data.rows);
+      const f = stateFilteredRows(data.headers, data.rows, data.stateCol);
       App.downloadReport('win-' + rep.id + '-report', rep.title || rep.id, f.headers, f.rows, fmt || 'CSV');
     } else {
       App.downloadReport('win-custom-extract', 'Custom extract',
@@ -400,12 +470,12 @@
       if (!rep) return;
       const data = REPORT_DATA[rep.id];
       const rawHeaders = data ? data.headers : ['Report', 'Section', 'Frequency', 'Last generated'];
-      const filtered = stateFilteredRows(rawHeaders, data ? data.rows : REPORTS.map(r => [r.title, r.section, r.freq, r.last]));
+      const filtered = stateFilteredRows(rawHeaders, data ? data.rows : REPORTS.map(r => [r.title, r.section, r.freq, r.last]), data && data.stateCol);
       const headers = filtered.headers, allRows = filtered.rows;
       const sample = allRows.slice(0, 50);
       const thead = '<tr>' + headers.map(h => `<th>${App.esc(h)}</th>`).join('') + '</tr>';
       const tbody = sample.map(r => '<tr>' + r.map(c => `<td>${App.esc(c)}</td>`).join('') + '</tr>').join('');
-      const stateNote = (rawHeaders.indexOf('State') !== -1 && S.state !== 'All')
+      const stateNote = (stateIdxOf(rawHeaders, data && data.stateCol) !== -1 && S.state !== 'All')
         ? (headers.indexOf('District') !== -1 ? ` — district-wise for <b>${App.esc(S.state)}</b>` : ` filtered to <b>${App.esc(S.state)}</b>`)
         : '';
       App.modal.open(`
