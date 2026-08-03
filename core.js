@@ -226,7 +226,10 @@ window.App = (function () {
             { id: 'overview', label: 'Overview' },
             { id: 'manual', label: 'Manual Verification' },
           ] },
-          { id: 'emp-compliance', label: 'Compliance', icon: 'filecheck' },
+          { id: 'emp-compliance', label: 'Compliance', icon: 'filecheck', children: [
+            { id: 'returns', label: 'Compliance Returns' },
+            { id: 'grievances', label: 'Grievances Overview' },
+          ] },
           { id: 'emp-hrms', label: 'HRMS Sync', icon: 'plug' },
         ]},
         { section: 'Build', items: [

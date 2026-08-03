@@ -53,23 +53,23 @@
   // Each carries current value, last month's value, and the national benchmark
   // it's judged against, rolled up into a red/amber/green status.
   const KEY_INDICATORS = [
-    { label: 'Formal Employment Share', icon: 'briefcase', unit: '%', cur: 31.4, prev: 30.1, bench: 35, higherIsBetter: true,
+    { id: 'formal-share', label: 'Formal Employment Share', icon: 'briefcase', unit: '%', cur: 31.4, prev: 30.1, bench: 35, higherIsBetter: true,
       note: 'Share of enrolled workers in formal, HRMS-verified employment', hotspot: { name: 'Tamil Nadu', val: '41.2%' } },
-    { label: 'Avg. Verification Turnaround', icon: 'clock', unit: 'd', cur: 2.4, prev: 2.9, bench: 3, higherIsBetter: false,
+    { id: 'verif-turnaround', label: 'Avg. Verification Turnaround', icon: 'clock', unit: 'd', cur: 2.4, prev: 2.9, bench: 3, higherIsBetter: false,
       note: 'Average days from application to source-verified WIN ID', hotspot: { name: 'Bihar', val: '4.1 days' } },
-    { label: 'Minimum Wage Compliance', icon: 'shieldcheck', unit: '%', cur: 87.6, prev: 85.2, bench: 90, higherIsBetter: true,
+    { id: 'min-wage', label: 'Minimum Wage Compliance', icon: 'shieldcheck', unit: '%', cur: 87.6, prev: 85.2, bench: 90, higherIsBetter: true,
       note: 'Employers found compliant with state minimum-wage notifications', hotspot: { name: 'Rajasthan', val: '76.4%' } },
-    { label: 'Skilling Coverage', icon: 'graduation', unit: '%', cur: 22.8, prev: 21.5, bench: 30, higherIsBetter: true,
+    { id: 'skilling', label: 'Skilling Coverage', icon: 'graduation', unit: '%', cur: 22.8, prev: 21.5, bench: 30, higherIsBetter: true,
       note: 'Enrolled workers with at least one certified skill on WIN', hotspot: { name: 'Karnataka', val: '29.6%' } },
-    { label: 'Interstate Migrant Share', icon: 'mappin', unit: '%', cur: 18.2, prev: 17.9, bench: 15, higherIsBetter: false,
+    { id: 'migrant-share', label: 'Interstate Migrant Share', icon: 'mappin', unit: '%', cur: 18.2, prev: 17.9, bench: 15, higherIsBetter: false,
       note: 'Enrolled workers employed outside their home state', hotspot: { name: 'Delhi NCR', val: '34.8%' } },
-    { label: 'Employer Compliance Filing Rate', icon: 'filecheck', unit: '%', cur: 71.5, prev: 68.4, bench: 80, higherIsBetter: true,
+    { id: 'employer-filing', label: 'Employer Compliance Filing Rate', icon: 'filecheck', unit: '%', cur: 71.5, prev: 68.4, bench: 80, higherIsBetter: true,
       note: 'EPF/ESI/LWF returns filed on time this cycle', hotspot: { name: 'Bihar', val: '54.2%' } },
-    { label: 'e-Shram Enrollment Growth', icon: 'trend', unit: 'L/72h', cur: 4.2, prev: 2.1, bench: 3.0, higherIsBetter: true,
+    { id: 'eshram-growth', label: 'e-Shram Enrollment Growth', icon: 'trend', unit: 'L/72h', cur: 4.2, prev: 2.1, bench: 3.0, higherIsBetter: true,
       note: 'New worker registrations in the last 72 hours', hotspot: { name: 'Bihar — Patna & Gaya', val: '+4.2L' } },
-    { label: 'ESIC Claims Pending 45+ Days', icon: 'clock', unit: '', cur: 18400, prev: 21200, bench: 10000, higherIsBetter: false,
+    { id: 'esic-backlog', label: 'ESIC Claims Pending 45+ Days', icon: 'clock', unit: '', cur: 18400, prev: 21200, bench: 10000, higherIsBetter: false,
       note: 'Claims older than 45 days awaiting resolution', hotspot: { name: 'Maharashtra — Pune region', val: '18,400 claims' } },
-    { label: 'EPFO Non-Compliant Employers', icon: 'alert', unit: '', cur: 2340, prev: 2510, bench: 1500, higherIsBetter: false,
+    { id: 'epfo-noncompliance', label: 'EPFO Non-Compliant Employers', icon: 'alert', unit: '', cur: 2340, prev: 2510, bench: 1500, higherIsBetter: false,
       note: 'Employers with 3+ months of missed PF deposits', hotspot: { name: 'National', val: '2,340 employers' } },
   ];
   function ragStatus(ind) {
@@ -77,6 +77,16 @@
     if (gap >= 0) return { kind: 'green', label: 'On track' };
     if (gap >= -5) return { kind: 'amber', label: 'Watch' };
     return { kind: 'red', label: 'Off track' };
+  }
+  // deterministic per-state spread around an indicator's national value, for
+  // the preview/download report opened when a Key Indicator card is clicked.
+  function indicatorStateRows(ind) {
+    const seed = (s) => s.split('').reduce((a, c) => (a * 31 + c.charCodeAt(0)) % 1000, 7);
+    return STATES.map(s => {
+      const spread = ((seed(s.name + ind.id) % 21) - 10) / 100; // ±10%
+      const val = Math.max(0, ind.cur * (1 + spread));
+      return [s.name, (Math.round(val * 10) / 10) + ind.unit, ind.bench + ind.unit, val >= ind.bench === !!ind.higherIsBetter ? 'On track' : 'Off track'];
+    });
   }
 
   // ---- Benefits & Schemes (view layer only — eligibility checks and enrollment
@@ -154,6 +164,41 @@
     setState(v) { S.state = v; App.reload(); },
     viewAll() { App.toast('Full activity log is a demo affordance in this prototype'); },
     viewRiskList(t) { App.toast('Opening flagged-employer list · ' + t); },
+    openIndicator(id) {
+      const ind = KEY_INDICATORS.find(i => i.id === id); if (!ind) return;
+      const rag = ragStatus(ind);
+      const ragColor = { green: 'var(--green-600)', amber: 'var(--amber-600)', red: 'var(--red-600)' }[rag.kind];
+      const rows = indicatorStateRows(ind);
+      const preview = rows.slice(0, 6).map(r => `
+        <tr><td>${App.esc(r[0])}</td><td class="num">${App.esc(r[1])}</td><td class="num">${App.esc(r[2])}</td><td>${App.ui.statusPill(r[3])}</td></tr>`).join('');
+      App.modal.open(`
+        <div class="row between" style="align-items:flex-start;margin-bottom:6px">
+          <div><b style="font-size:15px">${App.esc(ind.label)}</b><div class="muted" style="font-size:12.5px;margin-top:3px;max-width:44ch">${App.esc(ind.note)}</div></div>
+          ${App.ui.pill(rag.label, rag.kind, true)}
+        </div>
+        <div class="row gap-16 wrap mt-16 mb-16">
+          <div><div class="faint" style="font-size:11px">Current</div><b class="num" style="font-size:18px">${App.esc(ind.cur)}${App.esc(ind.unit)}</b></div>
+          <div><div class="faint" style="font-size:11px">Last Month</div><b class="num" style="font-size:18px">${App.esc(ind.prev)}${App.esc(ind.unit)}</b></div>
+          <div><div class="faint" style="font-size:11px">National Benchmark</div><b class="num" style="font-size:18px">${App.esc(ind.bench)}${App.esc(ind.unit)}</b></div>
+          ${ind.hotspot ? `<div><div class="faint" style="font-size:11px">Hotspot</div><b style="font-size:14px;color:${ragColor}">${App.esc(ind.hotspot.name)}</b></div>` : ''}
+        </div>
+        <div class="label" style="margin-bottom:6px">State-wise preview</div>
+        <div class="tablewrap tablewrap--scroll" style="margin-bottom:6px">
+          <table class="tbl"><thead><tr><th>State</th><th>Value</th><th>Benchmark</th><th>Status</th></tr></thead><tbody>${preview}</tbody></table>
+        </div>
+        <div class="faint" style="font-size:11.5px">Showing 6 of ${rows.length} states — download the full report below.</div>`, {
+        title: 'Key Indicator', icon: ind.icon, wide: true,
+        foot: `<button class="btn" onclick="GovDash.downloadIndicator('${id}','PDF')">${App.icon('doc')} PDF</button>
+               <button class="btn" onclick="GovDash.downloadIndicator('${id}','Excel')">${App.icon('chart')} Excel</button>
+               <button class="btn btn--primary" onclick="GovDash.downloadIndicator('${id}','CSV')">${App.icon('download')} CSV</button>`,
+      });
+    },
+    downloadIndicator(id, fmt) {
+      const ind = KEY_INDICATORS.find(i => i.id === id); if (!ind) return;
+      const rows = indicatorStateRows(ind);
+      App.downloadReport('win-indicator-' + id, ind.label, ['State', 'Value', 'Benchmark', 'Status'], rows, fmt);
+      App.toast(ind.label + ' report downloaded as ' + fmt, 'download');
+    },
     exportReport() {
       App.modal.open(`
         <p class="muted" style="margin:0 0 16px;font-size:13px">Generate a consolidated national labour-data report across enrollment, verification, grievances and compliance. Choose a format:</p>
@@ -255,7 +300,7 @@
               const delta = fmtNum(Math.abs(ind.cur - ind.prev));
               const deltaUp = ind.cur >= ind.prev;
               return `
-              <div class="card card--pad" style="border-top:3px solid ${ragColor}">
+              <button class="card card--pad card--hover" style="border-top:3px solid ${ragColor};text-align:left;width:100%;cursor:pointer" onclick="GovDash.openIndicator('${ind.id}')">
                 <div class="row between" style="align-items:flex-start;margin-bottom:8px">
                   <span class="row gap-8" style="font-size:12.5px;font-weight:600;color:var(--muted)">${App.icon(ind.icon)}${App.esc(ind.label)}</span>
                   ${App.ui.pill(rag.label, rag.kind, true)}
@@ -267,7 +312,8 @@
                 <div class="faint" style="font-size:11.5px;margin-bottom:6px">Benchmark: <b class="num">${fmtNum(ind.bench)}${ind.unit}</b> · Last month: <span class="num">${fmtNum(ind.prev)}${ind.unit}</span></div>
                 <div class="muted" style="font-size:12px;margin-bottom:8px">${App.esc(ind.note)}</div>
                 ${ind.hotspot ? `<div class="row gap-6" style="font-size:11.5px;color:var(--muted);padding-top:8px;border-top:1px solid var(--line-2)"><span style="color:${ragColor}">${App.icon('mappin')}</span>Hotspot: <b>${App.esc(ind.hotspot.name)}</b> · <span class="num">${App.esc(ind.hotspot.val)}</span></div>` : ''}
-              </div>`;
+                <div class="row gap-6" style="font-size:11px;font-weight:600;color:var(--accent-strong);margin-top:8px">${App.icon('external')} View report &amp; download</div>
+              </button>`;
             }).join('')}
           </div>
         </div>

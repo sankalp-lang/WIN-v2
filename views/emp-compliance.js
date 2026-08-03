@@ -40,7 +40,9 @@
   const EC = {
     tab: 'returns',
     added: [],
-    setTab(t) { EC.tab = t; App.reload(); },
+    // keep the sidebar's nested Compliance Returns / Grievances Overview children
+    // (see PERSONAS.employer nav in core.js) in sync with the in-page tab bar.
+    setTab(t) { EC.tab = t; App.state.params = Object.assign({}, App.state.params, { tab: t }); App.reload(); },
     allReturns() { return EC.added.concat(RETURNS); },
 
     openFile(id) {
@@ -180,6 +182,8 @@
     title: 'Compliance',
     subtitle: 'File statutory returns and see organisation-wide grievance patterns',
     render(ctx) {
+      const paramTab = ctx.params && ctx.params.tab;
+      if (paramTab && paramTab !== EC._lastParam && (paramTab === 'returns' || paramTab === 'grievances')) { EC.tab = paramTab; EC._lastParam = paramTab; }
       const hero = `
         <div class="hero reveal">
           <div class="hero__wash"></div>
