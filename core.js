@@ -914,7 +914,7 @@ window.App = (function () {
       <div class="auth" data-persona="${accent}">
         ${langSwitcher}
         <div class="auth__aside">
-          <div class="auth__brand"><div class="brandmark">${App.icon('shieldcheck')}</div><b>WiN</b></div>
+          <div class="auth__brand"><div class="brandmark">${App.icon('shieldcheck')}</div><div><b>WiN</b><div class="auth__tagline">Bharat Karamsheel Setu</div></div></div>
           <div class="auth__pitch">
             <div class="auth__eyebrow">${App.icon('fingerprint')} ${T.eyebrow}</div>
             <h2>${T.tagline}</h2>
@@ -931,7 +931,7 @@ window.App = (function () {
         </div>
         <div class="auth__main">
           <div class="auth__card">
-            <div class="auth__mobilebrand"><div class="brandmark">${App.icon('shieldcheck')}</div><b>WiN</b></div>
+            <div class="auth__mobilebrand"><div class="brandmark">${App.icon('shieldcheck')}</div><div><b>WiN</b><div class="auth__tagline">Bharat Karamsheel Setu</div></div></div>
             <div class="auth__tabs">
               <div class="auth__tab ${L.mode === 'worker' ? 'is-active' : ''}" onclick="App.login.setMode('worker')">${App.icon('user')} ${T.tabWorker}</div>
               <div class="auth__tab ${L.mode === 'employer' ? 'is-active' : ''}" onclick="App.login.setMode('employer')">${App.icon('building')} ${T.tabEmployer}</div>
