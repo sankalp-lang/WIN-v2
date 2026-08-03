@@ -128,40 +128,71 @@
   }
   function buildResumePdf() {
     const p = state.personal;
+    const ACCENT = '#2f5fd0', ACCENT_DARK = '#1e3a8a', INK = '#1e293b', MUTED = '#64748b';
     const M = 50, W = 612, H = 792, maxY = H - M;
     const pages = []; let page = []; let y = H - M;
     const need = (h) => { if (y - h < M) { pages.push(page); page = []; y = maxY; } };
     const put = (text, size, font, dy, color) => { need(size + 4); page.push({ t: text, x: M, y, s: size, f: font, c: color }); y -= dy; };
-    const rule = (dy) => { page.push({ rule: true, x: M, y, x2: W - M }); y -= dy; };
+    const putAt = (text, x, size, font, color) => page.push({ t: text, x, y, s: size, f: font, c: color });
+    const rectF = (x, ry, w, h, color) => page.push({ rect: true, x, y: ry, w, h, c: color });
+    const line = (x1, y1, x2, y2, color, wt) => page.push({ ln: true, x, y: y1, x2, y2, c: color, wt: wt || 0.75 });
+    const bullets = (text, maxChars, size, dy, color) => {
+      wrapText(text, maxChars).forEach((l, i) => {
+        need(size + 4);
+        if (i === 0) rectF(M + 1, y - size * 0.35, 3, 3, ACCENT);
+        page.push({ t: l, x: M + 12, y, s: size, f: 'F1', c: color });
+        y -= dy;
+      });
+    };
+    const sectionHeader = (label) => {
+      y -= 3; need(20);
+      const baseline = y;
+      put(label, 11, 'F2', 7, ACCENT_DARK);
+      page.push({ rect: true, x: M, y: baseline - 6, w: 26, h: 1.5, c: ACCENT });
+      y -= 12;
+    };
 
-    put(p.name || 'Rajan Kumar', 20, 'F2', 22);
-    put(p.title || '', 12, 'F1', 16);
-    put([p.location, p.email, p.phone, p.winId ? 'WIN ID ' + p.winId : ''].filter(Boolean).join('   |   '), 9, 'F1', 18);
-    rule(14);
+    // ---- header band (accent-filled, name/title/contact in white) ----
+    const bandH = 72;
+    rectF(0, H - bandH, W, bandH, ACCENT);
+    y = H - 30;
+    putAt(p.name || 'Rajan Kumar', M, 19, 'F2', '#ffffff'); y -= 18;
+    putAt(p.title || '', M, 11.5, 'F1', '#dbe4ff'); y -= 15;
+    putAt([p.location, p.email, p.phone, p.winId ? 'WIN ID ' + p.winId : ''].filter(Boolean).join('    |    '), M, 9, 'F1', '#dbe4ff');
+    y = H - bandH - 16;
 
-    put('PROFESSIONAL SUMMARY', 11, 'F2', 15, '#2f5fd0');
-    wrapText(buildSummary(), 100).forEach(l => put(l, 9.5, 'F1', 13));
-    y -= 6;
+    sectionHeader('PROFESSIONAL SUMMARY');
+    wrapText(buildSummary(), 104).forEach(l => put(l, 9.5, 'F1', 12, INK));
 
-    put('WORK EXPERIENCE', 11, 'F2', 15, '#2f5fd0');
+    sectionHeader('WORK EXPERIENCE');
     state.entries.forEach(en => {
-      need(40);
-      put(`${en.role || 'Role'} — ${en.company || 'Company'}`, 10.5, 'F2', 13);
-      put(`${en.period || ''}   |   ${en.location || ''}   |   ${segLabel(en)}`, 8.5, 'F1', 13, '#667085');
+      need(38);
+      put(en.role || 'Role', 10.5, 'F2', 11.5, INK);
+      putAt(en.company || 'Company', M, 9.5, 'F1', ACCENT); y -= 11;
+      put(`${en.period || ''}    |    ${en.location || ''}    |    ${segLabel(en)}`, 8.5, 'F1', 11, MUTED);
       const desc = en.description || 'Description entered by the worker while building this CV.';
-      wrapText(desc, 105).forEach(l => put(l, 9.5, 'F1', 12.5));
-      y -= 5;
+      bullets(desc, 104, 9.5, 11.5, INK);
+      y -= 2;
     });
-    y -= 4;
 
-    put('SKILLS', 11, 'F2', 15, '#2f5fd0');
-    wrapText(state.skills.join('   •   '), 100).forEach(l => put(l, 9.5, 'F1', 13));
-    y -= 6;
+    sectionHeader('SKILLS');
+    need(26);
+    (() => {
+      let cx = M, rowH = 19, maxW = W - M;
+      state.skills.forEach(s => {
+        const chipW = s.length * 5.4 + 18;
+        if (cx + chipW > maxW) { cx = M; y -= rowH; need(rowH); }
+        rectF(cx, y - 12.5, chipW, 16, '#e9edff');
+        putAt(s, cx + 9, 9, 'F1', ACCENT_DARK);
+        cx += chipW + 8;
+      });
+      y -= rowH;
+    })();
 
-    put('EDUCATION', 11, 'F2', 15, '#2f5fd0');
+    sectionHeader('EDUCATION');
     const ed = state.education;
-    put(`${ed.level}`, 10, 'F2', 13);
-    put(`${ed.board}   |   ${ed.year}   |   ${ed.percentage}%   |   ${ed.school || ''}`, 9, 'F1', 13, '#667085');
+    put(`${ed.level}`, 10, 'F2', 13, INK);
+    put(`${ed.board}    |    ${ed.year}    |    ${ed.percentage}%    |    ${ed.school || ''}`, 9, 'F1', 13, MUTED);
 
     pages.push(page);
 
@@ -184,6 +215,8 @@
       let stream = '';
       pageItems.forEach(it => {
         if (it.rule) { stream += `${hex('#e2e8f0')} RG 0.75 w ${it.x} ${it.y} m ${it.x2} ${it.y} l S\n`; return; }
+        if (it.rect) { stream += `${hex(it.c)} rg ${it.x} ${it.y} ${it.w} ${it.h} re f\n`; return; }
+        if (it.ln) { stream += `${hex(it.c)} RG ${it.wt} w ${it.x} ${it.y} m ${it.x2} ${it.y2} l S\n`; return; }
         stream += `${hex(it.c)} rg BT /${it.f} ${it.s} Tf ${it.x} ${it.y} Td (${escPdf(it.t)}) Tj ET\n`;
       });
       objects.push(`${contentStart + pages.indexOf(pageItems)} 0 obj\n<< /Length ${stream.length} >>\nstream\n${stream}\nendstream\nendobj\n`);
