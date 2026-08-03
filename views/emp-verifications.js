@@ -21,10 +21,71 @@
   // they upload salary slips / appointment letters instead; those show up here
   // for the employer to approve or reject.
   const MANUAL_DOCS = [
-    { id: 'MDV-2201', worker: 'Suresh Yadav', winId: 'WIN-2024-7712-4453', docType: 'Salary Slip (Feb 2026)', uploadedOn: '2026-03-02', status: 'Pending Review' },
-    { id: 'MDV-2202', worker: 'Vikram Singh', winId: 'WIN-2024-5581-2290', docType: 'Appointment Letter', uploadedOn: '2026-02-27', status: 'Pending Review' },
-    { id: 'MDV-2198', worker: 'Ramesh Chauhan', winId: 'WIN-2024-3340-1187', docType: 'Salary Slip (Jan 2026)', uploadedOn: '2026-02-10', status: 'Approved' },
+    { id: 'MDV-2201', worker: 'Suresh Yadav', winId: 'WIN-2024-7712-4453', docType: 'Salary Slip (Feb 2026)', uploadedOn: '2026-03-02', status: 'Pending Review',
+      company: 'Aditya Birla Construction Ltd.', role: 'Site Mason', joiningDate: '14 Jun 2024', city: 'Gurugram',
+      month: 'February 2026', basic: 18500, hra: 7400, allowance: 3200, pf: 2220, esi: 350, netPay: 26530 },
+    { id: 'MDV-2202', worker: 'Vikram Singh', winId: 'WIN-2024-5581-2290', docType: 'Appointment Letter', uploadedOn: '2026-02-27', status: 'Pending Review',
+      company: 'Aditya Birla Construction Ltd.', role: 'Scaffolding Supervisor', joiningDate: '02 Mar 2026', city: 'Noida' },
+    { id: 'MDV-2198', worker: 'Ramesh Chauhan', winId: 'WIN-2024-3340-1187', docType: 'Salary Slip (Jan 2026)', uploadedOn: '2026-02-10', status: 'Approved',
+      company: 'Aditya Birla Construction Ltd.', role: 'Electrician', joiningDate: '09 Aug 2023', city: 'Delhi',
+      month: 'January 2026', basic: 21000, hra: 8400, allowance: 2800, pf: 2520, esi: 400, netPay: 29280 },
   ];
+
+  // a mocked-up salary-slip visual, styled to look like an actual payslip document
+  // rather than a plain "document preview" placeholder.
+  function salarySlipHtml(d) {
+    const gross = d.basic + d.hra + d.allowance;
+    const deductions = d.pf + d.esi;
+    const row = (label, val, bold) => `<div class="row between" style="padding:6px 0;${bold ? 'border-top:1px solid var(--line);margin-top:4px;font-weight:700' : ''}"><span style="font-size:12.5px${bold ? ';font-weight:700' : ''}">${App.esc(label)}</span><span class="num" style="font-size:12.5px${bold ? ';font-weight:700' : ''}">₹${App.num(val)}</span></div>`;
+    return `
+      <div class="card" style="border:1px solid var(--line);overflow:hidden">
+        <div style="background:var(--ink);color:#fff;padding:16px 20px">
+          <div class="row between" style="align-items:flex-start">
+            <div><b style="font-size:15px">${App.esc(d.company)}</b><div style="font-size:11px;opacity:.75;margin-top:2px">Payslip · ${App.esc(d.month)}</div></div>
+            ${App.icon('building')}
+          </div>
+        </div>
+        <div class="card__body" style="padding:18px 20px">
+          <div class="grid grid-2" style="margin-bottom:16px">
+            <div><div class="faint" style="font-size:10.5px;text-transform:uppercase;letter-spacing:.04em">Employee Name</div><b style="font-size:13px">${App.esc(d.worker)}</b></div>
+            <div><div class="faint" style="font-size:10.5px;text-transform:uppercase;letter-spacing:.04em">Designation</div><b style="font-size:13px">${App.esc(d.role)}</b></div>
+            <div style="margin-top:8px"><div class="faint" style="font-size:10.5px;text-transform:uppercase;letter-spacing:.04em">Location</div><b style="font-size:13px">${App.esc(d.city)}</b></div>
+            <div style="margin-top:8px"><div class="faint" style="font-size:10.5px;text-transform:uppercase;letter-spacing:.04em">Date of Joining</div><b style="font-size:13px">${App.esc(d.joiningDate)}</b></div>
+          </div>
+          <div class="grid grid-2" style="gap:24px">
+            <div>
+              <div class="label" style="margin-bottom:2px">Earnings</div>
+              ${row('Basic Pay', d.basic)}${row('HRA', d.hra)}${row('Other Allowances', d.allowance)}${row('Gross Pay', gross, true)}
+            </div>
+            <div>
+              <div class="label" style="margin-bottom:2px">Deductions</div>
+              ${row('Provident Fund (PF)', d.pf)}${row('ESI', d.esi)}${row('Total Deductions', deductions, true)}
+            </div>
+          </div>
+          <div class="row between" style="margin-top:16px;padding-top:14px;border-top:2px solid var(--ink);align-items:center">
+            <b style="font-size:14px">Net Pay</b>
+            <b class="num" style="font-size:16px;color:var(--green-700)">₹${App.num(d.netPay)}</b>
+          </div>
+          <div class="faint" style="font-size:10.5px;margin-top:12px">This is a document uploaded by the worker for manual review — a mocked preview for this prototype.</div>
+        </div>
+      </div>`;
+  }
+
+  function appointmentLetterHtml(d) {
+    return `
+      <div class="card" style="border:1px solid var(--line);overflow:hidden">
+        <div class="card__body" style="padding:24px 28px">
+          <div class="row between" style="margin-bottom:20px;align-items:flex-start">
+            <b style="font-size:15px">${App.esc(d.company)}</b>${App.icon('building')}
+          </div>
+          <div class="faint" style="font-size:11px;margin-bottom:14px">Ref: APT/${App.esc((d.joiningDate || '').replace(/\s/g, ''))}/${App.esc(d.city || '')}</div>
+          <p style="font-size:13px;line-height:1.7">Dear <b>${App.esc(d.worker)}</b>,</p>
+          <p style="font-size:13px;line-height:1.7;margin-top:8px">We are pleased to confirm your appointment as <b>${App.esc(d.role)}</b> at our ${App.esc(d.city)} site, effective from <b>${App.esc(d.joiningDate)}</b>. This letter, along with your verified WiN profile, confirms your employment details for the purpose of background verification.</p>
+          <p style="font-size:13px;line-height:1.7;margin-top:14px">We look forward to your contribution to the team.</p>
+          <div class="faint" style="font-size:10.5px;margin-top:20px">This is a document uploaded by the worker for manual review — a mocked preview for this prototype.</div>
+        </div>
+      </div>`;
+  }
 
   const DOTS = '<svg class="ico" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="19" r="1.7"/></svg>';
 
@@ -41,13 +102,25 @@
     setTab(t) { EV.tab = t; App.reload(); },
     reviewDoc(id) {
       const d = MANUAL_DOCS.find(x => x.id === id); if (!d) return;
+      const firstName = (d.worker || '').split(' ')[0];
+      const context = `
+        <div class="banner banner--info" style="margin-bottom:16px">${App.icon('idcard')}<div>
+          <b>${App.esc(firstName)} is trying to get their work experience at ${App.esc(d.company)} verified.</b>
+          <div style="margin-top:3px;opacity:.9">Since this couldn't be fetched from HRMS, ${App.esc(firstName)} shared the details below directly — review and approve or reject them.</div>
+        </div></div>
+        <div class="grid grid-3" style="margin-bottom:16px">
+          <div><div class="faint" style="font-size:11px;text-transform:uppercase;letter-spacing:.04em">Role</div><b style="font-size:13.5px">${App.esc(d.role || '—')}</b></div>
+          <div><div class="faint" style="font-size:11px;text-transform:uppercase;letter-spacing:.04em">Joining Date</div><b style="font-size:13.5px">${App.esc(d.joiningDate || '—')}</b></div>
+          <div><div class="faint" style="font-size:11px;text-transform:uppercase;letter-spacing:.04em">City</div><b style="font-size:13.5px">${App.esc(d.city || '—')}</b></div>
+        </div>`;
+
+      const doc = d.docType.startsWith('Salary Slip') ? salarySlipHtml(d) : appointmentLetterHtml(d);
+
       App.modal.open(`
-        <div class="banner banner--info" style="margin-bottom:14px">${App.icon('file')}<div><b>${App.esc(d.docType)}</b><div style="margin-top:3px;opacity:.9">Uploaded by ${App.esc(d.worker)} · WIN ID <span class="mono">${App.esc(d.winId)}</span> on ${App.esc(d.uploadedOn)}</div></div></div>
-        <div class="card card--pad" style="background:var(--surface-2);text-align:center;padding:40px 20px">
-          ${App.icon('file')}
-          <div class="muted" style="font-size:13px;margin-top:8px">Document preview (demo) — ${App.esc(d.docType)}</div>
-        </div>`, {
-        title: 'Manual Document Review', icon: 'shieldcheck',
+        ${context}
+        <div class="faint" style="font-size:11px;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">Document uploaded · ${App.esc(d.uploadedOn)}</div>
+        ${doc}`, {
+        title: 'Manual Document Review', icon: 'shieldcheck', wide: true,
         foot: `<button class="btn btn--danger" onclick="EmpVerifications.decideDoc('${id}','Rejected')">${App.icon('x')} Reject</button>
                <button class="btn btn--primary" style="background:var(--green-600)" onclick="EmpVerifications.decideDoc('${id}','Approved')">${App.icon('check')} Approve</button>`,
       });
