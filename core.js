@@ -282,11 +282,12 @@ window.App = (function () {
   App.setLang = (l) => { App.state.lang = LANG_LABELS[l] ? l : 'en'; App.reload(); };
   // the topbar language dropdown markup, shared by every persona's shell.
   App.langSelect = () => `
-    <div class="topbar__lang">${App.icon('globe')}
+    <label class="topbar__lang">${App.icon('globe')}
       <select onchange="App.setLang(this.value)" aria-label="Language">
         ${Object.keys(LANG_LABELS).map(l => `<option value="${l}" ${(App.state.lang || 'en') === l ? 'selected' : ''}>${LANG_LABELS[l]}</option>`).join('')}
       </select>
-    </div>`;
+      ${App.icon('chevrondown')}
+    </label>`;
 
   /* ---------------- shell ---------------- */
   function navHtml() {
