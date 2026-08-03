@@ -17,6 +17,15 @@
 
   const DEPARTMENTS = ['Construction', 'Electrical', 'MEP / Plumbing', 'Safety & Compliance', 'Administration'];
 
+  // manual document fallback — when a worker can't be verified through HRMS,
+  // they upload salary slips / appointment letters instead; those show up here
+  // for the employer to approve or reject.
+  const MANUAL_DOCS = [
+    { id: 'MDV-2201', worker: 'Suresh Yadav', winId: 'WIN-2024-7712-4453', docType: 'Salary Slip (Feb 2026)', uploadedOn: '2026-03-02', status: 'Pending Review' },
+    { id: 'MDV-2202', worker: 'Vikram Singh', winId: 'WIN-2024-5581-2290', docType: 'Appointment Letter', uploadedOn: '2026-02-27', status: 'Pending Review' },
+    { id: 'MDV-2198', worker: 'Ramesh Chauhan', winId: 'WIN-2024-3340-1187', docType: 'Salary Slip (Jan 2026)', uploadedOn: '2026-02-10', status: 'Approved' },
+  ];
+
   const DOTS = '<svg class="ico" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="19" r="1.7"/></svg>';
 
   const plural = (n, w) => n + ' ' + w + (n === 1 ? '' : 's');
@@ -27,6 +36,28 @@
     status: 'all',    // all | Completed | In Progress | Pending
     added: [],        // employees submitted this session
     _focusSearch: false,
+    tab: 'roster',    // roster | manual
+
+    setTab(t) { EV.tab = t; App.reload(); },
+    reviewDoc(id) {
+      const d = MANUAL_DOCS.find(x => x.id === id); if (!d) return;
+      App.modal.open(`
+        <div class="banner banner--info" style="margin-bottom:14px">${App.icon('file')}<div><b>${App.esc(d.docType)}</b><div style="margin-top:3px;opacity:.9">Uploaded by ${App.esc(d.worker)} · WIN ID <span class="mono">${App.esc(d.winId)}</span> on ${App.esc(d.uploadedOn)}</div></div></div>
+        <div class="card card--pad" style="background:var(--surface-2);text-align:center;padding:40px 20px">
+          ${App.icon('file')}
+          <div class="muted" style="font-size:13px;margin-top:8px">Document preview (demo) — ${App.esc(d.docType)}</div>
+        </div>`, {
+        title: 'Manual Document Review', icon: 'shieldcheck',
+        foot: `<button class="btn btn--danger" onclick="EmpVerifications.decideDoc('${id}','Rejected')">${App.icon('x')} Reject</button>
+               <button class="btn btn--primary" style="background:var(--green-600)" onclick="EmpVerifications.decideDoc('${id}','Approved')">${App.icon('check')} Approve</button>`,
+      });
+    },
+    decideDoc(id, decision) {
+      const d = MANUAL_DOCS.find(x => x.id === id); if (d) d.status = decision;
+      App.modal.close();
+      App.toast(decision === 'Approved' ? 'Document approved' : 'Document rejected', decision === 'Approved' ? 'checkcircle' : 'x');
+      App.reload();
+    },
 
     all() { return EV.added.concat(base); },
     find(id) { return EV.all().find(r => r.id === id) || null; },
@@ -320,6 +351,39 @@
           ${footer}
         </div>`;
 
+      /* ---- manual document review (HRMS fallback) ---- */
+      const pendingDocs = MANUAL_DOCS.filter(d => d.status === 'Pending Review').length;
+      const manualRows = MANUAL_DOCS.map(d => `
+        <tr>
+          <td><b style="font-size:13px">${App.esc(d.worker)}</b><div class="faint mono" style="font-size:11px;margin-top:2px">${App.esc(d.winId)}</div></td>
+          <td>${App.esc(d.docType)}</td>
+          <td>${App.esc(d.uploadedOn)}</td>
+          <td>${App.ui.statusPill(d.status === 'Pending Review' ? 'Pending' : d.status)}</td>
+          <td style="text-align:right">${d.status === 'Pending Review'
+            ? `<button class="btn btn--sm btn--primary" onclick="EmpVerifications.reviewDoc('${d.id}')">${App.icon('shieldcheck')} Review</button>`
+            : `<span class="muted" style="font-size:12.5px">${App.icon(d.status === 'Approved' ? 'checkcircle' : 'x')} ${App.esc(d.status)}</span>`}</td>
+        </tr>`).join('');
+      const manualReview = `
+        <div class="banner banner--info reveal" style="margin-bottom:18px">${App.icon('idcard')}<div>When a worker can't be verified through your HRMS, they can upload a salary slip or appointment letter instead. Review and approve or reject those submissions here.</div></div>
+        <div class="card reveal" style="overflow:hidden">
+          <div class="card__head">
+            <div class="grow"><h3>Manual Document Verification</h3><div class="muted" style="font-size:12.5px;margin-top:2px">Documents uploaded when HRMS verification isn't available</div></div>
+            <span class="pill ${pendingDocs ? 'pill--amber' : 'pill--gray'}">${App.icon('clock')} <span class="num">${pendingDocs}</span> pending</span>
+          </div>
+          <div class="tablewrap tablewrap--scroll" style="border:none;border-radius:0;box-shadow:none">
+            <table class="tbl">
+              <thead><tr><th>Worker</th><th>Document</th><th>Uploaded</th><th>Status</th><th style="text-align:right">Action</th></tr></thead>
+              <tbody>${manualRows}</tbody>
+            </table>
+          </div>
+        </div>`;
+
+      const tabs = `
+        <div class="tabs">
+          <div class="tab ${EV.tab === 'roster' ? 'is-active' : ''}" onclick="EmpVerifications.setTab('roster')">${App.icon('shieldcheck')} Verification Roster</div>
+          <div class="tab ${EV.tab === 'manual' ? 'is-active' : ''}" onclick="EmpVerifications.setTab('manual')">${App.icon('idcard')} Manual Document Review${pendingDocs ? ` <span class="nav__tag">${pendingDocs}</span>` : ''}</div>
+        </div>`;
+
       return `<div class="page fade-in">
         <style>
           .ev-searchbar{ display:flex; gap:12px; align-items:center; margin-bottom:16px; flex-wrap:wrap; }
@@ -372,7 +436,8 @@
 
         ${hero}
         ${stats}
-        ${roster}
+        ${tabs}
+        ${EV.tab === 'roster' ? roster : manualReview}
       </div>`;
     },
     mounted() {
