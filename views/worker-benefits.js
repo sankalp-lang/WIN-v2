@@ -33,28 +33,7 @@
     setTab(t) { WB.tab = t; App.reload(); },
 
     openBenefit(id) {
-      const b = ELIGIBLE.find(x => x.id === id); if (!b) return;
-      App.modal.open(`
-        <div class="banner banner--info" style="margin-bottom:14px">${App.icon('idcard')}<div><b>${App.esc(b.title)}</b><div style="margin-top:3px;opacity:.9">${App.esc(b.desc)}</div></div></div>
-        <p class="muted" style="font-size:13px">Checking eligibility and completing enrollment happens on <b>Mahasarthi</b>, the state scheme portal. We'll share your verified WiN profile (identity, work history, income) with your consent so you don't have to re-enter it.</p>
-        <label class="row gap-8" style="margin-top:14px;align-items:flex-start;cursor:pointer">
-          <input type="checkbox" id="benefitConsent" style="margin-top:3px">
-          <span style="font-size:13px">I consent to sharing my verified WiN profile with Mahasarthi to check eligibility for this scheme.</span>
-        </label>`, {
-        title: 'Continue to Mahasarthi', icon: 'shieldcheck',
-        foot: `<button class="btn" onclick="App.modal.close()">Cancel</button>
-               <button class="btn btn--primary" id="mahasarthiGoBtn" onclick="WorkerBenefits.confirmBenefit('${id}')">${App.icon('external')} Continue to Mahasarthi</button>`,
-      });
-    },
-    confirmBenefit(id) {
-      const box = document.getElementById('benefitConsent');
-      if (!box || !box.checked) { App.toast('Please provide consent to continue.', 'alert'); return; }
-      const btn = document.getElementById('mahasarthiGoBtn');
-      if (btn) { btn.disabled = true; btn.innerHTML = 'Redirecting…'; }
-      setTimeout(() => {
-        App.modal.close();
-        App.navigate('mahasarthi-portal', { scheme: id });
-      }, 500);
+      App.navigate('mahasarthi-portal', { scheme: id });
     },
 
     openEnrolled(id) {

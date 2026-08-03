@@ -455,12 +455,6 @@
           </div>
         </div>`;
 
-      const tabs = `
-        <div class="tabs">
-          <div class="tab ${EV.tab === 'overview' ? 'is-active' : ''}" onclick="EmpVerifications.setTab('overview')">${App.icon('shieldcheck')} Verification Roster</div>
-          <div class="tab ${EV.tab === 'manual' ? 'is-active' : ''}" onclick="EmpVerifications.setTab('manual')">${App.icon('idcard')} Manual Document Review${pendingDocs ? ` <span class="nav__tag">${pendingDocs}</span>` : ''}</div>
-        </div>`;
-
       return `<div class="page fade-in">
         <style>
           .ev-searchbar{ display:flex; gap:12px; align-items:center; margin-bottom:16px; flex-wrap:wrap; }
@@ -513,7 +507,6 @@
 
         ${hero}
         ${stats}
-        ${tabs}
         ${EV.tab === 'overview' ? roster : manualReview}
       </div>`;
     },
