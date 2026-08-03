@@ -130,6 +130,18 @@
       HS.modal.step = key === 'hrms' ? 'platform' : key; // 'sftp' | 'csv'
       paintModal();
     },
+    // "Add new HRMS" — lets an org with an existing connection add another one
+    // (multi-HRMS support), reusing the same Data Transfer Method → wizard flow
+    // shown inline for first-time setup.
+    openAddMethod() {
+      const body = (DB.hrmsMethods || []).map(x => `
+        <button class="hs-choice" onclick="EmpHrms.startMethod('${x.key}')">
+          <span class="hs-choice__ic">${App.icon(x.ic)}</span>
+          <div class="grow"><b style="display:block">${App.esc(x.title)}</b><span class="muted" style="font-size:12px">${App.esc(x.desc)}</span></div>
+          ${App.icon('arrow')}
+        </button>`).join('');
+      App.modal.open(HS_STYLE + body, { title: 'Add New HRMS Connection', icon: 'plug', foot: `<button class="btn" onclick="App.modal.close()">Cancel</button>` });
+    },
     closeConnect() { HS.modal = null; App.modal.close(); },
     setSearch(v) { HS.modal.search = v; paintModal(); },
     pickPlatform(p) { HS.modal.platform = p; HS.modal.step = 'credentials'; paintModal(); },
@@ -194,27 +206,34 @@
       const active = HS.connections.filter(c => c.status === 'active');
       const terminated = HS.connections.filter(c => c.status === 'terminated');
       // scoped to this org specifically — matches the hasActiveConnection(vendor) fix
-      // elsewhere, so one org's connection never shows as "connected" for another.
-      const connected = active.find(c => c.vendor === org);
+      // elsewhere, so one org's connections never show as "connected" for another.
+      const orgActive = active.filter(c => c.vendor === org);
 
-      const connectedCard = connected ? `
+      const connectedCard = orgActive.length ? `
         <div class="card reveal">
-          <div class="card__body">
-            <div class="row between wrap gap-12" style="align-items:center">
-              <div class="hs-vendor"><span class="hs-ic">${App.icon('checkcircle')}</span>
-                <div><b>${App.esc(connected.vendor)}</b><div class="muted" style="font-size:12.5px;margin-top:2px">${App.esc(connected.platform)} · connected ${App.esc(connected.connectedOn)}</div></div>
-              </div>
-              <div class="row gap-10" style="align-items:center">
-                ${App.ui.pill('Active', 'green', true)}
-                <button class="btn btn--ghost btn--sm" onclick="EmpHrms.disconnect('${connected.id}')">${App.icon('x')} Disconnect</button>
-              </div>
+          <div class="card__head"><h3 class="grow">Connected HRMS${orgActive.length > 1 ? 's' : ''}</h3>
+            <button class="btn btn--sm btn--accent" onclick="EmpHrms.openAddMethod()">${App.icon('plus')} Add New HRMS</button>
+          </div>
+          <div class="card__body" style="padding-top:2px;padding-bottom:6px">
+            <div class="list--divided">
+              ${orgActive.map(c => `
+                <div class="row between wrap gap-12" style="padding:12px 0;align-items:center">
+                  <div class="hs-vendor"><span class="hs-ic">${App.icon('checkcircle')}</span>
+                    <div><b>${App.esc(c.platform)}</b><div class="muted" style="font-size:12.5px;margin-top:2px">${App.esc(c.host)} · connected ${App.esc(c.connectedOn)}</div></div>
+                  </div>
+                  <div class="row gap-10" style="align-items:center">
+                    ${App.ui.pill('Active', 'green', true)}
+                    <button class="btn btn--ghost btn--sm" onclick="EmpHrms.disconnect('${c.id}')">${App.icon('x')} Disconnect</button>
+                  </div>
+                </div>`).join('')}
             </div>
           </div>
         </div>` : '';
 
-      // the connect options themselves — shown directly, not behind a "Connect HRMS"
-      // button + a separate Data Transfer Method modal step.
-      const methodCards = connected ? '' : `
+      // the connect options themselves — shown directly on first-time setup (no
+      // connections yet); once at least one exists, "Add New HRMS" opens the same
+      // choices in a modal instead, so multiple HRMS connections can be added.
+      const methodCards = orgActive.length ? '' : `
         <div class="card reveal">
           <div class="card__head"><h3 class="grow">Connect your HRMS</h3></div>
           <div class="card__body">
