@@ -263,20 +263,20 @@ window.App = (function () {
     hi: {
       sections: { Overview: 'अवलोकन', Grow: 'विकास', Account: 'खाता', Workspace: 'कार्यक्षेत्र', Build: 'निर्माण', Registry: 'रजिस्ट्री', Operations: 'संचालन' },
       items: {
-        'worker-home': 'होम', 'worker-portfolio': 'मेरा पोर्टफोलियो', 'worker-benefits': 'लाभ', 'worker-skills': 'स्किल सलाहकार', 'worker-jobs': 'नौकरियां',
+        'worker-home': 'होम', 'worker-portfolio': 'मेरा कार्य इतिहास', 'worker-benefits': 'लाभ', 'worker-skills': 'स्किल सलाहकार', 'worker-jobs': 'नौकरियां',
         'worker-cv': 'सीवी बिल्डर', 'worker-courses': 'कोर्स', 'worker-grievance': 'शिकायतें', 'worker-settings': 'प्रोफ़ाइल और सेटिंग्स', 'worker-help': 'सहायता',
-        'emp-dashboard': 'डैशबोर्ड', 'emp-verifications': 'कर्मचारी', 'emp-hrms': 'HRMS सिंक', 'emp-apidocs': 'API और दस्तावेज़', 'emp-settings': 'सेटिंग्स',
-        'gov-demographics': 'जनसांख्यिकी', 'gov-enrollment': 'नामांकन', 'gov-grievances': 'शिकायतें', 'gov-reports': 'रिपोर्ट', 'gov-settings': 'सेटिंग्स',
+        'emp-dashboard': 'डैशबोर्ड', 'emp-verifications': 'कर्मचारी', 'emp-compliance': 'अनुपालन', 'emp-hrms': 'HRMS सिंक', 'emp-apidocs': 'API और दस्तावेज़', 'emp-settings': 'सेटिंग्स',
+        'gov-dashboard': 'डैशबोर्ड', 'gov-benefits': 'लाभ और योजनाएं', 'gov-demographics': 'जनसांख्यिकी', 'gov-enrollment': 'नामांकन', 'gov-grievances': 'शिकायतें', 'gov-reports': 'रिपोर्ट', 'gov-settings': 'सेटिंग्स',
       },
       searchPlaceholder: 'खोजें…', switchPersona: 'व्यक्तित्व बदलें',
     },
     mr: {
       sections: { Overview: 'आढावा', Grow: 'वाढ', Account: 'खाते', Workspace: 'कार्यक्षेत्र', Build: 'तयार करा', Registry: 'नोंदणी', Operations: 'कामकाज' },
       items: {
-        'worker-home': 'मुख्यपृष्ठ', 'worker-portfolio': 'माझा पोर्टफोलिओ', 'worker-benefits': 'लाभ', 'worker-skills': 'कौशल्य सल्लागार', 'worker-jobs': 'नोकऱ्या',
+        'worker-home': 'मुख्यपृष्ठ', 'worker-portfolio': 'माझा कामाचा इतिहास', 'worker-benefits': 'लाभ', 'worker-skills': 'कौशल्य सल्लागार', 'worker-jobs': 'नोकऱ्या',
         'worker-cv': 'सीव्ही बिल्डर', 'worker-courses': 'अभ्यासक्रम', 'worker-grievance': 'तक्रारी', 'worker-settings': 'प्रोफाइल आणि सेटिंग्ज', 'worker-help': 'मदत',
-        'emp-dashboard': 'डॅशबोर्ड', 'emp-verifications': 'कर्मचारी', 'emp-hrms': 'HRMS सिंक', 'emp-apidocs': 'API आणि दस्तऐवज', 'emp-settings': 'सेटिंग्ज',
-        'gov-demographics': 'लोकसंख्याशास्त्र', 'gov-enrollment': 'नोंदणी', 'gov-grievances': 'तक्रारी', 'gov-reports': 'अहवाल', 'gov-settings': 'सेटिंग्ज',
+        'emp-dashboard': 'डॅशबोर्ड', 'emp-verifications': 'कर्मचारी', 'emp-compliance': 'अनुपालन', 'emp-hrms': 'HRMS सिंक', 'emp-apidocs': 'API आणि दस्तऐवज', 'emp-settings': 'सेटिंग्ज',
+        'gov-dashboard': 'डॅशबोर्ड', 'gov-benefits': 'लाभ आणि योजना', 'gov-demographics': 'लोकसंख्याशास्त्र', 'gov-enrollment': 'नोंदणी', 'gov-grievances': 'तक्रारी', 'gov-reports': 'अहवाल', 'gov-settings': 'सेटिंग्ज',
       },
       searchPlaceholder: 'शोधा…', switchPersona: 'व्यक्तिरेखा बदला',
     },
@@ -367,7 +367,8 @@ window.App = (function () {
     App.renderNav();
     const s = $('#shell'); if (s) s.classList.remove('nav-open');
     const content = $('#content');
-    const title = (view && view.title) || route;
+    const nt = App.navT();
+    const title = (nt && nt.items[route]) || (view && view.title) || route;
     const tb = $('#tbTitle'); if (tb) tb.textContent = title;
     const tbs = $('#tbSub'); if (tbs) tbs.textContent = (view && view.subtitle) || '';
     if (!content) return;

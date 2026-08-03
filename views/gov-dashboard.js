@@ -26,13 +26,6 @@
     { label: 'Verification Rate', val: '74.2%', sub: '28,50,57,492 verified', delta: '+2.8% this quarter', up: true, icon: 'shield', c: '#0e9f6e' },
   ];
 
-  const ALERTS = [
-    { kind: 'info', icon: 'trend', title: 'e-Shram enrollment surge in Bihar', body: '+4.2L workers registered in last 72 hours from Patna & Gaya', when: '1 hour ago' },
-    { kind: 'warn', icon: 'clock', title: 'ESIC claim backlog: Maharashtra', body: '18,400 pending claims older than 45 days in Pune region', when: '3 hours ago' },
-    { kind: 'alert', icon: 'alert', title: 'EPFO compliance alert', body: '2,340 employers have not deposited PF for 3+ months', when: '6 hours ago' },
-    { kind: 'info', icon: 'checkcircle', title: 'Quarterly report generated', body: 'Q3 FY2024-25 national employment statistics ready', when: '1 day ago' },
-  ];
-
   const STATES = [
     { name: 'Uttar Pradesh', enrolled: '5,12,34,000', employers: 184200, grievances: 72340, verif: 68 },
     { name: 'Maharashtra', enrolled: '4,28,56,000', employers: 212400, grievances: 58200, verif: 78 },
@@ -62,17 +55,23 @@
   // it's judged against, rolled up into a red/amber/green status.
   const KEY_INDICATORS = [
     { label: 'Formal Employment Share', icon: 'briefcase', unit: '%', cur: 31.4, prev: 30.1, bench: 35, higherIsBetter: true,
-      note: 'Share of enrolled workers in formal, HRMS-verified employment' },
+      note: 'Share of enrolled workers in formal, HRMS-verified employment', hotspot: { name: 'Tamil Nadu', val: '41.2%' } },
     { label: 'Avg. Verification Turnaround', icon: 'clock', unit: 'd', cur: 2.4, prev: 2.9, bench: 3, higherIsBetter: false,
-      note: 'Average days from application to source-verified WIN ID' },
+      note: 'Average days from application to source-verified WIN ID', hotspot: { name: 'Bihar', val: '4.1 days' } },
     { label: 'Minimum Wage Compliance', icon: 'shieldcheck', unit: '%', cur: 87.6, prev: 85.2, bench: 90, higherIsBetter: true,
-      note: 'Employers found compliant with state minimum-wage notifications' },
+      note: 'Employers found compliant with state minimum-wage notifications', hotspot: { name: 'Rajasthan', val: '76.4%' } },
     { label: 'Skilling Coverage', icon: 'graduation', unit: '%', cur: 22.8, prev: 21.5, bench: 30, higherIsBetter: true,
-      note: 'Enrolled workers with at least one certified skill on WIN' },
+      note: 'Enrolled workers with at least one certified skill on WIN', hotspot: { name: 'Karnataka', val: '29.6%' } },
     { label: 'Interstate Migrant Share', icon: 'mappin', unit: '%', cur: 18.2, prev: 17.9, bench: 15, higherIsBetter: false,
-      note: 'Enrolled workers employed outside their home state' },
+      note: 'Enrolled workers employed outside their home state', hotspot: { name: 'Delhi NCR', val: '34.8%' } },
     { label: 'Employer Compliance Filing Rate', icon: 'filecheck', unit: '%', cur: 71.5, prev: 68.4, bench: 80, higherIsBetter: true,
-      note: 'EPF/ESI/LWF returns filed on time this cycle' },
+      note: 'EPF/ESI/LWF returns filed on time this cycle', hotspot: { name: 'Bihar', val: '54.2%' } },
+    { label: 'e-Shram Enrollment Growth', icon: 'trend', unit: 'L/72h', cur: 4.2, prev: 2.1, bench: 3.0, higherIsBetter: true,
+      note: 'New worker registrations in the last 72 hours', hotspot: { name: 'Bihar — Patna & Gaya', val: '+4.2L' } },
+    { label: 'ESIC Claims Pending 45+ Days', icon: 'clock', unit: '', cur: 18400, prev: 21200, bench: 10000, higherIsBetter: false,
+      note: 'Claims older than 45 days awaiting resolution', hotspot: { name: 'Maharashtra — Pune region', val: '18,400 claims' } },
+    { label: 'EPFO Non-Compliant Employers', icon: 'alert', unit: '', cur: 2340, prev: 2510, bench: 1500, higherIsBetter: false,
+      note: 'Employers with 3+ months of missed PF deposits', hotspot: { name: 'National', val: '2,340 employers' } },
   ];
   function ragStatus(ind) {
     const gap = ind.higherIsBetter ? ind.cur - ind.bench : ind.bench - ind.cur;
@@ -128,29 +127,11 @@
   // Domestic Workers only shows under "All" — no dedicated filter chip.
   const SECTOR_CHIPS = ['All', 'Construction', 'Manufacturing', 'Gig & Platform', 'Agriculture', 'Services'];
 
-  // ---- Push tab ----
-  const AUDIENCES = [
-    { key: 'all', title: 'All Users', sub: 'Workers + Employers', reach: '51.2L' },
-    { key: 'workers', title: 'Workers Only', sub: '38.4 Cr registered', reach: '38.4L' },
-    { key: 'employers', title: 'Employers Only', sub: '12.8L registered', reach: '8.4L' },
-  ];
-  const TEMPLATES = [
-    { name: 'PM-SHRI Scheme', icon: 'graduation', title: 'New PM-SHRI Upskilling Scheme Launched', body: 'New PM Schools for Rising India (PM-SHRI) scheme has been launched. Skilled workers in construction & allied trades are eligible for upskilling benefits. Apply via e-Shram portal.' },
-    { name: 'ESIC Health Alert', icon: 'shieldcheck', title: 'ESIC Cashless Treatment Expanded', body: 'ESIC has expanded cashless treatment facilities to 1,500+ new hospitals. All registered workers are now covered for critical illnesses without prior approval.' },
-    { name: 'e-Shram Card Benefit', icon: 'idcard', title: '₹2 Lakh Accident Cover for e-Shram Cardholders', body: 'Workers with e-Shram cards are now eligible for ₹2 lakh accident insurance under PMSBY at zero premium. Ensure your card is updated.' },
-  ];
-  const RECENT = [
-    { title: 'ESIC Health Benefit Expansion', audience: 'Workers', when: '2 days ago', reach: '38.4L reached' },
-    { title: 'PF Withdrawal Process Update', audience: 'All', when: '5 days ago', reach: '51.2L reached' },
-    { title: 'Compliance Deadline Reminder', audience: 'Employers', when: '1 week ago', reach: '8.4L reached' },
-  ];
-
   // =============================================================
   // local state + controller
   // =============================================================
-  const S = { tab: 'overview', sector: 'All', audience: 'all', pushTitle: '', pushBody: '', sent: false, recent: RECENT.slice(), state: 'All' };
+  const S = { tab: 'overview', sector: 'All', state: 'All' };
   const jsq = s => String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-  const alive = () => App.state.route === 'gov-dashboard';
 
   // ---- state -> district drill-down (once a state is selected in the header select) ----
   function districtRows(stateName) {
@@ -170,11 +151,8 @@
 
   window.GovDash = {
     setTab(t) { S.tab = t; App.reload(); },
-    pushScheme() { S.tab = 'push'; App.reload(); },
     setSector(s) { S.sector = s; App.reload(); },
-    setAudience(a) { S.audience = a; App.reload(); },
     setState(v) { S.state = v; App.reload(); },
-    setField(k, v) { S[k] = v; },   // silent bind — no reload, so inputs keep focus
     viewAll() { App.toast('Full activity log is a demo affordance in this prototype'); },
     viewRiskList(t) { App.toast('Opening flagged-employer list · ' + t); },
     exportReport() {
@@ -203,29 +181,6 @@
       } else {
         App.toast('National report exported as ' + fmt, 'download');
       }
-    },
-    useTemplate(i) {
-      const t = TEMPLATES[i]; if (!t) return;
-      S.pushTitle = t.title; S.pushBody = t.body; S.sent = false;
-      App.reload();
-      App.toast('Template loaded · ' + t.name);
-    },
-    submitPush() {
-      const te = document.getElementById('gdPushTitle');
-      const be = document.getElementById('gdPushBody');
-      const title = (te && te.value.trim()) || '';
-      const body = (be && be.value.trim()) || '';
-      S.pushTitle = title; S.pushBody = body;
-      if (!title) { App.toast('Add a notification title to continue', 'alert'); if (te) te.focus(); return; }
-      if (!body) { App.toast('Add a message body to continue', 'alert'); if (be) be.focus(); return; }
-      const aud = AUDIENCES.find(a => a.key === S.audience) || AUDIENCES[0];
-      S.recent.unshift({ title: title, audience: aud.title.replace(' Only', '').replace('All Users', 'All'), when: 'Just now', reach: aud.reach + ' targeted' });
-      S.sent = true; App.reload();
-      App.toast('Sent successfully', 'send');
-      setTimeout(() => {
-        if (!alive()) return;
-        S.sent = false; S.pushTitle = ''; S.pushBody = ''; App.reload();
-      }, 2500);
     },
   };
 
@@ -289,36 +244,16 @@
         <div class="grid grid-4 mb-20">${stateStats.map(statCard).join('')}</div>
       </div>`;
 
-    const alertTint = { info: '#0d9488', warn: '#c07d10', alert: '#d64545' };
-    const alerts = `
-      <div class="card reveal mb-20">
-        <div class="card__head">${App.icon('bell')}<h3 class="grow">System Alerts</h3><button class="btn btn--ghost btn--sm" onclick="GovDash.viewAll()">View all</button></div>
-        <div class="card__body">
-          <div class="grid grid-2">
-            ${ALERTS.map(a => {
-              const c = alertTint[a.kind];
-              return `<div class="gd-alert">
-                <div class="kpi__icon" style="width:34px;height:34px;flex-shrink:0;background:${c}1a;color:${c}">${App.icon(a.icon)}</div>
-                <div class="grow" style="min-width:0">
-                  <b style="font-size:13.5px">${App.esc(a.title)}</b>
-                  <div class="muted" style="font-size:12.5px;margin-top:3px">${App.esc(a.body)}</div>
-                  <div class="faint num" style="font-size:11.5px;margin-top:6px">${App.esc(a.when)}</div>
-                </div>
-              </div>`;
-            }).join('')}
-          </div>
-        </div>
-      </div>`;
-
+    const fmtNum = (n) => Number.isInteger(n) && Math.abs(n) >= 1000 ? App.num(n) : (Math.round(n * 10) / 10).toString();
     const keyIndicators = `
       <div class="card reveal mb-20">
-        <div class="card__head">${App.icon('shieldcheck')}<h3 class="grow">Key Indicators</h3></div>
+        <div class="card__head">${App.icon('shieldcheck')}<h3 class="grow">Key Indicators</h3><span class="faint" style="font-size:12px">Current vs. last month vs. national benchmark, with the highest-impact state/district</span></div>
         <div class="card__body">
           <div class="grid grid-3">
             ${KEY_INDICATORS.map(ind => {
               const rag = ragStatus(ind);
               const ragColor = { green: 'var(--green-600)', amber: 'var(--amber-600)', red: 'var(--red-600)' }[rag.kind];
-              const delta = (ind.cur - ind.prev).toFixed(1);
+              const delta = fmtNum(Math.abs(ind.cur - ind.prev));
               const deltaUp = ind.cur >= ind.prev;
               return `
               <div class="card card--pad" style="border-top:3px solid ${ragColor}">
@@ -327,11 +262,12 @@
                   ${App.ui.pill(rag.label, rag.kind, true)}
                 </div>
                 <div class="row gap-8" style="align-items:baseline;margin-bottom:4px">
-                  <span class="num" style="font-size:22px;font-weight:700">${ind.cur}${ind.unit}</span>
-                  <span class="num" style="font-size:12px;color:${deltaUp ? 'var(--green-700)' : 'var(--red-600)'}">${deltaUp ? '▲' : '▼'} ${Math.abs(delta)}${ind.unit} vs last month</span>
+                  <span class="num" style="font-size:22px;font-weight:700">${fmtNum(ind.cur)}${ind.unit}</span>
+                  <span class="num" style="font-size:12px;color:${deltaUp ? 'var(--green-700)' : 'var(--red-600)'}">${deltaUp ? '▲' : '▼'} ${delta}${ind.unit} vs last month</span>
                 </div>
-                <div class="faint" style="font-size:11.5px;margin-bottom:6px">Benchmark: <b class="num">${ind.bench}${ind.unit}</b> · Last month: <span class="num">${ind.prev}${ind.unit}</span></div>
-                <div class="muted" style="font-size:12px">${App.esc(ind.note)}</div>
+                <div class="faint" style="font-size:11.5px;margin-bottom:6px">Benchmark: <b class="num">${fmtNum(ind.bench)}${ind.unit}</b> · Last month: <span class="num">${fmtNum(ind.prev)}${ind.unit}</span></div>
+                <div class="muted" style="font-size:12px;margin-bottom:8px">${App.esc(ind.note)}</div>
+                ${ind.hotspot ? `<div class="row gap-6" style="font-size:11.5px;color:var(--muted);padding-top:8px;border-top:1px solid var(--line-2)"><span style="color:${ragColor}">${App.icon('mappin')}</span>Hotspot: <b>${App.esc(ind.hotspot.name)}</b> · <span class="num">${App.esc(ind.hotspot.val)}</span></div>` : ''}
               </div>`;
             }).join('')}
           </div>
@@ -399,7 +335,6 @@
     return `
       ${stats}
       ${keyIndicators}
-      ${alerts}
       <div class="gd-grid-main reveal">
         ${stateTable}
         <div class="col gap-20">${sectorDist}${trend}</div>
@@ -520,92 +455,12 @@
   }
 
   // =============================================================
-  // PUSH SCHEMES & ALERTS
-  // =============================================================
-  function pushTab() {
-    const banner = `
-      <div class="banner banner--accent reveal mb-20" style="align-items:flex-start">
-        ${ICO.radio}
-        <div><b>Government Information Push System</b><div style="margin-top:3px;opacity:.9">Broadcast new schemes, policy alerts, and benefit notifications directly to employers and/or workers on the WiN platform.</div></div>
-      </div>`;
-
-    const audience = AUDIENCES.map(a => `
-      <button class="gd-aud ${S.audience === a.key ? 'is-active' : ''}" onclick="GovDash.setAudience('${a.key}')">
-        <span class="gd-radio"></span>
-        <span class="grow" style="text-align:left"><b style="font-size:13.5px;display:block">${App.esc(a.title)}</b><span class="muted" style="font-size:12px">${App.esc(a.sub)}</span></span>
-      </button>`).join('');
-
-    const submitBtn = S.sent
-      ? `<button class="btn btn--block" style="background:var(--green-600);color:#fff;border-color:transparent">${App.icon('checkcircle')} Sent Successfully!</button>`
-      : `<button class="btn btn--primary btn--block" onclick="GovDash.submitPush()">${App.icon('send')} Push Notification</button>`;
-
-    const compose = `
-      <div class="card">
-        <div class="card__head">${App.icon('bell')}<h3 class="grow">Compose Push Notification</h3></div>
-        <div class="card__body">
-          <div class="field">
-            <label class="label">Target Audience <span style="color:var(--red-600)">*</span></label>
-            <div class="gd-aud-row">${audience}</div>
-          </div>
-          <div class="field">
-            <label class="label">Title <span style="color:var(--red-600)">*</span></label>
-            <input class="input" id="gdPushTitle" placeholder="e.g. New PM-SHRI Upskilling Scheme Launched" value="${App.esc(S.pushTitle)}" oninput="GovDash.setField('pushTitle', this.value)">
-          </div>
-          <div class="field">
-            <label class="label">Message Body <span style="color:var(--red-600)">*</span></label>
-            <textarea class="textarea" id="gdPushBody" rows="4" placeholder="Describe the scheme, eligibility criteria, benefits, and next steps..." oninput="GovDash.setField('pushBody', this.value)">${App.esc(S.pushBody)}</textarea>
-          </div>
-          <div class="banner banner--info" style="align-items:center;font-size:12.5px">${App.icon('bell')}<div>Will appear as an in-app notification + floating alert for workers.</div></div>
-          <div class="mt-16">${submitBtn}</div>
-        </div>
-      </div>`;
-
-    const templates = `
-      <div class="card">
-        <div class="card__head">${App.icon('sparkles')}<h3 class="grow">Quick Templates</h3></div>
-        <div class="card__body" style="display:flex;flex-direction:column;gap:10px">
-          ${TEMPLATES.map((t, i) => `
-            <button class="gd-tmpl" onclick="GovDash.useTemplate(${i})">
-              <div class="kpi__icon" style="width:34px;height:34px;flex-shrink:0;background:var(--accent-weak);color:var(--accent-strong)">${App.icon(t.icon)}</div>
-              <span class="grow" style="text-align:left;min-width:0"><b style="font-size:13px;display:block">${App.esc(t.name)}</b><span class="muted" style="font-size:11.5px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${App.esc(t.body)}</span></span>
-              ${App.icon('plus')}
-            </button>`).join('')}
-        </div>
-      </div>`;
-
-    const recent = `
-      <div class="card">
-        <div class="card__head">${App.icon('clock')}<h3 class="grow">Recent Pushes</h3></div>
-        <div class="card__body" style="padding-top:6px;padding-bottom:6px">
-          <div class="list--divided">
-            ${S.recent.map(r => `
-              <div class="row gap-12" style="align-items:flex-start;padding:12px 0">
-                <div class="kpi__icon" style="width:32px;height:32px;flex-shrink:0;background:var(--accent-weak);color:var(--accent-strong)">${App.icon('send')}</div>
-                <div class="grow" style="min-width:0">
-                  <b style="font-size:13px">${App.esc(r.title)}</b>
-                  <div class="muted num" style="font-size:11.5px;margin-top:3px">${App.esc(r.audience)} · ${App.esc(r.when)} · ${App.esc(r.reach)}</div>
-                </div>
-              </div>`).join('')}
-          </div>
-        </div>
-      </div>`;
-
-    return `
-      ${banner}
-      <div class="gd-push-grid reveal">
-        ${compose}
-        <div class="col gap-20">${templates}${recent}</div>
-      </div>`;
-  }
-
-  // =============================================================
   // view registration
   // =============================================================
   const TABS = [
     ['overview', 'Overview'],
     ['risk', 'Risk Vigilance'],
     ['compliance', 'Compliance Gaps'],
-    ['push', 'Push Schemes & Alerts'],
   ];
 
   App.registerView('gov-dashboard', {
@@ -614,8 +469,7 @@
     render() {
       const body = S.tab === 'overview' ? overviewTab()
         : S.tab === 'risk' ? riskTab()
-        : S.tab === 'compliance' ? complianceTab()
-        : pushTab();
+        : complianceTab();
 
       const govStates = (window.DB && DB.govStates) || [];
       const stateOptions = ['All'].concat(govStates.filter(n => STATES.some(s => s.name === n)))
@@ -626,7 +480,6 @@
         .gd-selwrap .ico{ position:absolute; left:11px; color:var(--muted); pointer-events:none; }
         .gd-sel{ padding-left:34px; min-width:172px; font-weight:600; }
         .gd-grid-main{ display:grid; grid-template-columns:1.5fr 1fr; gap:20px; align-items:start; }
-        .gd-alert{ display:flex; gap:12px; align-items:flex-start; padding:13px 14px; border:1px solid var(--line); border-radius:var(--r); background:var(--surface-2); }
         .gd-dot{ width:9px; height:9px; border-radius:50%; flex-shrink:0; display:inline-block; }
         .gd-barcell{ display:flex; align-items:center; gap:9px; }
         .gd-barcell .bar{ flex:1; }
@@ -645,23 +498,12 @@
         .gd-chip:hover{ border-color:var(--accent); color:var(--accent-strong); }
         .gd-chip.is-active{ background:var(--accent); color:#fff; border-color:transparent; }
         .gd-trends-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
-        .gd-push-grid{ display:grid; grid-template-columns:1.4fr 1fr; gap:20px; align-items:start; }
-        .gd-aud-row{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
-        .gd-aud{ display:flex; gap:10px; align-items:center; padding:12px 13px; border:1px solid var(--line); border-radius:var(--r); background:var(--surface); cursor:pointer; transition:.13s; }
-        .gd-aud:hover{ border-color:var(--accent); }
-        .gd-aud.is-active{ border-color:var(--accent); background:var(--accent-weak); box-shadow:0 0 0 2px var(--accent-ring); }
-        .gd-radio{ width:17px; height:17px; border-radius:50%; border:2px solid var(--line); flex-shrink:0; position:relative; transition:.13s; }
-        .gd-aud.is-active .gd-radio{ border-color:var(--accent); }
-        .gd-aud.is-active .gd-radio::after{ content:""; position:absolute; inset:2.5px; border-radius:50%; background:var(--accent); }
-        .gd-tmpl{ display:flex; gap:11px; align-items:center; padding:11px 12px; border:1px solid var(--line); border-radius:var(--r); background:var(--surface); cursor:pointer; transition:.13s; }
-        .gd-tmpl:hover{ border-color:var(--accent); background:var(--surface-2); }
-        .gd-tmpl > .ico{ color:var(--muted); flex-shrink:0; }
         @media (max-width:1080px){
-          .gd-grid-main, .gd-push-grid{ grid-template-columns:1fr; }
+          .gd-grid-main{ grid-template-columns:1fr; }
           .gd-risk-grid, .gd-trends-grid{ grid-template-columns:repeat(2,1fr); }
         }
         @media (max-width:720px){
-          .gd-risk-grid, .gd-trends-grid, .gd-aud-row{ grid-template-columns:1fr; }
+          .gd-risk-grid, .gd-trends-grid{ grid-template-columns:1fr; }
         }
       </style>`;
 
@@ -688,7 +530,7 @@
                   <select class="select gd-sel" onchange="GovDash.setState(this.value)" aria-label="Filter by state">${stateOptions}</select>
                 </div>
                 <button class="btn" onclick="GovDash.exportReport()">${ICO.fileChart} Export Report</button>
-                <button class="btn btn--primary" onclick="GovDash.pushScheme()">${ICO.radio} Push Scheme</button>
+                <button class="btn btn--primary" onclick="App.navigate('gov-benefits', {tab:'push'})">${ICO.radio} Push Scheme</button>
               </div>
             </div>
           </div>
