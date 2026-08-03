@@ -30,11 +30,16 @@
     { name: 'Noida Site', count: 26 },
     { name: 'Faridabad Site', count: 21 },
   ];
+  // categories the employer can actually act on (wage/pay and their own conduct);
+  // everything else (EPFO, ESIC, safety) is routed to and resolved by the
+  // relevant ministry/regulator via the government Grievances console, not here.
+  const EMPLOYER_ACTIONABLE = ['Salary / Wage Disputes', 'Employer Conduct'];
   const RECENT_CASES = [
-    { id: 'GRV-4509', subject: 'ESIC Claim Reimbursement', site: 'Gurugram Site', filed: '2026-03-22', status: 'In Progress' },
-    { id: 'GRV-4498', subject: 'EPFO Withdrawal Pending', site: 'Delhi Site', filed: '2026-03-12', status: 'In Progress' },
-    { id: 'GRV-4476', subject: 'Salary Discrepancy — Feb', site: 'Noida Site', filed: '2026-02-28', status: 'Resolved' },
-    { id: 'GRV-4451', subject: 'Work Site Safety Concern', site: 'Gurugram Site', filed: '2026-02-15', status: 'Resolved' },
+    { id: 'GRV-4509', subject: 'ESIC Claim Reimbursement', category: 'ESIC / Health Insurance', site: 'Gurugram Site', filed: '2026-03-22', status: 'In Progress' },
+    { id: 'GRV-4498', subject: 'EPFO Withdrawal Pending', category: 'EPFO / Provident Fund', site: 'Delhi Site', filed: '2026-03-12', status: 'In Progress' },
+    { id: 'GRV-4482', subject: 'Supervisor Misconduct Complaint', category: 'Employer Conduct', site: 'Gurugram Site', filed: '2026-03-08', status: 'In Progress' },
+    { id: 'GRV-4476', subject: 'Salary Discrepancy — Feb', category: 'Salary / Wage Disputes', site: 'Noida Site', filed: '2026-02-28', status: 'Resolved' },
+    { id: 'GRV-4451', subject: 'Work Site Safety Concern', category: 'Work Site Safety', site: 'Gurugram Site', filed: '2026-02-15', status: 'Resolved' },
   ];
 
   const EC = {
@@ -69,6 +74,31 @@
       App.reload();
     },
 
+    // scoped to categories that are genuinely the employer's to act on (wage
+    // disputes, their own conduct) — a response, not a resolution; the case
+    // stays routed through WiN until the worker/ministry closes it. Everything
+    // else (EPFO, ESIC, safety) has no action here by design.
+    respondCase(id) {
+      const c = RECENT_CASES.find(x => x.id === id); if (!c) return;
+      App.modal.open(`
+        <div class="banner banner--info" style="margin-bottom:14px">${App.icon('message')}<div><b>${App.esc(c.subject)}</b><div style="margin-top:3px;opacity:.9">${App.esc(c.category)} · ${App.esc(c.site)}</div></div></div>
+        <p class="muted" style="font-size:13px;margin-bottom:12px">Your response is shared with the worker and logged against this case — it does not close the case; that happens through WiN's standard grievance process.</p>
+        <div class="field"><label class="label">Your response</label><textarea class="textarea" id="ecRespNote" placeholder="Describe the action you're taking or have taken"></textarea></div>`,
+        {
+          title: 'Respond to Grievance', icon: 'message',
+          foot: `<button class="btn" onclick="App.modal.close()">Cancel</button>
+                 <button class="btn btn--primary" onclick="EmpCompliance.confirmRespond('${id}')">${App.icon('send')} Send Response</button>`,
+        });
+    },
+    confirmRespond(id) {
+      const note = document.getElementById('ecRespNote');
+      const text = (note && note.value.trim()) || '';
+      if (!text) { App.toast('Add a response before sending', 'alert'); return; }
+      const c = RECENT_CASES.find(x => x.id === id); if (c) c.employerResponse = text;
+      App.modal.close();
+      App.toast('Response sent to worker', 'checkcircle');
+      App.reload();
+    },
   };
   window.EmpCompliance = EC;
 
@@ -151,21 +181,31 @@
         <div class="card__body" style="padding-top:4px">${siteRows}</div>
       </div>`;
 
-    const recentRows = RECENT_CASES.map(c => `
+    const recentRows = RECENT_CASES.map(c => {
+      const actionable = EMPLOYER_ACTIONABLE.includes(c.category) && c.status !== 'Resolved';
+      const action = c.employerResponse
+        ? `<span class="muted" style="font-size:12px">${App.icon('checkcircle')} Responded</span>`
+        : actionable
+          ? `<button class="btn btn--sm" onclick="EmpCompliance.respondCase('${c.id}')">${App.icon('send')} Respond</button>`
+          : `<span class="faint" style="font-size:12px">Routed via WiN</span>`;
+      return `
       <tr>
         <td class="mono" style="font-size:12px">${App.esc(c.id)}</td>
         <td>${App.esc(c.subject)}</td>
+        <td class="muted" style="font-size:12.5px">${App.esc(c.category)}</td>
         <td>${App.esc(c.site)}</td>
         <td>${App.esc(c.filed)}</td>
         <td>${App.ui.statusPill(c.status)}</td>
-      </tr>`).join('');
+        <td style="text-align:right">${action}</td>
+      </tr>`;
+    }).join('');
 
     const recentCard = `
       <div class="card reveal" style="overflow:hidden">
-        <div class="card__head"><div class="grow"><h3>Recent Cases</h3><div class="muted" style="font-size:12.5px;margin-top:2px">Read-only — worker identity kept confidential at this view</div></div></div>
+        <div class="card__head"><div class="grow"><h3>Recent Cases</h3><div class="muted" style="font-size:12.5px;margin-top:2px">Worker identity kept confidential — respond only where the issue is yours to act on (wage disputes, employer conduct); everything else is handled by the relevant ministry via WiN</div></div></div>
         <div class="tablewrap tablewrap--scroll" style="border:none;border-radius:0;box-shadow:none">
           <table class="tbl">
-            <thead><tr><th>Case ID</th><th>Subject</th><th>Site</th><th>Filed</th><th>Status</th></tr></thead>
+            <thead><tr><th>Case ID</th><th>Subject</th><th>Category</th><th>Site</th><th>Filed</th><th>Status</th><th style="text-align:right">Action</th></tr></thead>
             <tbody>${recentRows}</tbody>
           </table>
         </div>
