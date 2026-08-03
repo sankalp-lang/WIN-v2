@@ -283,12 +283,12 @@ window.App = (function () {
   App.setLang = (l) => { App.state.lang = LANG_LABELS[l] ? l : 'en'; App.reload(); };
   // the topbar language dropdown markup, shared by every persona's shell.
   App.langSelect = () => `
-    <label class="topbar__lang">${App.icon('globe')}
+    <div class="topbar__lang">
+      ${App.icon('globe')}<span>${App.esc(LANG_LABELS[App.state.lang || 'en'])}</span>${App.icon('chevrondown')}
       <select onchange="App.setLang(this.value)" aria-label="Language">
         ${Object.keys(LANG_LABELS).map(l => `<option value="${l}" ${(App.state.lang || 'en') === l ? 'selected' : ''}>${LANG_LABELS[l]}</option>`).join('')}
       </select>
-      ${App.icon('chevrondown')}
-    </label>`;
+    </div>`;
 
   /* ---------------- shell ---------------- */
   function navHtml() {
@@ -323,7 +323,7 @@ window.App = (function () {
             <div class="brandmark">${App.icon('shieldcheck')}</div>
             <div class="sidebar__brandtext"><b>${p.brand}</b><span>${p.sub}</span></div>
           </div>
-          <div class="sidebar__tagline" style="font-size:10.5px;color:var(--muted);padding:0 16px 10px;letter-spacing:.2px">WIN Bharat Karamsheel Setu</div>
+          <div class="sidebar__tagline">Bharat Karamsheel Setu</div>
           <div class="sidebar__persona">${App.icon(p.key === 'worker' ? 'user' : p.key === 'employer' ? 'building' : 'landmark')} ${p.tag}</div>
           <nav class="sidebar__nav" id="sidebarNav">${navHtml()}</nav>
           <div class="sidebar__foot">

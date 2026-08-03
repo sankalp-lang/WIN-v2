@@ -45,7 +45,10 @@
       WG.draft = { catIx: -1, subject: '', description: '', priority: 'Normal' };
       WG.renderModal();
     },
-    setCategory(ix) { WG.draft.catIx = ix; WG.step = 1; WG.renderModal(); },
+    setCategory(ix) {
+      WG.draft.catIx = ix;
+      App.otpGate('filing this grievance', () => { WG.step = 1; WG.renderModal(); });
+    },
     setPriority(p) { WG._capture(); WG.draft.priority = p; WG.renderModal(); },
     next() { WG._capture(); if (!WG._stepValid()) return; WG.step = Math.min(3, WG.step + 1); WG.renderModal(); },
     back() { WG._capture(); WG.step = Math.max(0, WG.step - 1); WG.renderModal(); },
@@ -154,7 +157,7 @@
       if (!(d.catIx > -1 && d.subject.trim() && d.description.trim())) {
         App.toast('Complete category, subject and description', 'alert'); return;
       }
-      App.otpGate('filing this grievance', () => WorkerGrievance._doSubmit());
+      WorkerGrievance._doSubmit();
     },
     _doSubmit() {
       const d = WG.draft;
@@ -280,50 +283,79 @@
         { t: 'Case Resolved: Benefit Info Sent',        d: '' },
       ];
       const openRows = rows.filter(r => r.status === 'In Progress');
+      // progress for a given open case, deterministic by position (older cases further along)
+      const caseProgress = (row) => {
+        if (row.status !== 'In Progress') return { doneSteps: steps.length, pct: 100 };
+        const i = openRows.indexOf(row);
+        const doneSteps = Math.max(2, steps.length - 1 - i);
+        return { doneSteps, pct: Math.round((doneSteps / steps.length) * 100) };
+      };
+      WG._trackerSteps = steps;
+      WG._trackerRows = () => (fresh ? WG.added : WG.added.concat(base));
       const trackerCard = (row, doneSteps, pct, barCol) => `
-        <div class="card">
-          <div class="card__head">
-            <h3 class="grow">Live Resolution Tracker</h3>
-            <span class="pill pill--gray mono">${App.esc(row.id)}</span>
-            ${App.ui.statusPill(row.status)}
+        <div class="card__head">
+          <h3 class="grow">Live Resolution Tracker</h3>
+          <span class="pill pill--gray mono">${App.esc(row.id)}</span>
+          ${App.ui.statusPill(row.status)}
+        </div>
+        <div class="card__body">
+          <div class="faint" style="font-size:12px;margin-bottom:10px">${App.esc(row.subject)}</div>
+          <div class="wg-routebox">
+            <div class="row between wrap gap-8" style="margin-bottom:12px">
+              <span class="pill pill--accent">${App.icon('fingerprint')} WIN ID</span>
+              <span class="faint" style="font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase">Ministry routing</span>
+            </div>
+            <div class="wg-route">
+              ${mchip('eS', 'var(--green-600)', 'e-Shram')}${arrow}
+              ${mchip('ES', 'var(--green-700)', 'ESIC')}${arrow}
+              ${mchip('PF', 'var(--blue-700)', 'EPFO')}
+            </div>
+            <div class="meter-row mt-16">
+              ${App.ui.bar(pct, barCol)}
+              <span class="val num" style="color:${barCol}">${pct}%</span>
+            </div>
+            <div class="muted" style="font-size:11.5px;margin-top:7px">${pct === 100 ? 'Case routed and resolved across all linked ministries.' : 'Case routed and being processed across linked ministries.'}</div>
           </div>
-          <div class="card__body">
-            <div class="faint" style="font-size:12px;margin-bottom:10px">${App.esc(row.subject)}</div>
-            <div class="wg-routebox">
-              <div class="row between wrap gap-8" style="margin-bottom:12px">
-                <span class="pill pill--accent">${App.icon('fingerprint')} WIN ID</span>
-                <span class="faint" style="font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase">Ministry routing</span>
-              </div>
-              <div class="wg-route">
-                ${mchip('eS', 'var(--green-600)', 'e-Shram')}${arrow}
-                ${mchip('ES', 'var(--green-700)', 'ESIC')}${arrow}
-                ${mchip('PF', 'var(--blue-700)', 'EPFO')}
-              </div>
-              <div class="meter-row mt-16">
-                ${App.ui.bar(pct, barCol)}
-                <span class="val num" style="color:${barCol}">${pct}%</span>
-              </div>
-              <div class="muted" style="font-size:11.5px;margin-top:7px">${pct === 100 ? 'Case routed and resolved across all linked ministries.' : 'Case routed and being processed across linked ministries.'}</div>
-            </div>
-            <div class="timeline">
-              ${steps.map((s, i) => `
-                <div class="timeline__item">
-                  <span class="timeline__dot ${i < doneSteps ? 'done' : ''}"></span>
-                  <b>${App.esc(s.t)}</b>${s.d ? `<div class="when">${App.esc(s.d)}</div>` : ''}
-                </div>`).join('')}
-            </div>
+          <div class="timeline">
+            ${steps.map((s, i) => `
+              <div class="timeline__item">
+                <span class="timeline__dot ${i < doneSteps ? 'done' : ''}"></span>
+                <b>${App.esc(s.t)}</b>${s.d ? `<div class="when">${App.esc(s.d)}</div>` : ''}
+              </div>`).join('')}
           </div>
         </div>`;
+      WG._trackerCard = trackerCard;
+      WG.viewTracker = (id) => {
+        const row = WG._trackerRows().find(r => r.id === id); if (!row) return;
+        const { doneSteps, pct } = caseProgress(row);
+        App.modal.open(trackerCard(row, doneSteps, pct, row.status === 'In Progress' ? 'var(--blue-700)' : 'var(--green-600)'), { wide: true });
+      };
+      // one open case: show the full tracker inline. Several: a compact, scannable
+      // list instead of one card per case, which got scattered fast past 2-3 cases.
       const tracker = !rows.length ? `
         <div class="card">
           <div class="card__body">${App.ui.empty('message', 'No grievances yet', 'File a grievance and its live resolution status will track here.')}</div>
         </div>`
-        : !openRows.length ? trackerCard(rows[0], steps.length, 100, 'var(--green-600)')
-        : `<div class="grid grid-2" style="align-items:start">${openRows.map((row, i) => {
-            const doneSteps = Math.max(2, steps.length - 1 - i);
-            const pct = Math.round((doneSteps / steps.length) * 100);
-            return trackerCard(row, doneSteps, pct, 'var(--blue-700)');
-          }).join('')}</div>`;
+        : !openRows.length ? `<div class="card">${trackerCard(rows[0], steps.length, 100, 'var(--green-600)')}</div>`
+        : openRows.length === 1 ? `<div class="card">${trackerCard(openRows[0], caseProgress(openRows[0]).doneSteps, caseProgress(openRows[0]).pct, 'var(--blue-700)')}</div>`
+        : `<div class="card">
+            <div class="card__head"><h3 class="grow">Live Resolution Tracker</h3><span class="pill pill--amber mono">${openRows.length} open</span></div>
+            <div class="card__body" style="padding-top:4px;padding-bottom:6px">
+              <div class="list--divided">
+                ${openRows.map(row => {
+                  const { pct } = caseProgress(row);
+                  return `
+                  <button class="wg-trackrow" onclick="WorkerGrievance.viewTracker('${row.id}')">
+                    <div class="grow" style="min-width:0;text-align:left">
+                      <div class="row gap-8" style="align-items:center"><b style="font-size:13.5px">${App.esc(row.subject)}</b><span class="mono faint" style="font-size:11px">${App.esc(row.id)}</span></div>
+                      <div class="meter-row mt-8">${App.ui.bar(pct, 'var(--blue-700)')}<span class="val num" style="color:var(--blue-700);min-width:34px">${pct}%</span></div>
+                    </div>
+                    ${App.icon('chevron')}
+                  </button>`;
+                }).join('')}
+              </div>
+            </div>
+          </div>`;
 
       /* ---- activity log ---- */
       const acts = WG.activity();
@@ -403,6 +435,10 @@
           .wg-actdot{ width:9px; height:9px; border-radius:50%; margin-top:5px; flex-shrink:0; }
           .wg-res{ display:flex; align-items:flex-start; gap:9px; padding:12px 14px; border-radius:var(--r-sm); background:var(--green-50); border:1px solid var(--green-100); color:var(--green-700); font-size:13px; line-height:1.5; }
           .wg-res .ico{ color:var(--green-600); margin-top:1px; flex-shrink:0; }
+          .wg-trackrow{ display:flex; align-items:center; gap:12px; width:100%; text-align:left; padding:14px 16px; border-bottom:1px solid var(--line-2); transition:.13s; }
+          .wg-trackrow:last-child{ border-bottom:none; }
+          .wg-trackrow:hover{ background:var(--surface-2); }
+          .wg-trackrow .ico{ color:var(--faint); flex-shrink:0; }
 
           /* multi-step file-grievance flow */
           .wg-steps{ display:flex; align-items:center; gap:6px; margin-bottom:20px; }

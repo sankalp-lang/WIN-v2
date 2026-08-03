@@ -203,7 +203,27 @@
 
   // shown to a freshly signed-up worker instead of Rajan's demo portfolio — there's
   // no work history, skills or schemes to show yet.
-  function freshPortfolio() {
+  function benefitsCard(u) {
+    return `
+      <div class="card reveal">
+        <div class="wp-strip" style="background:var(--green-50);color:var(--green-700)">${App.icon('shieldcheck')} Benefits &amp; Schemes · ${App.esc((u && u.location) || 'Delhi NCR')}</div>
+        <div class="card__body">
+          <p class="muted" style="font-size:13px;margin-bottom:14px">Labour-department schemes and subsidies you may be eligible for, based on your worker segment. Eligibility is checked and enrollment is completed on Mahasarthi.</p>
+          <div class="list--divided">
+            ${BENEFITS.map(b => `
+              <div class="row between wrap gap-10" style="padding:10px 0">
+                <div class="row gap-10" style="align-items:flex-start">
+                  <span style="color:${b.c};flex-shrink:0;margin-top:1px">${App.icon(b.ic)}</span>
+                  <div><b style="font-size:13.5px">${App.esc(b.title)}</b><div class="faint" style="font-size:12px;margin-top:2px">${App.esc(b.desc)}</div></div>
+                </div>
+                <button class="btn btn--sm" onclick="WorkerPortfolio.openBenefit('${b.id}')">View</button>
+              </div>`).join('')}
+          </div>
+        </div>
+      </div>`;
+  }
+
+  function freshPortfolio(u) {
     return `<div class="page fade-in">
       <div class="hero reveal">
         <div class="hero__wash"></div>
@@ -214,6 +234,7 @@
           <button class="btn btn--accent" style="margin-top:16px" onclick="App.navigate('worker-settings')">${App.icon('edit')} Add Work History</button>
         </div>
       </div>
+      <div style="margin-top:20px">${benefitsCard(u)}</div>
     </div>`;
   }
 
@@ -222,7 +243,7 @@
     subtitle: 'Your verified professional identity',
     render(ctx) {
       const u = ctx.user;
-      if (u && u._fresh) return freshPortfolio();
+      if (u && u._fresh) return freshPortfolio(u);
 
       const work = [
         { role: 'Construction Supervisor', org: 'NBCC (India) Ltd. — Govt. Housing Project', period: 'Mar 2023 – Present', loc: 'Delhi',
@@ -419,22 +440,7 @@
             </div>
 
             <!-- benefits & schemes -->
-            <div class="card reveal">
-              <div class="wp-strip" style="background:var(--green-50);color:var(--green-700)">${App.icon('shieldcheck')} Benefits &amp; Schemes · ${App.esc(u.location || 'Delhi NCR')}</div>
-              <div class="card__body">
-                <p class="muted" style="font-size:13px;margin-bottom:14px">Labour-department schemes and subsidies you may be eligible for, based on your worker segment. Eligibility is checked and enrollment is completed on Mahasarthi.</p>
-                <div class="list--divided">
-                  ${BENEFITS.map(b => `
-                    <div class="row between wrap gap-10" style="padding:10px 0">
-                      <div class="row gap-10" style="align-items:flex-start">
-                        <span style="color:${b.c};flex-shrink:0;margin-top:1px">${App.icon(b.ic)}</span>
-                        <div><b style="font-size:13.5px">${App.esc(b.title)}</b><div class="faint" style="font-size:12px;margin-top:2px">${App.esc(b.desc)}</div></div>
-                      </div>
-                      <button class="btn btn--sm" onclick="WorkerPortfolio.openBenefit('${b.id}')">View</button>
-                    </div>`).join('')}
-                </div>
-              </div>
-            </div>
+            ${benefitsCard(u)}
 
             <!-- skills -->
             <div class="card reveal">
