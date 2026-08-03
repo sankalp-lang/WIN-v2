@@ -1,7 +1,9 @@
 /* Employer · Compliance — file statutory compliance returns (PF, ESI, Labour
-   Welfare Fund, Minimum Wages) and manage worker grievance cases raised
-   against this employer. Editorial hero + stats + two tabs, same shell as
-   Employee Verifications. */
+   Welfare Fund, Minimum Wages) and see organisation-wide grievance patterns
+   (by category, by site) raised against this employer. Deliberately
+   read-only/aggregate — not a case-by-case ticketing queue; resolution
+   happens through WiN's standard grievance-routing process, not here.
+   Editorial hero + stats + two tabs, same shell as Employee Verifications. */
 (function () {
   const RETURNS = [
     { id: 'RET-PF-0326', type: 'EPF Monthly Return', period: 'Mar 2026', due: '15 Apr 2026', amount: 428600, status: 'Pending' },
@@ -12,10 +14,27 @@
     { id: 'RET-ESI-0226', type: 'ESI Monthly Return', period: 'Feb 2026', due: '21 Mar 2026', amount: 92800, status: 'Filed' },
   ];
 
-  const CASES = [
-    { id: 'GRV-4498', worker: 'Rajan Kumar', winId: 'WIN-2024-8834-1029', subject: 'EPFO Withdrawal Pending', filed: '2025-03-12', status: 'In Progress' },
-    { id: 'GRV-4509', worker: 'Suresh Yadav', winId: 'WIN-2024-7712-4453', subject: 'ESIC Claim Reimbursement', filed: '2025-03-22', status: 'In Progress' },
-    { id: 'GRV-4476', worker: 'Mahesh Pawar', winId: 'WIN-2024-6620-9981', subject: 'Salary Discrepancy — Feb', filed: '2025-02-28', status: 'Resolved' },
+  // company-level view, not a case-by-case ticketing queue — resolution happens
+  // through the normal grievance/HR process; this is read-only visibility into
+  // patterns across the organisation (category, site, trend).
+  const CASE_CATEGORIES = [
+    { name: 'EPFO / Provident Fund', count: 42, c: '#2f5fd0' },
+    { name: 'ESIC / Health Insurance', count: 27, c: '#0e9f6e' },
+    { name: 'Salary / Wage Disputes', count: 23, c: '#c07d10' },
+    { name: 'Work Site Safety', count: 15, c: '#d64545' },
+    { name: 'Employer Conduct', count: 9, c: '#6b4fc7' },
+  ];
+  const CASE_SITES = [
+    { name: 'Gurugram Site', count: 38 },
+    { name: 'Delhi Site', count: 31 },
+    { name: 'Noida Site', count: 26 },
+    { name: 'Faridabad Site', count: 21 },
+  ];
+  const RECENT_CASES = [
+    { id: 'GRV-4509', subject: 'ESIC Claim Reimbursement', site: 'Gurugram Site', filed: '2026-03-22', status: 'In Progress' },
+    { id: 'GRV-4498', subject: 'EPFO Withdrawal Pending', site: 'Delhi Site', filed: '2026-03-12', status: 'In Progress' },
+    { id: 'GRV-4476', subject: 'Salary Discrepancy — Feb', site: 'Noida Site', filed: '2026-02-28', status: 'Resolved' },
+    { id: 'GRV-4451', subject: 'Work Site Safety Concern', site: 'Gurugram Site', filed: '2026-02-15', status: 'Resolved' },
   ];
 
   const EC = {
@@ -48,23 +67,6 @@
       App.reload();
     },
 
-    resolveCase(id) {
-      const c = CASES.find(x => x.id === id); if (!c) return;
-      App.modal.open(`
-        <div class="banner banner--info" style="margin-bottom:14px">${App.icon('message')}<div><b>${App.esc(c.subject)}</b><div style="margin-top:3px;opacity:.9">Raised by ${App.esc(c.worker)} · WIN ID <span class="mono">${App.esc(c.winId)}</span></div></div></div>
-        <div class="field"><label class="label">Resolution notes</label><textarea class="textarea" id="ecResNote" placeholder="Describe the action taken to resolve this case"></textarea></div>`,
-        {
-          title: 'Resolve Grievance Case', icon: 'checkcircle',
-          foot: `<button class="btn" onclick="App.modal.close()">Cancel</button>
-                 <button class="btn btn--primary" style="background:var(--green-600)" onclick="EmpCompliance.confirmResolve('${id}')">${App.icon('checkcircle')} Mark Resolved</button>`,
-        });
-    },
-    confirmResolve(id) {
-      const c = CASES.find(x => x.id === id); if (c) c.status = 'Resolved';
-      App.modal.close();
-      App.toast('Grievance case marked resolved', 'checkcircle');
-      App.reload();
-    },
   };
   window.EmpCompliance = EC;
 
@@ -102,39 +104,81 @@
   }
 
   function grievancesTab() {
-    const openN = CASES.filter(c => c.status !== 'Resolved').length;
-    const rowsHtml = CASES.map(c => `
+    const totalN = CASE_CATEGORIES.reduce((s, c) => s + c.count, 0);
+    const openN = RECENT_CASES.filter(c => c.status !== 'Resolved').length;
+    const maxCat = Math.max.apply(null, CASE_CATEGORIES.map(c => c.count));
+    const maxSite = Math.max.apply(null, CASE_SITES.map(s => s.count));
+
+    const stats = `
+      <div class="grid grid-4 reveal" style="margin-bottom:22px">
+        ${App.ui.kpi('message', '#c07d10', 'Total Cases (FY)', totalN, 'Across all sites')}
+        ${App.ui.kpi('checkcircle', '#0e9f6e', 'Resolution Rate', '87%', 'Company-wide, this quarter')}
+        ${App.ui.kpi('clock', '#2f5fd0', 'Avg. Resolution Time', '4.2d', 'Within SLA')}
+        ${App.ui.kpi('alert', '#667085', 'Currently Open', openN, 'Being handled via WiN routing')}
+      </div>`;
+
+    const banner = `<div class="banner banner--info reveal mb-20">${App.icon('idcard')}<div>This is an organisation-wide view of grievance patterns — not a case-management queue. Individual cases are routed and resolved through WiN's standard grievance process, not actioned here.</div></div>`;
+
+    const catRows = CASE_CATEGORIES.map(c => `
+      <div class="gd-sector" style="margin-bottom:14px">
+        <div class="row between wrap gap-8" style="margin-bottom:6px">
+          <span class="row gap-8" style="font-size:13px"><span class="gd-dot" style="background:${c.c};width:9px;height:9px;border-radius:50%;display:inline-block"></span><b>${App.esc(c.name)}</b></span>
+          <span class="muted num" style="font-size:12px">${c.count} cases</span>
+        </div>
+        ${App.ui.bar(Math.round(c.count / maxCat * 100), c.c)}
+      </div>`).join('');
+
+    const siteRows = CASE_SITES.map(s => `
+      <div class="row between" style="padding:10px 0;border-bottom:1px solid var(--line-2)">
+        <span style="font-size:13px">${App.esc(s.name)}</span>
+        <div class="row gap-10" style="align-items:center;min-width:140px">
+          <div style="flex:1">${App.ui.bar(Math.round(s.count / maxSite * 100), '#2f5fd0')}</div>
+          <span class="num" style="font-size:12.5px;font-weight:600;min-width:22px;text-align:right">${s.count}</span>
+        </div>
+      </div>`).join('');
+
+    const catCard = `
+      <div class="card reveal">
+        <div class="card__head"><div class="grow"><h3>Cases by Category</h3><div class="muted" style="font-size:12.5px;margin-top:2px">What workers are raising grievances about, company-wide</div></div></div>
+        <div class="card__body">${catRows}</div>
+      </div>`;
+
+    const siteCard = `
+      <div class="card reveal">
+        <div class="card__head"><h3 class="grow">Cases by Site</h3></div>
+        <div class="card__body" style="padding-top:4px">${siteRows}</div>
+      </div>`;
+
+    const recentRows = RECENT_CASES.map(c => `
       <tr>
-        <td class="mono" style="font-size:12.5px">${App.esc(c.id)}</td>
-        <td><b style="font-size:13px">${App.esc(c.worker)}</b><div class="faint mono" style="font-size:11px;margin-top:2px">${App.esc(c.winId)}</div></td>
+        <td class="mono" style="font-size:12px">${App.esc(c.id)}</td>
         <td>${App.esc(c.subject)}</td>
+        <td>${App.esc(c.site)}</td>
         <td>${App.esc(c.filed)}</td>
         <td>${App.ui.statusPill(c.status)}</td>
-        <td style="text-align:right">${c.status === 'Resolved'
-          ? `<span class="muted" style="font-size:12.5px">${App.icon('checkcircle')} Resolved</span>`
-          : `<button class="btn btn--sm btn--primary" style="background:var(--green-600)" onclick="EmpCompliance.resolveCase('${c.id}')">${App.icon('checkcircle')} Resolve</button>`}</td>
       </tr>`).join('');
-    return `
-      <div class="grid grid-4 reveal" style="margin-bottom:22px">
-        ${App.ui.kpi('message', '#c07d10', 'Open Cases', openN, 'Raised by verified workers')}
-        ${App.ui.kpi('checkcircle', '#0e9f6e', 'Resolved', CASES.filter(c => c.status === 'Resolved').length, 'This quarter')}
-        ${App.ui.kpi('file', '#667085', 'Total Cases', CASES.length, 'All time')}
-        ${App.ui.kpi('clock', '#2f5fd0', 'Avg. Resolution', '4d', 'Faster than SLA')}
-      </div>
+
+    const recentCard = `
       <div class="card reveal" style="overflow:hidden">
-        <div class="card__head"><div class="grow"><h3>Grievance Cases</h3><div class="muted" style="font-size:12.5px;margin-top:2px">Cases workers have filed against this organisation, routed via WiN</div></div></div>
+        <div class="card__head"><div class="grow"><h3>Recent Cases</h3><div class="muted" style="font-size:12.5px;margin-top:2px">Read-only — worker identity kept confidential at this view</div></div></div>
         <div class="tablewrap tablewrap--scroll" style="border:none;border-radius:0;box-shadow:none">
           <table class="tbl">
-            <thead><tr><th>Case ID</th><th>Worker</th><th>Subject</th><th>Filed</th><th>Status</th><th style="text-align:right">Action</th></tr></thead>
-            <tbody>${rowsHtml}</tbody>
+            <thead><tr><th>Case ID</th><th>Subject</th><th>Site</th><th>Filed</th><th>Status</th></tr></thead>
+            <tbody>${recentRows}</tbody>
           </table>
         </div>
       </div>`;
+
+    return `
+      ${stats}
+      ${banner}
+      <div class="grid grid-2 reveal" style="margin-bottom:20px;align-items:start">${catCard}${siteCard}</div>
+      ${recentCard}`;
   }
 
   App.registerView('emp-compliance', {
     title: 'Compliance',
-    subtitle: 'File statutory returns and manage worker grievance cases',
+    subtitle: 'File statutory returns and see organisation-wide grievance patterns',
     render(ctx) {
       const hero = `
         <div class="hero reveal">
@@ -142,13 +186,13 @@
           <div class="hero__in">
             <div class="eyebrow">${App.icon('filecheck')} Compliance</div>
             <h1 class="h-grad" style="margin-top:12px">Stay ahead of every filing.</h1>
-            <p class="lead">File statutory compliance returns and resolve worker grievance cases — all against your verified WiN organisation record.</p>
+            <p class="lead">File statutory compliance returns and see grievance patterns across your organisation — all against your verified WiN organisation record.</p>
           </div>
         </div>`;
       const tabs = `
         <div class="tabs">
           <div class="tab ${EC.tab === 'returns' ? 'is-active' : ''}" onclick="EmpCompliance.setTab('returns')">${App.icon('filecheck')} Compliance Returns</div>
-          <div class="tab ${EC.tab === 'grievances' ? 'is-active' : ''}" onclick="EmpCompliance.setTab('grievances')">${App.icon('message')} Grievance Cases</div>
+          <div class="tab ${EC.tab === 'grievances' ? 'is-active' : ''}" onclick="EmpCompliance.setTab('grievances')">${App.icon('message')} Grievances Overview</div>
         </div>`;
       return `<div class="page fade-in">
         ${hero}
