@@ -51,12 +51,12 @@
 
   const demandKind = { 'Very High': 'red', High: 'amber', Rising: 'blue' };
   const fieldSkills = [
-    { name: 'Waterproofing', demand: 'Very High', boost: 300, openings: 2840, desc: 'Chemical & membrane waterproofing for basements, terraces, and wet areas.' },
-    { name: 'Structural Repair', demand: 'High', boost: 250, openings: 1960, desc: 'Crack injection, carbon fibre reinforcement, and concrete restoration techniques.' },
-    { name: 'Green Building Practices', demand: 'High', boost: 200, openings: 1540, desc: 'Sustainable construction methods, energy-efficient materials, and IGBC certification prep.' },
-    { name: 'BIM (Basic)', demand: 'Rising', boost: 400, openings: 890, desc: 'Building Information Modelling basics for on-site coordination and clash detection.' },
-    { name: 'Plumbing & Sanitary', demand: 'High', boost: 200, openings: 3200, desc: 'Pipe fitting, drainage systems, water supply networks for residential & commercial projects.' },
-    { name: 'Electrical Wiring', demand: 'Very High', boost: 350, openings: 4100, desc: 'Domestic and industrial wiring, panel boards, earthing and safety compliance.' },
+    { name: 'Waterproofing', demand: 'Very High', boost: 300, openings: 2840, c: '#0d9488', desc: 'Chemical & membrane waterproofing for basements, terraces, and wet areas.' },
+    { name: 'Structural Repair', demand: 'High', boost: 250, openings: 1960, c: '#2f5fd0', desc: 'Crack injection, carbon fibre reinforcement, and concrete restoration techniques.' },
+    { name: 'Green Building Practices', demand: 'High', boost: 200, openings: 1540, c: '#0e9f6e', desc: 'Sustainable construction methods, energy-efficient materials, and IGBC certification prep.' },
+    { name: 'BIM (Basic)', demand: 'Rising', boost: 400, openings: 890, c: '#6b4fc7', desc: 'Building Information Modelling basics for on-site coordination and clash detection.' },
+    { name: 'Plumbing & Sanitary', demand: 'High', boost: 200, openings: 3200, c: '#c07d10', desc: 'Pipe fitting, drainage systems, water supply networks for residential & commercial projects.' },
+    { name: 'Electrical Wiring', demand: 'Very High', boost: 350, openings: 4100, c: '#d64545', desc: 'Domestic and industrial wiring, panel boards, earthing and safety compliance.' },
   ];
 
   const enrolled = [
@@ -93,7 +93,7 @@
   function skillsTab(fresh) {
     const certList = fresh ? [] : certified;
     const certCards = certList.map(s => `
-      <div class="card card--pad">
+      <div class="card card--pad" style="border-top:3px solid ${TIER[s.tier]};background:${TIER[s.tier]}0d">
         <div class="row between" style="align-items:flex-start">
           <div>
             <b style="font-size:15px">${App.esc(s.name)}</b>
@@ -108,7 +108,7 @@
       </div>`).join('');
 
     const fieldCards = fieldSkills.map((f, i) => `
-      <div class="card card--pad ws-flow">
+      <div class="card card--pad ws-flow" style="border-top:3px solid ${f.c};background:${f.c}0a">
         <div class="row between" style="align-items:flex-start;margin-bottom:9px">
           <b style="font-size:15px;max-width:16ch">${App.esc(f.name)}</b>
           ${App.ui.pill(f.demand, demandKind[f.demand], true)}
@@ -116,7 +116,7 @@
         <p class="muted ws-desc">${App.esc(f.desc)}</p>
         <div class="row between wrap gap-8 mt-12 mb-16">
           <span class="row gap-6" style="color:var(--green-700);font-weight:600;font-size:13px">${App.icon('bolt')}+<span class="num">₹${f.boost}</span>/day</span>
-          <span class="row gap-6 muted" style="font-size:12px">${App.icon('briefcase')}<span class="num">${App.num(f.openings)}</span> openings</span>
+          <span class="row gap-6" style="font-size:12.5px;font-weight:700;color:#fff;background:${f.c};padding:4px 9px;border-radius:var(--r-full)">${App.icon('briefcase')}<span class="num">${App.num(f.openings)}</span> openings</span>
         </div>
         <div class="row gap-8 ws-cta">
           <button class="btn ws-btn-blue grow" onclick="WorkerSkills.open('${SKILLINDIA}','Skill India')">Learn More on Skill India ${App.icon('external')}</button>
