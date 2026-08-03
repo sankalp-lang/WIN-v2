@@ -113,6 +113,91 @@
     return `<b style="font-size:12.5px">${esc(ed.level)}</b><div class="cvb-pv-sub">${esc(ed.board)} | <span class="num">${esc(ed.year)}</span> | <span class="num">${esc(ed.percentage)}%</span></div>`;
   }
 
+  // ---- resume PDF: a real, laid-out single/multi-page PDF built the same way
+  // App.downloadPDF hand-rolls its report PDFs (raw objects/xref, no library),
+  // but with positioned text runs (bold headers, wrapped body copy) instead of
+  // a monospace table, so it reads like an actual resume.
+  function wrapText(text, maxChars) {
+    const words = String(text || '').split(/\s+/), lines = []; let line = '';
+    words.forEach(w => {
+      if ((line + ' ' + w).trim().length > maxChars) { if (line) lines.push(line); line = w; }
+      else line = (line ? line + ' ' : '') + w;
+    });
+    if (line) lines.push(line);
+    return lines;
+  }
+  function buildResumePdf() {
+    const p = state.personal;
+    const M = 50, W = 612, H = 792, maxY = H - M;
+    const pages = []; let page = []; let y = H - M;
+    const need = (h) => { if (y - h < M) { pages.push(page); page = []; y = maxY; } };
+    const put = (text, size, font, dy, color) => { need(size + 4); page.push({ t: text, x: M, y, s: size, f: font, c: color }); y -= dy; };
+    const rule = (dy) => { page.push({ rule: true, x: M, y, x2: W - M }); y -= dy; };
+
+    put(p.name || 'Rajan Kumar', 20, 'F2', 22);
+    put(p.title || '', 12, 'F1', 16);
+    put([p.location, p.email, p.phone, p.winId ? 'WIN ID ' + p.winId : ''].filter(Boolean).join('   |   '), 9, 'F1', 18);
+    rule(14);
+
+    put('PROFESSIONAL SUMMARY', 11, 'F2', 15, '#2f5fd0');
+    wrapText(buildSummary(), 100).forEach(l => put(l, 9.5, 'F1', 13));
+    y -= 6;
+
+    put('WORK EXPERIENCE', 11, 'F2', 15, '#2f5fd0');
+    state.entries.forEach(en => {
+      need(40);
+      put(`${en.role || 'Role'} — ${en.company || 'Company'}`, 10.5, 'F2', 13);
+      put(`${en.period || ''}   |   ${en.location || ''}   |   ${segLabel(en)}`, 8.5, 'F1', 13, '#667085');
+      const desc = en.description || 'Description entered by the worker while building this CV.';
+      wrapText(desc, 105).forEach(l => put(l, 9.5, 'F1', 12.5));
+      y -= 5;
+    });
+    y -= 4;
+
+    put('SKILLS', 11, 'F2', 15, '#2f5fd0');
+    wrapText(state.skills.join('   •   '), 100).forEach(l => put(l, 9.5, 'F1', 13));
+    y -= 6;
+
+    put('EDUCATION', 11, 'F2', 15, '#2f5fd0');
+    const ed = state.education;
+    put(`${ed.level}`, 10, 'F2', 13);
+    put(`${ed.board}   |   ${ed.year}   |   ${ed.percentage}%   |   ${ed.school || ''}`, 9, 'F1', 13, '#667085');
+
+    pages.push(page);
+
+    // ---- raw PDF assembly (same object/xref approach as App.downloadPDF) ----
+    const escPdf = s => String(s)
+      .replace(/[—–]/g, '-').replace(/[•·]/g, '-')
+      .replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
+    const hex = c => (c || '#111827').replace('#', '').match(/.{2}/g).map(h => (parseInt(h, 16) / 255).toFixed(3)).join(' ');
+    const pageObjStart = 3, font1Num = pageObjStart + pages.length, font2Num = font1Num + 1, contentStart = font2Num + 1;
+    const kids = pages.map((_, i) => (pageObjStart + i) + ' 0 R').join(' ');
+    const objects = [];
+    objects.push(`1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n`);
+    objects.push(`2 0 obj\n<< /Type /Pages /Kids [${kids}] /Count ${pages.length} >>\nendobj\n`);
+    pages.forEach((_, i) => {
+      objects.push(`${pageObjStart + i} 0 obj\n<< /Type /Page /Parent 2 0 R /Resources << /Font << /F1 ${font1Num} 0 R /F2 ${font2Num} 0 R >> >> /MediaBox [0 0 ${W} ${H}] /Contents ${contentStart + i} 0 R >>\nendobj\n`);
+    });
+    objects.push(`${font1Num} 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n`);
+    objects.push(`${font2Num} 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>\nendobj\n`);
+    pages.forEach(pageItems => {
+      let stream = '';
+      pageItems.forEach(it => {
+        if (it.rule) { stream += `${hex('#e2e8f0')} RG 0.75 w ${it.x} ${it.y} m ${it.x2} ${it.y} l S\n`; return; }
+        stream += `${hex(it.c)} rg BT /${it.f} ${it.s} Tf ${it.x} ${it.y} Td (${escPdf(it.t)}) Tj ET\n`;
+      });
+      objects.push(`${contentStart + pages.indexOf(pageItems)} 0 obj\n<< /Length ${stream.length} >>\nstream\n${stream}\nendstream\nendobj\n`);
+    });
+    let pdf = '%PDF-1.4\n';
+    const offsets = [0];
+    objects.forEach(o => { offsets.push(pdf.length); pdf += o; });
+    const xrefStart = pdf.length, total = objects.length + 1;
+    let xref = `xref\n0 ${total}\n0000000000 65535 f \n`;
+    for (let i = 1; i < total; i++) xref += String(offsets[i]).padStart(10, '0') + ' 00000 n \n';
+    pdf += xref + `trailer\n<< /Size ${total} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF`;
+    return pdf;
+  }
+
   // ---- controller: text edits patch the preview live (no reload → keeps focus);
   //      structural changes (add/remove/toggle/save) go through App.reload() ----
   window.WorkerCV = {
@@ -151,8 +236,14 @@
       state.saved = true; App.reload(); App.toast('CV saved to your WiN profile');
       setTimeout(() => { state.saved = false; if (App.state.route === 'worker-cv') App.reload(); }, 2000);
     },
-    exportCv() { App.toast('CV exported as PDF (demo)', 'download'); },
-    exportProfile() { App.toast('Profile PDF downloaded (demo)', 'download'); },
+    exportCv() {
+      App.downloadFile((state.personal.name || 'Resume').replace(/\s+/g, '_') + '_Resume.pdf', buildResumePdf(), 'application/pdf');
+      App.toast('CV downloaded as PDF', 'download');
+    },
+    exportProfile() {
+      App.downloadFile((state.personal.name || 'Profile').replace(/\s+/g, '_') + '_Profile.pdf', buildResumePdf(), 'application/pdf');
+      App.toast('Profile downloaded as PDF', 'download');
+    },
   };
 
   App.registerView('worker-cv', {
