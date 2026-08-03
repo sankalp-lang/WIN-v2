@@ -176,8 +176,8 @@
       <div class="hero reveal">
         <div class="hero__wash"></div>
         <div class="hero__in">
-          <div class="eyebrow">${App.icon('idcard')} My Portfolio</div>
-          <h1 class="h-grad" style="margin-top:12px">Your portfolio is empty.</h1>
+          <div class="eyebrow">${App.icon('idcard')} My Work History</div>
+          <h1 class="h-grad" style="margin-top:12px">Your work history is empty.</h1>
           <p class="lead">Add your work history and skills in Profile &amp; Settings — once verified, they'll show up here as your golden record.</p>
           <button class="btn btn--accent" style="margin-top:16px" onclick="App.navigate('worker-settings')">${App.icon('edit')} Add Work History</button>
         </div>
@@ -186,7 +186,7 @@
   }
 
   App.registerView('worker-portfolio', {
-    title: 'My Portfolio',
+    title: 'My Work History',
     subtitle: 'Your verified professional identity',
     render(ctx) {
       const u = ctx.user;

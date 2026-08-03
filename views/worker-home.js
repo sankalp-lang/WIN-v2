@@ -41,7 +41,7 @@
         { label: 'Govt schemes', q: 'which government schemes am I eligible for?' },
       ];
       const actions = [
-        { ic: 'idcard', c: '#0E9E6C', t: 'My Portfolio', s: 'Verified work history', tag: '100% Verified', tagIc: 'shieldcheck', go: 'worker-portfolio' },
+        { ic: 'idcard', c: '#0E9E6C', t: 'My Work History', s: 'Verified work history', tag: '100% Verified', tagIc: 'shieldcheck', go: 'worker-portfolio' },
         { ic: 'graduation', c: '#3B54E8', t: 'Skills', s: 'Courses & guidance', tag: '3 new courses', tagIc: 'trend', go: 'worker-skills' },
         { ic: 'briefcase', c: '#0E8C82', t: 'Find Jobs', s: 'Hyperlocal & gig', tag: '6 matching', tagIc: 'search', go: 'worker-jobs' },
         { ic: 'message', c: '#B77E12', t: 'Grievances', s: 'File & track', tag: '2 active', tagIc: 'clock', go: 'worker-grievance' },
@@ -83,7 +83,7 @@
                 </div>
               </div>
               <div class="row gap-10">
-                <button class="btn" onclick="App.navigate('worker-portfolio')">${App.icon('idcard')} Portfolio</button>
+                <button class="btn" onclick="App.navigate('worker-portfolio')">${App.icon('idcard')} Work History</button>
                 <button class="btn btn--primary" onclick="App.navigate('worker-cv')">${App.icon('doc')} My CV</button>
               </div>
             </div>

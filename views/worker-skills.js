@@ -310,8 +310,8 @@
             <div class="eyebrow">${App.icon('sparkles')} Skill advisor</div>
             <div class="row between wrap gap-20" style="margin-top:12px;align-items:flex-end">
               <div style="flex:1;min-width:280px">
-                <h1 class="h-grad">Grow your daily rate, ${App.esc(fn)}.</h1>
-                <p class="lead">Your certified skills, the fastest-rising trades in construction, and courses matched to higher-paying roles.</p>
+                <h1 class="h-grad">Earn more, ${App.esc(fn)}.</h1>
+                <p class="lead">Khud ka vikas — upskilling helps you earn more. Your certified skills, the fastest-rising trades in construction, and courses matched to higher-paying roles.</p>
                 <div class="ws-stats mt-16">
                   <div class="ws-stat"><span class="ws-stat__v num" style="color:var(--accent-strong)">${fresh ? 0 : 6}</span><span class="ws-stat__l">Certified skills</span></div>
                   <div class="ws-stat"><span class="ws-stat__v num" style="color:var(--green-700)">${fresh ? '—' : '+₹400'}</span><span class="ws-stat__l">Top daily boost</span></div>

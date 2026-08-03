@@ -200,13 +200,11 @@ window.App = (function () {
       nav: [
         { section: 'Overview', items: [
           { id: 'worker-home', label: 'Home', icon: 'home' },
-          { id: 'worker-portfolio', label: 'My Portfolio', icon: 'idcard' },
+          { id: 'worker-portfolio', label: 'My Work History', icon: 'idcard' },
         ]},
         { section: 'Grow', items: [
           { id: 'worker-skills', label: 'Skill Advisor', icon: 'sparkles' },
-          { id: 'worker-jobs', label: 'Jobs', icon: 'briefcase' },
-          { id: 'worker-cv', label: 'CV Builder', icon: 'doc' },
-          { id: 'worker-courses', label: 'Courses', icon: 'graduation' },
+          { id: 'worker-jobs', label: 'Jobs & Resources', icon: 'briefcase' },
         ]},
         { section: 'Account', items: [
           { id: 'worker-grievance', label: 'Grievances', icon: 'message', tag: '2' },
@@ -323,6 +321,7 @@ window.App = (function () {
             <div class="brandmark">${App.icon('shieldcheck')}</div>
             <div class="sidebar__brandtext"><b>${p.brand}</b><span>${p.sub}</span></div>
           </div>
+          <div class="sidebar__tagline" style="font-size:10.5px;color:var(--muted);padding:0 16px 10px;letter-spacing:.2px">WIN Bharat Karamsheel Setu</div>
           <div class="sidebar__persona">${App.icon(p.key === 'worker' ? 'user' : p.key === 'employer' ? 'building' : 'landmark')} ${p.tag}</div>
           <nav class="sidebar__nav" id="sidebarNav">${navHtml()}</nav>
           <div class="sidebar__foot">
