@@ -153,6 +153,10 @@
       if (!(d.catIx > -1 && d.subject.trim() && d.description.trim())) {
         App.toast('Complete category, subject and description', 'alert'); return;
       }
+      App.otpGate('filing this grievance', () => WorkerGrievance._doSubmit());
+    },
+    _doSubmit() {
+      const d = WG.draft;
       const id = 'GRV-' + (4550 + Math.floor(Math.random() * 449));
       const cat = WG.cats[d.catIx].tag;
       const today = new Date().toISOString().slice(0, 10);

@@ -167,11 +167,13 @@
 
     apply(id, fromModal) {
       if (applied.includes(id)) { if (fromModal) App.modal.close(); return; }
-      applied.push(id);
       const j = JOBS.find(x => x.id === id);
       if (fromModal) App.modal.close();
-      App.toast('Application sent to ' + (j ? j.company : 'employer') + ' via NCS', 'checkcircle');
-      App.reload();
+      App.otpGate('submitting this job application', () => {
+        applied.push(id);
+        App.toast('Application sent to ' + (j ? j.company : 'employer') + ' via NCS', 'checkcircle');
+        App.reload();
+      });
     },
     appliedToast() { App.toast('Application already submitted — track it on the NCS portal'); },
 

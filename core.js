@@ -419,6 +419,38 @@ window.App = (function () {
     }
   };
 
+  /* ---------------- OTP gate ---------------- */
+  // shared confirm-with-OTP step for sensitive actions (grievance filing, job
+  // application submission, etc.) — enter OTP sent to the phone on file, then
+  // fires onVerified(). Mirrors the mobile→OTP timing used in the DigiLocker link flow.
+  App.otpGate = (purpose, onVerified) => {
+    const phone = (App.currentUser() && App.currentUser().phone) || '+91 98••• ••••9';
+    const S = { step: 'send', otp: '', busy: false };
+    const render = () => {
+      const body = S.step === 'send'
+        ? `<div class="banner banner--info">${App.icon('phone')}<div>We'll send a one-time password to <b>${App.esc(phone)}</b> to confirm ${App.esc(purpose)}.</div></div>`
+        : `<div class="banner banner--green" style="margin-bottom:14px">${App.icon('checkcircle')}<div>OTP sent to <b>${App.esc(phone)}</b></div></div>
+           <div class="field"><label class="label">Enter OTP</label>
+             <input class="input mono" id="otpGateInput" inputmode="numeric" maxlength="6" placeholder="Enter 6-digit OTP" value="${App.esc(S.otp)}" ${S.busy ? 'disabled' : ''}
+               oninput="App._otpGateInput(this)" onkeydown="if(event.key==='Enter'){event.preventDefault();App._otpGateVerify();}">
+           </div>`;
+      const foot = S.step === 'send'
+        ? `<button class="btn" onclick="App.modal.close()">Cancel</button>
+           <button class="btn btn--primary" ${S.busy ? 'disabled' : ''} onclick="App._otpGateSend()">${S.busy ? 'Sending…' : App.icon('send') + ' Send OTP'}</button>`
+        : `<button class="btn" onclick="App.modal.close()">Cancel</button>
+           <button class="btn btn--primary" ${(S.otp.length !== 6 || S.busy) ? 'disabled' : ''} onclick="App._otpGateVerify()">${S.busy ? 'Verifying…' : App.icon('shieldcheck') + ' Verify & Continue'}</button>`;
+      App.modal.open(body, { title: 'Confirm with OTP', icon: 'shieldcheck', foot });
+    };
+    App._otpGateSend = () => { S.busy = true; render(); setTimeout(() => { S.step = 'otp'; S.busy = false; render(); }, 1200); };
+    App._otpGateInput = (el) => { S.otp = el.value.replace(/\D/g, '').slice(0, 6); render(); const i = $('#otpGateInput'); if (i) { i.focus(); i.setSelectionRange(S.otp.length, S.otp.length); } };
+    App._otpGateVerify = () => {
+      if (S.otp.length !== 6) return;
+      S.busy = true; render();
+      setTimeout(() => { App.modal.close(); onVerified(); }, 1000);
+    };
+    render();
+  };
+
   /* ---------------- toast ---------------- */
   let toastT;
   App.toast = (msg, icon) => {
