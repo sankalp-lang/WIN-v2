@@ -83,14 +83,7 @@
 
   // ---- Benefits & Schemes (view layer only — eligibility checks and enrollment
   // execution happen on Mahasarthi; this is money allotted vs. money covered
-  // by workforce segment) ----
-  const BENEFIT_SCHEMES = [
-    { name: 'BOCW Cess Welfare Fund', segment: 'Construction Workers', allotted: 4820, covered: 3140, c: '#0d9488' },
-    { name: 'Ayushman Bharat — PMJAY', segment: 'All Registered Workers', allotted: 12400, covered: 7890, c: '#d64545' },
-    { name: 'e-Shram Accident Insurance', segment: 'Unorganised Sector', allotted: 2600, covered: 2210, c: '#2f5fd0' },
-    { name: 'Skill Upgradation Subsidy', segment: 'All Registered Workers', allotted: 1850, covered: 940, c: '#6b4fc7' },
-    { name: 'Maternity Benefit (ESIC)', segment: 'Formal Sector Women Workers', allotted: 980, covered: 812, c: '#c07d10' },
-  ];
+  // by workforce segment) — now its own page, see views/gov-benefits.js ----
 
   // ---- Risk Vigilance ----
   const RISK_SUMMARY = [
@@ -176,7 +169,7 @@
   }
 
   window.GovDash = {
-    setTab(t) { S.tab = t; App.state.params = Object.assign({}, App.state.params, { tab: t }); App.reload(); },
+    setTab(t) { S.tab = t; App.reload(); },
     pushScheme() { S.tab = 'push'; App.reload(); },
     setSector(s) { S.sector = s; App.reload(); },
     setAudience(a) { S.audience = a; App.reload(); },
@@ -606,68 +599,22 @@
   }
 
   // =============================================================
-  // BENEFITS & SCHEMES
-  // =============================================================
-  function benefitsTab() {
-    const totalAllotted = BENEFIT_SCHEMES.reduce((s, b) => s + b.allotted, 0);
-    const totalCovered = BENEFIT_SCHEMES.reduce((s, b) => s + b.covered, 0);
-    const summary = `
-      <div class="grid grid-3 mb-20 reveal">
-        ${App.ui.kpi('file', '#2f5fd0', 'Total Allotted (₹ Cr)', App.num(totalAllotted), 'Across all schemes, FY 2024-25')}
-        ${App.ui.kpi('checkcircle', '#0e9f6e', 'Total Covered (₹ Cr)', App.num(totalCovered), `${Math.round(totalCovered / totalAllotted * 100)}% of allotted disbursed`)}
-        ${App.ui.kpi('users', '#c07d10', 'Schemes Tracked', BENEFIT_SCHEMES.length, 'Labour dept. schemes')}
-      </div>`;
-
-    const banner = `<div class="banner banner--info reveal mb-20">${App.icon('idcard')}<div>This is a view-only rollup of scheme allotment vs. coverage by workforce segment. Eligibility checks and enrollment execution happen on <b>Mahasarthi</b> — this dashboard does not run its own eligibility logic.</div></div>`;
-
-    const rows = BENEFIT_SCHEMES.map(b => {
-      const pct = Math.round(b.covered / b.allotted * 100);
-      return `
-      <div class="gd-sector">
-        <div class="row between wrap gap-8" style="margin-bottom:6px">
-          <span class="row gap-8" style="font-size:13px"><span class="gd-dot" style="background:${b.c}"></span><b>${App.esc(b.name)}</b></span>
-          <span class="muted" style="font-size:12px">${App.esc(b.segment)}</span>
-        </div>
-        <div class="gd-barcell">
-          ${App.ui.bar(pct, b.c)}
-          <span class="num" style="min-width:38px;font-weight:600;color:${b.c}">${pct}%</span>
-        </div>
-        <div class="faint" style="font-size:11.5px;margin-top:4px">₹<span class="num">${App.num(b.covered)}</span> Cr covered of ₹<span class="num">${App.num(b.allotted)}</span> Cr allotted</div>
-      </div>`;
-    }).join('');
-
-    const schemeCard = `
-      <div class="card reveal">
-        <div class="card__head">${App.icon('shieldcheck')}<h3 class="grow">Money Allotted vs. Money Covered — by Scheme</h3></div>
-        <div class="card__body">${rows}</div>
-      </div>`;
-
-    return `${summary}${banner}${schemeCard}`;
-  }
-
-  // =============================================================
   // view registration
   // =============================================================
   const TABS = [
     ['overview', 'Overview'],
     ['risk', 'Risk Vigilance'],
     ['compliance', 'Compliance Gaps'],
-    ['benefits', 'Benefits & Schemes'],
     ['push', 'Push Schemes & Alerts'],
   ];
 
   App.registerView('gov-dashboard', {
     title: 'Government Dashboard',
     subtitle: 'National labour-data command center',
-    render(ctx) {
-      // keep the sidebar's nested Overview / Benefits & Schemes children (see
-      // PERSONAS.gov nav in core.js) in sync with the in-page tab bar.
-      const paramTab = ctx && ctx.params && ctx.params.tab;
-      if (paramTab && paramTab !== S._lastParam && TABS.some(([k]) => k === paramTab)) { S.tab = paramTab; S._lastParam = paramTab; }
+    render() {
       const body = S.tab === 'overview' ? overviewTab()
         : S.tab === 'risk' ? riskTab()
         : S.tab === 'compliance' ? complianceTab()
-        : S.tab === 'benefits' ? benefitsTab()
         : pushTab();
 
       const govStates = (window.DB && DB.govStates) || [];
