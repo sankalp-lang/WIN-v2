@@ -40,8 +40,11 @@
   const SKILLINDIA = 'https://www.skillindia.gov.in';
 
   const TIER = { gold: '#b7791f', silver: '#64748b', bronze: '#c2620f' };
-  const CERT_ACCENT = '#0e9f6e';   // one shared accent for all certified-skill cards
-  const FIELD_ACCENT = '#2f5fd0';  // one shared accent for all top-skills-in-field cards
+  // one shared accent per card group — chosen to match each group's action button
+  // (green for certified, matching the "Verified" checkmark theme; blue for
+  // top-skills-in-field, matching the ws-btn-blue "Learn More" button).
+  const CERT_ACCENT = '#1F9E6C';
+  const FIELD_ACCENT = '#3B54E8';
   const certified = [
     { name: 'Masonry', level: 'Expert', tier: 'gold', years: 14, body: 'NSDC', date: 'Jan 2024' },
     { name: 'Scaffolding', level: 'Advanced', tier: 'silver', years: 10, body: 'Construction Skills Council', date: 'Mar 2023' },
@@ -95,7 +98,7 @@
   function skillsTab(fresh) {
     const certList = fresh ? [] : certified;
     const certCards = certList.map(s => `
-      <div class="card card--pad" style="border-top:3px solid ${CERT_ACCENT}">
+      <div class="card card--pad" style="border-top:3px solid ${CERT_ACCENT};background:${CERT_ACCENT}0d">
         <div class="row between" style="align-items:flex-start">
           <div>
             <b style="font-size:15px">${App.esc(s.name)}</b>
@@ -110,7 +113,7 @@
       </div>`).join('');
 
     const fieldCards = fieldSkills.map((f, i) => `
-      <div class="card card--pad ws-flow" style="border-top:3px solid ${FIELD_ACCENT}">
+      <div class="card card--pad ws-flow" style="border-top:3px solid ${FIELD_ACCENT};background:${FIELD_ACCENT}0d">
         <div class="row between" style="align-items:flex-start;margin-bottom:9px">
           <b style="font-size:15px;max-width:16ch">${App.esc(f.name)}</b>
           ${App.ui.pill(f.demand, demandKind[f.demand], true)}
