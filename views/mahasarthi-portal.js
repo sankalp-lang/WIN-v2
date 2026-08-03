@@ -1,7 +1,7 @@
-/* Mahasarthi — mocked external state scheme portal that WiN redirects a
-   worker to (with consent) to complete eligibility checking and enrollment.
-   Deliberately styled apart from WiN's own branding to read as a hand-off to
-   a different system, not another WiN screen. */
+/* Mahasarthi consent — the hand-off screen shown before WiN shares a
+   worker's verified profile with the real Mahasarthi state scheme portal.
+   After consent, this opens the actual Mahasarthi site (mahasarathi.in) in a
+   new tab — a genuine external redirect, not a mocked page. */
 (function () {
   const SCHEMES = {
     bocw: { title: 'BOCW Cess Welfare Benefits', dept: 'Building & Other Construction Workers Welfare Board' },
@@ -9,68 +9,54 @@
     'skill-subsidy': { title: 'Skill Upgradation Subsidy', dept: 'State Skill Development Mission' },
     'eshram-insurance': { title: 'e-Shram Accident Insurance (PMSBY)', dept: 'Ministry of Labour & Employment' },
   };
+  const MAHASARTHI_URL = 'https://www.mahasarathi.in/';
 
-  const MS = { step: 'checking' };
+  const MS = { step: 'consent' };
 
   window.MahasarthiPortal = {
-    submit() { MS.step = 'submitted'; App.reload(); },
+    setStep(s) { MS.step = s; App.reload(); },
+    giveConsent() {
+      const box = document.getElementById('mahasarthiConsent');
+      if (!box || !box.checked) { App.toast('Please provide consent to continue.', 'alert'); return; }
+      try { window.open(MAHASARTHI_URL, '_blank', 'noopener,noreferrer'); } catch (e) {}
+      MS.step = 'redirected';
+      App.reload();
+    },
     back() { App.navigate('worker-benefits'); },
   };
 
   App.registerView('mahasarthi-portal', {
-    title: 'Mahasarthi',
-    subtitle: 'Maharashtra State Scheme Portal',
+    title: 'Continue to Mahasarthi',
+    subtitle: 'Share your verified WiN profile to check eligibility and apply',
     render(ctx) {
       const schemeId = (ctx.params && ctx.params.scheme) || 'bocw';
       const scheme = SCHEMES[schemeId] || SCHEMES.bocw;
-      const u = ctx.user || {};
-      if (schemeId !== MS._lastScheme) { MS._lastScheme = schemeId; MS.step = 'checking'; MS._timerSet = false; }
-      if (MS.step === 'checking' && !MS._timerSet) {
-        MS._timerSet = true;
-        setTimeout(() => { MS.step = 'eligible'; MS._timerSet = false; if (App.state.route === 'mahasarthi-portal') App.reload(); }, 1300);
-      }
+      if (schemeId !== MS._lastScheme) { MS._lastScheme = schemeId; MS.step = 'consent'; }
 
       const header = `
-        <div style="background:linear-gradient(120deg,#b45309,#7c2d12);color:#fff;padding:22px 28px;border-radius:var(--r-lg) var(--r-lg) 0 0">
-          <div class="row between wrap gap-12" style="align-items:center">
-            <div class="row gap-12" style="align-items:center">
-              <div style="width:40px;height:40px;border-radius:10px;background:rgba(255,255,255,.16);display:grid;place-items:center">${App.icon('landmark')}</div>
-              <div><b style="font-size:17px">Mahasarthi</b><div style="font-size:11.5px;opacity:.85;margin-top:1px">Government of Maharashtra · State Scheme Portal</div></div>
-            </div>
-            <span class="pill" style="background:rgba(255,255,255,.16);color:#fff;border-color:transparent">${App.icon('external')} Redirected from WiN</span>
-          </div>
+        <div class="hero__wash"></div>
+        <div class="row gap-12" style="align-items:center;margin-bottom:18px">
+          <div class="kpi__icon" style="width:44px;height:44px;background:var(--accent-weak);color:var(--accent-strong)">${App.icon('landmark')}</div>
+          <div><b style="font-size:16px">${App.esc(scheme.title)}</b><div class="muted" style="font-size:12.5px;margin-top:2px">${App.esc(scheme.dept)} · via Mahasarthi</div></div>
         </div>`;
 
-      const body = MS.step === 'checking' ? `
-        <div style="text-align:center;padding:50px 20px">
-          <div class="spin" style="margin:0 auto 16px;width:34px;height:34px;border-width:3px"></div>
-          <b style="font-size:15px">Checking eligibility for ${App.esc(scheme.title)}…</b>
-          <div class="muted" style="font-size:13px;margin-top:6px">Verifying your shared WiN profile against ${App.esc(scheme.dept)} records</div>
-        </div>`
-        : MS.step === 'eligible' ? `
-        <div style="padding:24px 28px">
-          <div class="banner banner--green" style="margin-bottom:18px">${App.icon('checkcircle')}<div><b>You're eligible for ${App.esc(scheme.title)}</b><div style="margin-top:3px;opacity:.9">Verified against your shared WiN profile — no re-entry needed.</div></div></div>
-          <div class="label" style="margin-bottom:8px">Applicant Details (shared from WiN)</div>
-          <div class="list--divided" style="margin-bottom:20px">
-            <div class="row between" style="padding:9px 0"><span class="faint" style="font-size:12px">Name</span><b style="font-size:13px">${App.esc(u.name || 'Rajan Kumar')}</b></div>
-            <div class="row between" style="padding:9px 0"><span class="faint" style="font-size:12px">WIN ID</span><b class="mono" style="font-size:13px">${App.esc(u.winId || 'WIN-2024-8834-1029')}</b></div>
-            <div class="row between" style="padding:9px 0"><span class="faint" style="font-size:12px">Location</span><b style="font-size:13px">${App.esc(u.location || 'Delhi NCR')}</b></div>
-            <div class="row between" style="padding:9px 0"><span class="faint" style="font-size:12px">Scheme</span><b style="font-size:13px;text-align:right">${App.esc(scheme.title)}</b></div>
-            <div class="row between" style="padding:9px 0"><span class="faint" style="font-size:12px">Administered by</span><b style="font-size:13px;text-align:right">${App.esc(scheme.dept)}</b></div>
-          </div>
-          <button class="btn btn--primary" style="width:100%;background:#b45309;border-color:transparent" onclick="MahasarthiPortal.submit()">${App.icon('send')} Submit Application</button>
+      const body = MS.step === 'consent' ? `
+        <p class="muted" style="font-size:13.5px;line-height:1.6">Checking eligibility and completing enrollment for this scheme happens on <b>Mahasarthi</b>, the state scheme portal — WiN does not check eligibility itself. With your consent, we'll open Mahasarthi so you can apply; your verified identity and work history stay with WiN unless you choose to share them there.</p>
+        <label class="row gap-8" style="margin:18px 0;align-items:flex-start;cursor:pointer">
+          <input type="checkbox" id="mahasarthiConsent" style="margin-top:3px">
+          <span style="font-size:13.5px">I consent to being redirected to Mahasarthi to check eligibility and apply for this scheme.</span>
+        </label>
+        <div class="row gap-10">
+          <button class="btn" onclick="MahasarthiPortal.back()">${App.icon('arrowleft')} Back</button>
+          <button class="btn btn--primary grow" onclick="MahasarthiPortal.giveConsent()">${App.icon('external')} Continue to Mahasarthi</button>
         </div>`
         : `
-        <div style="text-align:center;padding:44px 24px">
-          <div class="kpi__icon" style="width:52px;height:52px;margin:0 auto 14px;background:var(--green-50);color:var(--green-600)">${App.icon('checkcircle')}</div>
-          <h3 style="margin-bottom:6px">Application Submitted</h3>
-          <p class="muted" style="font-size:13px;max-width:38ch;margin:0 auto">Your application for <b>${App.esc(scheme.title)}</b> has been submitted to the ${App.esc(scheme.dept)}. You'll be notified on WiN once it's processed.</p>
-          <div class="mono" style="font-size:12px;color:var(--muted);margin-top:12px">Reference: <b>MHS-${App.esc(String(schemeId).toUpperCase().slice(0, 4))}-${Math.floor(100000 + Math.random() * 900000)}</b></div>
-          <button class="btn" style="margin-top:22px" onclick="MahasarthiPortal.back()">${App.icon('arrowleft')} Back to WiN</button>
-        </div>`;
+        <div class="banner banner--green" style="margin-bottom:18px">${App.icon('checkcircle')}<div><b>Mahasarthi opened in a new tab</b><div style="margin-top:3px;opacity:.9">Continue your application for ${App.esc(scheme.title)} there.</div></div></div>
+        <p class="muted" style="font-size:13px">Didn't see the new tab? <a href="https://www.mahasarathi.in/" target="_blank" rel="noopener noreferrer" style="color:var(--accent-strong);font-weight:600">Open Mahasarthi again</a>.</p>
+        <button class="btn" style="margin-top:14px" onclick="MahasarthiPortal.back()">${App.icon('arrowleft')} Back to WiN</button>`;
 
       return `<div class="page fade-in">
-        <div class="card reveal" style="overflow:hidden;max-width:640px;margin:0 auto">
+        <div class="card card--pad reveal" style="max-width:560px;margin:0 auto;position:relative;overflow:hidden">
           ${header}
           ${body}
         </div>
