@@ -211,13 +211,6 @@
       const skills = ['Masonry', 'Scaffolding', 'Plastering', 'Tile Work', 'Concrete Finishing', 'Blueprint Reading'];
       const visSkills = skillsOpen ? skills : skills.slice(0, 4);
 
-      const schemes = [
-        { name: 'e-Shram', sub: 'UAN XXXX-XXXX-1234', st: 'Active', c: 'green', ic: 'idcard' },
-        { name: 'ESIC', sub: 'IP No: 1234567890', st: 'Active', c: 'green', ic: 'shieldcheck' },
-        { name: 'EPFO', sub: 'UAN 1001-2345-6789', st: 'Active', c: 'blue', ic: 'landmark' },
-        { name: 'PM-SYM', sub: 'Enrolment: PSM-84921', st: 'Enrolled', c: 'teal', ic: 'award' },
-      ];
-
       const gstats = [
         { label: 'Open Cases', val: '2', c: 'amber', ic: 'clock' },
         { label: 'Resolved', val: '14', c: 'green', ic: 'checkcircle' },
@@ -422,23 +415,6 @@
                     <div class="wp-gval num">${App.esc(g.val)}</div>
                     <div class="muted" style="font-size:12.5px;margin-top:2px">${g.label}</div>
                   </button>`).join('')}
-              </div>
-            </div>
-
-            <!-- schemes -->
-            <div class="reveal">
-              <div class="section-title">Schemes Enrolled In</div>
-              <div class="grid grid-2">
-                ${schemes.map(sc => `
-                  <div class="card card--pad">
-                    <div class="row between">
-                      <div class="row gap-12">
-                        <div class="kpi__icon" style="width:40px;height:40px;background:${C[sc.c]}1a;color:${C[sc.c]}">${App.icon(sc.ic)}</div>
-                        <div><b style="font-size:14.5px">${App.esc(sc.name)}</b><div class="mono muted" style="font-size:12px;margin-top:2px">${App.esc(sc.sub)}</div></div>
-                      </div>
-                      ${App.ui.pill(sc.st, sc.c, true)}
-                    </div>
-                  </div>`).join('')}
               </div>
             </div>
           </div>
