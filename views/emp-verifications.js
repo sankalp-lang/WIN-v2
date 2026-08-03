@@ -26,9 +26,22 @@
       month: 'February 2026', basic: 18500, hra: 7400, allowance: 3200, pf: 2220, esi: 350, netPay: 26530 },
     { id: 'MDV-2202', worker: 'Vikram Singh', winId: 'WIN-2024-5581-2290', docType: 'Appointment Letter', uploadedOn: '2026-02-27', status: 'Pending Review',
       company: 'Aditya Birla Construction Ltd.', role: 'Scaffolding Supervisor', joiningDate: '02 Mar 2026', city: 'Noida' },
+    { id: 'MDV-2203', worker: 'Anita Devi', winId: 'WIN-2024-9012-3345', docType: 'Salary Slip (Feb 2026)', uploadedOn: '2026-03-04', status: 'Pending Review',
+      company: 'Aditya Birla Construction Ltd.', role: 'Site Helper', joiningDate: '20 Sep 2024', city: 'Gurugram',
+      month: 'February 2026', basic: 14200, hra: 5680, allowance: 2100, pf: 1704, esi: 284, netPay: 19992 },
+    { id: 'MDV-2204', worker: 'Mohd. Irfan', winId: 'WIN-2024-6634-8871', docType: 'Appointment Letter', uploadedOn: '2026-03-05', status: 'Pending Review',
+      company: 'Aditya Birla Construction Ltd.', role: 'Crane Operator', joiningDate: '10 Mar 2026', city: 'Faridabad' },
+    { id: 'MDV-2205', worker: 'Kavita Rawat', winId: 'WIN-2024-4471-2298', docType: 'Salary Slip (Jan 2026)', uploadedOn: '2026-02-18', status: 'Pending Review',
+      company: 'Aditya Birla Construction Ltd.', role: 'Safety Officer', joiningDate: '05 Nov 2022', city: 'Delhi',
+      month: 'January 2026', basic: 26800, hra: 10720, allowance: 4000, pf: 3216, esi: 0, netPay: 38304 },
+    { id: 'MDV-2206', worker: 'Deepak Kumar', winId: 'WIN-2024-1187-5523', docType: 'Appointment Letter', uploadedOn: '2026-03-01', status: 'Pending Review',
+      company: 'Aditya Birla Construction Ltd.', role: 'Plumber', joiningDate: '18 Feb 2026', city: 'Gurugram' },
     { id: 'MDV-2198', worker: 'Ramesh Chauhan', winId: 'WIN-2024-3340-1187', docType: 'Salary Slip (Jan 2026)', uploadedOn: '2026-02-10', status: 'Approved',
       company: 'Aditya Birla Construction Ltd.', role: 'Electrician', joiningDate: '09 Aug 2023', city: 'Delhi',
       month: 'January 2026', basic: 21000, hra: 8400, allowance: 2800, pf: 2520, esi: 400, netPay: 29280 },
+    { id: 'MDV-2190', worker: 'Sunita Kumari', winId: 'WIN-2024-2245-9987', docType: 'Salary Slip (Dec 2025)', uploadedOn: '2026-01-15', status: 'Rejected',
+      company: 'Aditya Birla Construction Ltd.', role: 'Tile Fitter', joiningDate: '12 Apr 2024', city: 'Noida',
+      month: 'December 2025', basic: 16800, hra: 6720, allowance: 2400, pf: 2016, esi: 336, netPay: 23568 },
   ];
 
   // a mocked-up salary-slip visual, styled to look like an actual payslip document
