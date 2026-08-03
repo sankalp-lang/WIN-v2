@@ -55,6 +55,43 @@
 
   const TREND = { vals: [45, 52, 48, 62, 58, 72, 68, 78, 74, 85, 82, 92], months: ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'] };
 
+  // ---- Key Indicators (RAG) — the metrics a ministry official should look at
+  // first, beyond the headline enrolment/sector numbers: formal-informal mix,
+  // wage compliance, skilling coverage, migration, and time-to-resolution.
+  // Each carries current value, last month's value, and the national benchmark
+  // it's judged against, rolled up into a red/amber/green status.
+  const KEY_INDICATORS = [
+    { label: 'Formal Employment Share', icon: 'briefcase', unit: '%', cur: 31.4, prev: 30.1, bench: 35, higherIsBetter: true,
+      note: 'Share of enrolled workers in formal, HRMS-verified employment' },
+    { label: 'Avg. Verification Turnaround', icon: 'clock', unit: 'd', cur: 2.4, prev: 2.9, bench: 3, higherIsBetter: false,
+      note: 'Average days from application to source-verified WIN ID' },
+    { label: 'Minimum Wage Compliance', icon: 'shieldcheck', unit: '%', cur: 87.6, prev: 85.2, bench: 90, higherIsBetter: true,
+      note: 'Employers found compliant with state minimum-wage notifications' },
+    { label: 'Skilling Coverage', icon: 'graduation', unit: '%', cur: 22.8, prev: 21.5, bench: 30, higherIsBetter: true,
+      note: 'Enrolled workers with at least one certified skill on WIN' },
+    { label: 'Interstate Migrant Share', icon: 'mappin', unit: '%', cur: 18.2, prev: 17.9, bench: 15, higherIsBetter: false,
+      note: 'Enrolled workers employed outside their home state' },
+    { label: 'Employer Compliance Filing Rate', icon: 'filecheck', unit: '%', cur: 71.5, prev: 68.4, bench: 80, higherIsBetter: true,
+      note: 'EPF/ESI/LWF returns filed on time this cycle' },
+  ];
+  function ragStatus(ind) {
+    const gap = ind.higherIsBetter ? ind.cur - ind.bench : ind.bench - ind.cur;
+    if (gap >= 0) return { kind: 'green', label: 'On track' };
+    if (gap >= -5) return { kind: 'amber', label: 'Watch' };
+    return { kind: 'red', label: 'Off track' };
+  }
+
+  // ---- Benefits & Schemes (view layer only — eligibility checks and enrollment
+  // execution happen on Mahasarthi; this is money allotted vs. money covered
+  // by workforce segment) ----
+  const BENEFIT_SCHEMES = [
+    { name: 'BOCW Cess Welfare Fund', segment: 'Construction Workers', allotted: 4820, covered: 3140, c: '#0d9488' },
+    { name: 'Ayushman Bharat — PMJAY', segment: 'All Registered Workers', allotted: 12400, covered: 7890, c: '#d64545' },
+    { name: 'e-Shram Accident Insurance', segment: 'Unorganised Sector', allotted: 2600, covered: 2210, c: '#2f5fd0' },
+    { name: 'Skill Upgradation Subsidy', segment: 'All Registered Workers', allotted: 1850, covered: 940, c: '#6b4fc7' },
+    { name: 'Maternity Benefit (ESIC)', segment: 'Formal Sector Women Workers', allotted: 980, covered: 812, c: '#c07d10' },
+  ];
+
   // ---- Risk Vigilance ----
   const RISK_SUMMARY = [
     { c: '#d64545', val: '3,358', label: 'Total Employers Flagged', sub: 'Across all compliance categories' },
@@ -280,6 +317,34 @@
         </div>
       </div>`;
 
+    const keyIndicators = `
+      <div class="card reveal mb-20">
+        <div class="card__head">${App.icon('shieldcheck')}<div class="grow"><h3>Key Indicators — RAG Status</h3><div class="muted" style="font-size:12.5px;margin-top:2px">What to look at first, beyond enrolment and sector mix — current vs. last month vs. national benchmark</div></div></div>
+        <div class="card__body">
+          <div class="grid grid-3">
+            ${KEY_INDICATORS.map(ind => {
+              const rag = ragStatus(ind);
+              const ragColor = { green: 'var(--green-600)', amber: 'var(--amber-600)', red: 'var(--red-600)' }[rag.kind];
+              const delta = (ind.cur - ind.prev).toFixed(1);
+              const deltaUp = ind.cur >= ind.prev;
+              return `
+              <div class="card card--pad" style="border-top:3px solid ${ragColor}">
+                <div class="row between" style="align-items:flex-start;margin-bottom:8px">
+                  <span class="row gap-8" style="font-size:12.5px;font-weight:600;color:var(--muted)">${App.icon(ind.icon)}${App.esc(ind.label)}</span>
+                  ${App.ui.pill(rag.label, rag.kind, true)}
+                </div>
+                <div class="row gap-8" style="align-items:baseline;margin-bottom:4px">
+                  <span class="num" style="font-size:22px;font-weight:700">${ind.cur}${ind.unit}</span>
+                  <span class="num" style="font-size:12px;color:${deltaUp ? 'var(--green-700)' : 'var(--red-600)'}">${deltaUp ? '▲' : '▼'} ${Math.abs(delta)}${ind.unit} vs last month</span>
+                </div>
+                <div class="faint" style="font-size:11.5px;margin-bottom:6px">Benchmark: <b class="num">${ind.bench}${ind.unit}</b> · Last month: <span class="num">${ind.prev}${ind.unit}</span></div>
+                <div class="muted" style="font-size:12px">${App.esc(ind.note)}</div>
+              </div>`;
+            }).join('')}
+          </div>
+        </div>
+      </div>`;
+
     const dist = S.state !== 'All' ? districtRows(S.state) : null;
     const stateRows = (dist || STATES).map(s => {
       const gv = s.grievances > 50000;
@@ -340,6 +405,7 @@
 
     return `
       ${stats}
+      ${keyIndicators}
       ${alerts}
       <div class="gd-grid-main reveal">
         ${stateTable}
@@ -540,12 +606,53 @@
   }
 
   // =============================================================
+  // BENEFITS & SCHEMES
+  // =============================================================
+  function benefitsTab() {
+    const totalAllotted = BENEFIT_SCHEMES.reduce((s, b) => s + b.allotted, 0);
+    const totalCovered = BENEFIT_SCHEMES.reduce((s, b) => s + b.covered, 0);
+    const summary = `
+      <div class="grid grid-3 mb-20 reveal">
+        ${App.ui.kpi('file', '#2f5fd0', 'Total Allotted (₹ Cr)', App.num(totalAllotted), 'Across all schemes, FY 2024-25')}
+        ${App.ui.kpi('checkcircle', '#0e9f6e', 'Total Covered (₹ Cr)', App.num(totalCovered), `${Math.round(totalCovered / totalAllotted * 100)}% of allotted disbursed`)}
+        ${App.ui.kpi('users', '#c07d10', 'Schemes Tracked', BENEFIT_SCHEMES.length, 'Labour dept. schemes')}
+      </div>`;
+
+    const banner = `<div class="banner banner--info reveal mb-20">${App.icon('idcard')}<div>This is a view-only rollup of scheme allotment vs. coverage by workforce segment. Eligibility checks and enrollment execution happen on <b>Mahasarthi</b> — this dashboard does not run its own eligibility logic.</div></div>`;
+
+    const rows = BENEFIT_SCHEMES.map(b => {
+      const pct = Math.round(b.covered / b.allotted * 100);
+      return `
+      <div class="gd-sector">
+        <div class="row between wrap gap-8" style="margin-bottom:6px">
+          <span class="row gap-8" style="font-size:13px"><span class="gd-dot" style="background:${b.c}"></span><b>${App.esc(b.name)}</b></span>
+          <span class="muted" style="font-size:12px">${App.esc(b.segment)}</span>
+        </div>
+        <div class="gd-barcell">
+          ${App.ui.bar(pct, b.c)}
+          <span class="num" style="min-width:38px;font-weight:600;color:${b.c}">${pct}%</span>
+        </div>
+        <div class="faint" style="font-size:11.5px;margin-top:4px">₹<span class="num">${App.num(b.covered)}</span> Cr covered of ₹<span class="num">${App.num(b.allotted)}</span> Cr allotted</div>
+      </div>`;
+    }).join('');
+
+    const schemeCard = `
+      <div class="card reveal">
+        <div class="card__head">${App.icon('shieldcheck')}<h3 class="grow">Money Allotted vs. Money Covered — by Scheme</h3></div>
+        <div class="card__body">${rows}</div>
+      </div>`;
+
+    return `${summary}${banner}${schemeCard}`;
+  }
+
+  // =============================================================
   // view registration
   // =============================================================
   const TABS = [
     ['overview', 'Overview'],
     ['risk', 'Risk Vigilance'],
     ['compliance', 'Compliance Gaps'],
+    ['benefits', 'Benefits & Schemes'],
     ['push', 'Push Schemes & Alerts'],
   ];
 
@@ -556,6 +663,7 @@
       const body = S.tab === 'overview' ? overviewTab()
         : S.tab === 'risk' ? riskTab()
         : S.tab === 'compliance' ? complianceTab()
+        : S.tab === 'benefits' ? benefitsTab()
         : pushTab();
 
       const govStates = (window.DB && DB.govStates) || [];
