@@ -239,7 +239,10 @@ window.App = (function () {
       key: 'gov', label: 'Government', tag: 'Government Registry', brand: 'WiN', sub: 'Registry Console', home: 'gov-dashboard',
       nav: [
         { section: 'Registry', items: [
-          { id: 'gov-dashboard', label: 'Dashboard', icon: 'home' },
+          { id: 'gov-dashboard', label: 'Dashboard', icon: 'home', children: [
+            { id: 'overview', label: 'Overview' },
+            { id: 'benefits', label: 'Benefits & Schemes' },
+          ] },
           { id: 'gov-demographics', label: 'Demographics', icon: 'pie' },
           { id: 'gov-enrollment', label: 'Enrollment', icon: 'users' },
         ]},

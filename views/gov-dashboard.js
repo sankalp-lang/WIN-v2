@@ -176,7 +176,7 @@
   }
 
   window.GovDash = {
-    setTab(t) { S.tab = t; App.reload(); },
+    setTab(t) { S.tab = t; App.state.params = Object.assign({}, App.state.params, { tab: t }); App.reload(); },
     pushScheme() { S.tab = 'push'; App.reload(); },
     setSector(s) { S.sector = s; App.reload(); },
     setAudience(a) { S.audience = a; App.reload(); },
@@ -319,7 +319,7 @@
 
     const keyIndicators = `
       <div class="card reveal mb-20">
-        <div class="card__head">${App.icon('shieldcheck')}<div class="grow"><h3>Key Indicators — RAG Status</h3><div class="muted" style="font-size:12.5px;margin-top:2px">What to look at first, beyond enrolment and sector mix — current vs. last month vs. national benchmark</div></div></div>
+        <div class="card__head">${App.icon('shieldcheck')}<h3 class="grow">Key Indicators — RAG Status</h3></div>
         <div class="card__body">
           <div class="grid grid-3">
             ${KEY_INDICATORS.map(ind => {
@@ -659,7 +659,11 @@
   App.registerView('gov-dashboard', {
     title: 'Government Dashboard',
     subtitle: 'National labour-data command center',
-    render() {
+    render(ctx) {
+      // keep the sidebar's nested Overview / Benefits & Schemes children (see
+      // PERSONAS.gov nav in core.js) in sync with the in-page tab bar.
+      const paramTab = ctx && ctx.params && ctx.params.tab;
+      if (paramTab && paramTab !== S._lastParam && TABS.some(([k]) => k === paramTab)) { S.tab = paramTab; S._lastParam = paramTab; }
       const body = S.tab === 'overview' ? overviewTab()
         : S.tab === 'risk' ? riskTab()
         : S.tab === 'compliance' ? complianceTab()
