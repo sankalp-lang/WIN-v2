@@ -139,7 +139,7 @@
   }
 
   // ---- Benefits & Schemes (view layer only — eligibility checks and enrollment
-  // execution happen on Mahasarthi; this is money allotted vs. money covered
+  // execution happen on Mahasarathi; this is money allotted vs. money covered
   // by workforce segment) — now its own page, see views/gov-benefits.js ----
 
   // ---- Risk Vigilance ----

@@ -1,6 +1,6 @@
 /* Worker · Benefits & Schemes — state labour-department schemes and subsidies
    for this worker's segment. Two tabs: schemes matched/eligible (view-only;
-   eligibility checking and enrollment execution happen on Mahasarthi, with
+   eligibility checking and enrollment execution happen on Mahasarathi, with
    the worker's consent to share their verified WiN profile) and schemes
    already enrolled in (moved here from My Work History), each with a
    details view. */
@@ -71,7 +71,7 @@
           <div class="list--divided">${rows}</div>
         </div>
       </div>
-      <div class="banner banner--info reveal mt-16">${App.icon('idcard')}<div>WiN does not check scheme eligibility itself — it only matches schemes to your segment and, with your consent, shares your verified profile with <b>Mahasarthi</b> to complete the check and enrollment.</div></div>`;
+      <div class="banner banner--info reveal mt-16">${App.icon('idcard')}<div>WiN does not check scheme eligibility itself — it only matches schemes to your segment and, with your consent, shares your verified profile with <b>Mahasarathi</b> to complete the check and enrollment.</div></div>`;
   }
 
   function enrolledTab() {
@@ -103,7 +103,7 @@
           <div class="hero__in">
             <div class="eyebrow">${App.icon('shieldcheck')} Benefits &amp; Schemes</div>
             <h1 class="h-grad" style="margin-top:12px">Every scheme you're entitled to, in one place.</h1>
-            <p class="lead">State labour-department schemes and subsidies matched to your worker segment. Eligibility is checked and enrollment is completed on Mahasarthi, with your consent.</p>
+            <p class="lead">State labour-department schemes and subsidies matched to your worker segment. Eligibility is checked and enrollment is completed on Mahasarathi, with your consent.</p>
             <div class="row gap-8 wrap mt-16">
               <span class="pill pill--gray">${App.icon('mappin')} ${App.esc((u && u.location) || 'Delhi NCR')}</span>
               ${App.ui.verified('Identity verified')}

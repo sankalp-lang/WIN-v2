@@ -1,5 +1,5 @@
 /* Government · Benefits & Schemes — a view-only rollup of labour-department
-   scheme allotment vs. coverage by workforce segment (Mahasarthi is the
+   scheme allotment vs. coverage by workforce segment (Mahasarathi is the
    execution engine for eligibility checks and enrollment), plus the
    Government Information Push System for broadcasting new schemes and
    policy alerts to workers/employers. */
@@ -74,7 +74,7 @@
         ${App.ui.kpi('users', '#c07d10', 'Schemes Tracked', BENEFIT_SCHEMES.length, 'Labour dept. schemes')}
       </div>`;
 
-    const banner = `<div class="banner banner--info reveal mb-20">${App.icon('idcard')}<div>This is a view-only rollup of scheme allotment vs. coverage by workforce segment. Eligibility checks and enrollment execution happen on <b>Mahasarthi</b> — this dashboard does not run its own eligibility logic.</div></div>`;
+    const banner = `<div class="banner banner--info reveal mb-20">${App.icon('idcard')}<div>This is a view-only rollup of scheme allotment vs. coverage by workforce segment. Eligibility checks and enrollment execution happen on <b>Mahasarathi</b> — this dashboard does not run its own eligibility logic.</div></div>`;
 
     const rows = BENEFIT_SCHEMES.map(b => {
       const pct = Math.round(b.covered / b.allotted * 100);
@@ -190,7 +190,7 @@
           <div class="hero__in">
             <div class="eyebrow">${App.icon('shieldcheck')} Benefits &amp; Schemes</div>
             <h1 class="h-grad" style="margin-top:12px">Money allotted vs. money covered, by scheme.</h1>
-            <p class="lead">Labour-department benefit overview by workforce segment. This dashboard is a view layer — eligibility checks and enrollment execution happen on Mahasarthi.</p>
+            <p class="lead">Labour-department benefit overview by workforce segment. This dashboard is a view layer — eligibility checks and enrollment execution happen on Mahasarathi.</p>
           </div>
         </div>`;
 
